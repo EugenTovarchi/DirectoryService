@@ -1,3 +1,4 @@
+using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
 using System.Globalization;
@@ -22,11 +23,14 @@ public class Program
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
 
-            builder.Configuration.AddEnvironmentVariables(); //поддержка переменных окружения
+            builder.Configuration.AddEnvironmentVariables(); 
 
             builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
+
+            builder.Services
+                .AddDirectoryServiceInfrastructure(builder.Configuration);
 
             var app = builder.Build();
 

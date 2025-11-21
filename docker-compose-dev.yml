@@ -8,8 +8,10 @@ services:
       - "9002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
-      - ASPNETCORE_URLS=http://+9002 
-
+      - ASPNETCORE_URLS=http://+9002    
+    volumes:
+      - ./backend/DirectoryService/DirectoryService.Web/appsettings.Docker.json:/app/appsettings.Docker.json
+      - ./backend/DirectoryService/DirectoryService.Web/appsettings.json:/app/appsettings.json
     restart: always
 
   seq:
@@ -20,7 +22,7 @@ services:
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     ports:
       - "15341:5341" 
-      - "8080:80"
+      - "8081:80"
     restart: always  
 
   postgres: 
@@ -35,7 +37,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgresUser"]
+      test: ["CMD-SHELL", "pg_isready -U postgresUser -d directory_service"]
       interval: 5s
       timeout: 5s
       retries: 5

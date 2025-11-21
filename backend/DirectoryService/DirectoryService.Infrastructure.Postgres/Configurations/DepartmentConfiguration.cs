@@ -1,0 +1,77 @@
+using DirectoryService.Domain.Entities;
+using DirectoryService.SharedKernel.ValueObjects;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Path = DirectoryService.SharedKernel.ValueObjects.Path;
+
+namespace DirectoryService.Infrastructure.Postgres.Configurations;
+
+public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
+{
+    public void Configure(EntityTypeBuilder<Department> builder)
+    {
+        builder.ToTable("departments");
+
+        builder.HasKey(x => x.Id);
+
+        builder.Property(d => d.Id)
+            .HasConversion(
+            id => id.Value,
+            value => DepartmentId.Create(value));
+
+        builder.OwnsOne(d => d.Name, name =>
+        {
+            name.Property(name => name.Value)
+           .HasColumnName("name")
+           .HasMaxLength(Name.MAX_LENGTH)
+           .IsRequired();
+        });
+
+        builder.OwnsOne(d => d.Identifier, ident =>
+        {
+            ident.Property(ident => ident.Value)
+           .HasColumnName("identifier")
+           .HasMaxLength(Identifier.MAX_LENGTH)
+           .IsRequired();
+        });
+
+        builder.OwnsOne(d => d.Path, path =>
+        {
+            path.Property(path => path.Value)
+           .HasColumnName("path")
+           .HasMaxLength(Path.MAX_LENGTH)
+           .IsRequired();
+        });
+
+        builder.Property(d => d.ParentId)
+        .HasColumnName("parent_id")
+        .IsRequired(false);
+
+        builder.HasMany(d => d.DepartmentOffices)
+            .WithOne() 
+            .HasForeignKey(dl => dl.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(d => d.DepartmentPositions)
+            .WithOne() 
+            .HasForeignKey(dl => dl.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(d => d.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false);
+
+        builder.Property(d => d.DeletionDate)
+            .HasColumnName("deletion_date")
+            .IsRequired(false);
+
+        builder.Property(d => d.CreatedAt)
+            .HasColumnName("created_at")
+            .IsRequired();
+
+        builder.Property(d => d.UpdatedAt)
+            .HasColumnName("updated_at")
+            .IsRequired();
+    }
+}
