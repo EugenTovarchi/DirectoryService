@@ -14,8 +14,8 @@ public class DepartmentPosition
         PositionId = positionId;
         DepartmentId = departmentId;
     }
-    public Guid PositionId { get; private set; }
-    public Guid DepartmentId { get; private set; }
+    public PositionId PositionId { get; private set; } = null!;
+    public DepartmentId DepartmentId { get; private set; } = null!;
 
     public static Result<DepartmentPosition, Error> Create(PositionId positionId, DepartmentId departmentId)
     {

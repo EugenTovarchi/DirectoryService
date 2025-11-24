@@ -49,12 +49,12 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
         .IsRequired(false);
 
         builder.HasMany(d => d.DepartmentOffices)
-            .WithOne() 
+            .WithOne()
             .HasForeignKey(dl => dl.DepartmentId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(d => d.DepartmentPositions)
-            .WithOne() 
+            .WithOne()
             .HasForeignKey(dl => dl.DepartmentId)
             .OnDelete(DeleteBehavior.Restrict);
 

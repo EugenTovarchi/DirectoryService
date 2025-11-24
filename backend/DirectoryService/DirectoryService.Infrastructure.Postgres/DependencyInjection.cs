@@ -1,4 +1,5 @@
 using DirectoryService.Infrastructure.Postgres.DbContexts;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,8 +21,7 @@ public static class DependencyInjection
         {
             throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
         }
-        services.AddSingleton(connectionString);
-        services.AddScoped<DirectoryServiceDbContext>(_ => new DirectoryServiceDbContext(connectionString)); ;
+        services.AddDbContext<DirectoryServiceDbContext>(options => options.UseNpgsql(connectionString));
 
         return services;
     }

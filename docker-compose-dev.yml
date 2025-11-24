@@ -5,13 +5,17 @@ services:
         context: .
         dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
     ports:
-      - "9002:8080"
+      - "9002:8080" 
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
-      - ASPNETCORE_URLS=http://+9002    
-    volumes:
-      - ./backend/DirectoryService/DirectoryService.Web/appsettings.Docker.json:/app/appsettings.Docker.json
-      - ./backend/DirectoryService/DirectoryService.Web/appsettings.json:/app/appsettings.json
+      - ASPNETCORE_ENVIRONMENT=Development  
+      - ASPNETCORE_URLS=http://+:8080"
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=directory_service;Username=postgresUser;Password=postgresPassword
+      - Serilog__WriteTo__1__Args__serverUrl=http://seq:5341- 
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
     restart: always
 
   seq:
