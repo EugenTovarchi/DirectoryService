@@ -10,9 +10,9 @@ public class DirectoryServiceDbContext : DbContext
         : base(options)
     {
     }
-    DbSet<Department> Departments => Set<Department>();
-    DbSet<Location> Locations => Set<Location>();
-    DbSet<Position> Positions => Set<Position>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Position> Positions => Set<Position>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

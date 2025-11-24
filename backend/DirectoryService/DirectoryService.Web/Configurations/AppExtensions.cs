@@ -11,6 +11,7 @@ public static class AppExtensions
         app.UseRequestCorrelationId();
 
         app.UseAuthorization();
+        app.MapControllers();
 
         if (app.Environment.IsDevelopment())
         {

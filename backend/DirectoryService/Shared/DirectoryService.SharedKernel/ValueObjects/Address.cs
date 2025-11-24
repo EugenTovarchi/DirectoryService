@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using System.Text.Json.Serialization;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -10,7 +11,7 @@ public record Address
     public int House { get; }
     public int? Flat { get; }
 
-
+    [JsonConstructor]
     private Address(string city, string street, int house, int? flat = null)
     {
         City = city.Trim();

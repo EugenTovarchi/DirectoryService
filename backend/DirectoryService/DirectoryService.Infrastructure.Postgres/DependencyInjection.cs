@@ -1,4 +1,6 @@
+using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
+using DirectoryService.Infrastructure.Postgres.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,7 @@ public static class DependencyInjection
             throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
         }
         services.AddDbContext<DirectoryServiceDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddScoped<ILocationRepository, LocationRepository>();
 
         return services;
     }

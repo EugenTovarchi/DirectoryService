@@ -5,6 +5,7 @@ namespace DirectoryService.SharedKernel.ValueObjects;
 public record Name
 {
     public const int MAX_LENGTH = 120;
+    public const int MIN_LENGTH = 3;
     public string Value { get; } = string.Empty;
     private Name(string value)
     {
@@ -15,7 +16,7 @@ public record Name
 
     public static Result<Name, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH && value.Length < 3)
+        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH && value.Length < MIN_LENGTH)
         {
             return Errors.General.ValueIsInvalid("name");
         }

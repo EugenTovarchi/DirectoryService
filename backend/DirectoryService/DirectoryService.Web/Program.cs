@@ -1,3 +1,4 @@
+using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
@@ -29,9 +30,11 @@ public class Program
             builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
+            builder.Services.AddControllers();
 
             builder.Services
-                .AddDirectoryServiceInfrastructure(builder.Configuration);
+                .AddDirectoryServiceInfrastructure(builder.Configuration)
+                .AddApplication();
 
             var app = builder.Build();
 
