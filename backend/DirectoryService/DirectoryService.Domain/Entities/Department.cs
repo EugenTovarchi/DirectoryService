@@ -56,8 +56,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         Name name,
         Identifier identifier,
         Path path,
-        short depth,
-        DateTime updateTime)
+        short depth)
     {
         Name = name;
         Identifier = identifier;

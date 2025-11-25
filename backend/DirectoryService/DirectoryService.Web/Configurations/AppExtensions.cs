@@ -7,21 +7,22 @@ public static class AppExtensions
 {
     public static IApplicationBuilder WebConfigure (this WebApplication app)
     {
+        app.UseRouting();
         app.UseRequestCorrelationId();
+
+        app.UseAuthorization();
 
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "DeviceService v1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Directory Service v1");
+                c.RoutePrefix = "swagger";
             });
         }
-
+        
         app.UseSerilogRequestLogging();
-        app.UseRequestCorrelationId();
-        app.UseAuthorization();
-        app.UseRouting();
 
         return app;
     }

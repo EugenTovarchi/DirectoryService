@@ -1,3 +1,4 @@
+using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
 using System.Globalization;
@@ -6,7 +7,7 @@ namespace DirectoryService.Web;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public async static Task Main(string[] args)
     {
 
         Log.Logger = new LoggerConfiguration()
@@ -21,18 +22,24 @@ public class Program
             var environment = builder.Environment.EnvironmentName;
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
+            builder.Configuration.AddUserSecrets<Program>();
 
-            builder.Configuration.AddEnvironmentVariables(); //поддержка переменных окружения
+            builder.Configuration.AddEnvironmentVariables();
 
             builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
 
+            builder.Services
+                .AddDirectoryServiceInfrastructure(builder.Configuration);
+
             var app = builder.Build();
+
+            await app.ApplyMigrations();
 
             app.WebConfigure();
 
-            app.Run();
+            await app.RunAsync();
         }
         catch (Exception ex)
         {
@@ -40,7 +47,7 @@ public class Program
         }
         finally
         {
-            Log.CloseAndFlushAsync();
+            await Log.CloseAndFlushAsync();
         }
     }
 }

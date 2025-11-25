@@ -16,13 +16,11 @@ public static class DependencyInjectionExtensions
 
     public static IServiceCollection AddOpenApiSpec(this IServiceCollection services)
     {
-        services.AddOpenApi();
-
         services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "DeviceService",
+                Title = "DirectoryService",
                 Version = "v1",
                 Contact = new OpenApiContact
                 {

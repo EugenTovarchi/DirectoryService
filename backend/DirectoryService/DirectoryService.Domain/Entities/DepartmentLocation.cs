@@ -13,8 +13,8 @@ public class DepartmentLocation
         LocationId = locationId;
         DepartmentId = departmentId;
     }
-    public Guid LocationId { get; private set; }
-    public Guid DepartmentId { get; private set; }
+    public LocationId LocationId { get; private set; } = null!;
+    public DepartmentId DepartmentId { get; private set; } = null!;
 
     public static Result<DepartmentLocation, Error>Create (LocationId locationId, DepartmentId departmentId)
     {
