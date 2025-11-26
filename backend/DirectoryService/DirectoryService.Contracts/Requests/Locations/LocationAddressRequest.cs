@@ -1,7 +1,8 @@
 namespace DirectoryService.Contracts.Requests.Locations;
 
 public record LocationAddressRequest(
+    string Country,
     string City,
     string Street,
-    int House,
+    string House,
     int? Flat = null);

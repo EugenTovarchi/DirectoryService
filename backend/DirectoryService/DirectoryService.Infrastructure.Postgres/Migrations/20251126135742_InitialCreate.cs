@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DirectoryService.Infrastructure.Postgres.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -21,8 +21,8 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                     parent_id = table.Column<Guid>(type: "uuid", nullable: true),
                     path = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Depth = table.Column<short>(type: "smallint", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     deletion_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -37,13 +37,14 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    time_zone = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    city = table.Column<string>(type: "text", nullable: false),
+                    country = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    city = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    street = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    house = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     flat = table.Column<int>(type: "integer", nullable: true),
-                    house = table.Column<int>(type: "integer", nullable: false),
-                    street = table.Column<string>(type: "text", nullable: false),
+                    time_zone = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     deletion_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -59,8 +60,8 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     deletion_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },

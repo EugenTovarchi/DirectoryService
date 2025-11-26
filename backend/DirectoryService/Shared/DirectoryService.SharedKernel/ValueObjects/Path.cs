@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using System.Text.RegularExpressions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -20,6 +21,8 @@ public  record Path
             return Errors.General.ValueIsInvalid("path");
         }
 
-        return new Path(value);
+        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+
+        return new Path(normilized);
     }
 }

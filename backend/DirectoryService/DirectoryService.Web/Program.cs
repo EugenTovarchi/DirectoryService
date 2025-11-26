@@ -1,6 +1,7 @@
 using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
+using DirectoryService.Web.Middlewares;
 using Serilog;
 using System.Globalization;
 
@@ -34,7 +35,7 @@ public class Program
 
             builder.Services
                 .AddDirectoryServiceInfrastructure(builder.Configuration)
-                .AddApplication();
+                .AddDirectoryServiceApplication();
 
             var app = builder.Build();
 

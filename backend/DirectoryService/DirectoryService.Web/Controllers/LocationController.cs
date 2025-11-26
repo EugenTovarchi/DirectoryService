@@ -21,6 +21,6 @@ public class LocationController : ApplicationController
         if (result.IsFailure)
             return result.Error.ToResponse();
 
-        return Ok(result.Value);
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 }

@@ -7,7 +7,7 @@ namespace DirectoryService.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddDirectoryServiceApplication(this IServiceCollection services)
     {
         services
             .AddQueries()

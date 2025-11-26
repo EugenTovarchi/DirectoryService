@@ -38,42 +38,32 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
             return validationResult.ToErrors();
         }
 
-        var locationNameResult = Name.Create(command.Request.LocationName);
-        if (locationNameResult.IsFailure)
-        {
-            _logger.LogError("Location name:{locationName} is invalid", command.Request.LocationName);
-            return locationNameResult.Error.ToFailure();
-        }
+        var locationName = Name.Create(command.Request.LocationName).Value;
 
-        var locationTimeZoneResult = TimeZone.Create(command.Request.TimeZone);
-        if (locationTimeZoneResult.IsFailure)
-        {
-            _logger.LogError("Location time zone:{timeZone} is invalid", command.Request.TimeZone);
-            return locationTimeZoneResult.Error.ToFailure();
-        }
+        var locationTimeZone = TimeZone.Create(command.Request.TimeZone).Value;
 
-        var locationAddressResult = command.Request.LocationAddress.Flat is null
+
+        var locationAddress = command.Request.LocationAddress.Flat is null
         ? Address.Create(
+        command.Request.LocationAddress.Country,
         command.Request.LocationAddress.City,
         command.Request.LocationAddress.Street,
-        command.Request.LocationAddress.House)
+        command.Request.LocationAddress.House).Value
         : Address.CreateWithFlat(
+        command.Request.LocationAddress.Country,
         command.Request.LocationAddress.City,
         command.Request.LocationAddress.Street,
         command.Request.LocationAddress.House,
-        command.Request.LocationAddress.Flat.Value);
+        command.Request.LocationAddress.Flat.Value).Value;
 
-        if (locationAddressResult.IsFailure)
-        {
-            _logger.LogError("Location address is invalid");
-            return locationAddressResult.Error.ToFailure();
-        }
-
-        var locationResult = Location.Create(locationNameResult.Value, locationTimeZoneResult.Value, locationAddressResult.Value);
+        var locationResult = Location.Create(locationName, locationTimeZone, locationAddress);
         if (locationResult.IsFailure)
             return locationResult.Error.ToFailure();
 
-        await _locationRepository.Add(locationResult.Value, ct);
+        var result = await _locationRepository.Add(locationResult.Value, ct);
+        if(result.IsFailure)
+            return result.Error.ToFailure();
+
         _logger.LogInformation("Location: {location} was created", locationResult.Value.Id.Value);
 
         return locationResult.Value.Id.Value;

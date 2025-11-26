@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace DirectoryService.SharedKernel;
 
 public record Error
@@ -42,6 +44,8 @@ public record Error
         return string.Join(SEPARATOR, Code, Message, Type);
     }
 
+    public string GetMessage() => Message;
+
 
     /// Собираем ошибку из строки с данными ошибки
     public static Error Deserialize(string serialized)
@@ -61,6 +65,8 @@ public record Error
         return new Error(parts[0], parts[1], type);
     }
 }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ErrorType
 {
     None,

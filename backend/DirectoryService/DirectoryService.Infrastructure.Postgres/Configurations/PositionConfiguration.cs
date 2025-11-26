@@ -51,10 +51,14 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
 
         builder.Property(p => p.CreatedAt)
             .HasColumnName("created_at")
+            .HasDefaultValueSql("timezone('utc',now())")
             .IsRequired();
 
         builder.Property(p => p.UpdatedAt)
+            .HasDefaultValueSql("timezone('utc',now())")
             .HasColumnName("updated_at")
             .IsRequired();
+
+        builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }

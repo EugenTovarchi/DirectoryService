@@ -1,4 +1,5 @@
-using CSharpFunctionalExtensions; 
+using CSharpFunctionalExtensions;
+using System.Text.RegularExpressions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -16,11 +17,13 @@ public record Name
 
     public static Result<Name, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH && value.Length < MIN_LENGTH)
+        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH || value.Length < MIN_LENGTH)
         {
             return Errors.General.ValueIsInvalid("name");
         }
 
-        return new Name(value);
+        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+
+        return new Name(normilized);
     }
 }
