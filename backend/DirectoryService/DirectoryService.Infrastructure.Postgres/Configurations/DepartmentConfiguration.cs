@@ -67,11 +67,15 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .IsRequired(false);
 
         builder.Property(d => d.CreatedAt)
+            .HasDefaultValueSql("timezone('utc',now())")
             .HasColumnName("created_at")
             .IsRequired();
 
         builder.Property(d => d.UpdatedAt)
+            .HasDefaultValueSql("timezone('utc',now())")
             .HasColumnName("updated_at")
             .IsRequired();
+
+        builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }

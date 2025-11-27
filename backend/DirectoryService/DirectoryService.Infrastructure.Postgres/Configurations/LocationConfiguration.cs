@@ -7,6 +7,11 @@ using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
 namespace DirectoryService.Infrastructure.Postgres.Configurations;
 
+public static class LocationConstants
+{
+    public const int MAX_LENGTH = 50;
+}
+
 public class LocationConfiguration : IEntityTypeConfiguration<Location>
 {
     public void Configure(EntityTypeBuilder<Location> builder)
@@ -29,14 +34,33 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
                 .IsRequired();
         });
 
-        builder.ComplexProperty(l => l.Address, address =>
+        builder.OwnsOne(l => l.Address, address =>
         {
-            address.Property(a => a.City).HasColumnName("city").IsRequired();
-            address.Property(a => a.Street).HasColumnName("street").IsRequired();
-            address.Property(a => a.House).HasColumnName("house").IsRequired();
-            address.Property(a => a.Flat).HasColumnName("flat");
-        });
+            address.Property(a => a.Country)
+                .HasColumnName("country")
+                .HasMaxLength(100)
+                .IsRequired();
 
+            address.Property(a => a.City)
+                .HasColumnName("city")
+                .HasMaxLength(100)
+                .IsRequired();
+
+            address.Property(a => a.Street)
+                .HasColumnName("street")
+                .HasMaxLength(200)
+                .IsRequired();
+
+            address.Property(a => a.House)
+                .HasColumnName("house")
+                .HasMaxLength(20)
+                .IsRequired();
+
+            address.Property(a => a.Flat)
+                .HasColumnName("flat")
+                .IsRequired(false);
+        });
+       
         builder.OwnsOne(l => l.TimeZone, timeZone =>
         {
             timeZone.Property(tz => tz.Value)
@@ -59,12 +83,16 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
             .IsRequired(false);
 
         builder.Property(l => l.CreatedAt)
+            .HasDefaultValueSql("timezone('utc',now())")
             .HasColumnName("created_at")
             .IsRequired();
 
         builder.Property(l => l.UpdatedAt)
+            .HasDefaultValueSql("timezone('utc',now())")
             .HasColumnName("updated_at")
             .IsRequired();
+
+        builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }
 

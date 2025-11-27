@@ -1,10 +1,13 @@
 using CSharpFunctionalExtensions;
+using System.Text.RegularExpressions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
 public record Identifier
 {
     public const int MAX_LENGTH = 150;
+    public const int MIN_LENGTH = 3;
+
     public string Value { get; } = string.Empty;
     private Identifier(string value)
     {
@@ -15,11 +18,13 @@ public record Identifier
 
     public static Result<Identifier, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH && value.Length < 3)
+        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH || value.Length < MIN_LENGTH)
         {
             return Errors.General.ValueIsInvalid("identifier");
         }
 
-        return new Identifier(value);
+        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+
+        return new Identifier(normilized);
     }
 }

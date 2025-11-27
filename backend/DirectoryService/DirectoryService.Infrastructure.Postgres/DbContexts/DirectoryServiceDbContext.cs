@@ -10,14 +10,14 @@ public class DirectoryServiceDbContext : DbContext
         : base(options)
     {
     }
-    DbSet<Department> Departments => Set<Department>();
-    DbSet<Location> Locations => Set<Location>();
-    DbSet<Position> Positions => Set<Position>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Position> Positions => Set<Position>();
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.EnableSensitiveDataLogging();
-    }
+    //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    //{
+    //    optionsBuilder.EnableSensitiveDataLogging();
+    //}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +27,6 @@ public class DirectoryServiceDbContext : DbContext
         modelBuilder.ApplyConfiguration(new PositionConfiguration());
         modelBuilder.ApplyConfiguration(new DepartmentLocationConfiguration());
         modelBuilder.ApplyConfiguration(new DepartmentPositionConfiguration());
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
+        //AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
     }
 }

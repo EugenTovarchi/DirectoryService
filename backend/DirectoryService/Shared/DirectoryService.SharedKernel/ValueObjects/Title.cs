@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using System.Text.RegularExpressions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -20,6 +21,8 @@ public record Title
             return Errors.General.ValueIsInvalid("title");
         }
 
-        return new Title(value);
+        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+
+        return new Title(normilized);
     }
 }

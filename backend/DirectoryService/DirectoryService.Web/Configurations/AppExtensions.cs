@@ -8,9 +8,11 @@ public static class AppExtensions
     public static IApplicationBuilder WebConfigure (this WebApplication app)
     {
         app.UseRouting();
+        app.UseExceptionMiddleware(); 
         app.UseRequestCorrelationId();
 
         app.UseAuthorization();
+        app.MapControllers();
 
         if (app.Environment.IsDevelopment())
         {
