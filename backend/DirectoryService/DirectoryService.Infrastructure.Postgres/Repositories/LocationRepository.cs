@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
 public class LocationRepository : ILocationRepository
@@ -19,6 +18,17 @@ public class LocationRepository : ILocationRepository
     {
         _dbContext = dbContext;
         _logger = logger;
+    }
+
+    public async Task<Result<bool, Error>> IsLocationExistAsync(Guid locationId, CancellationToken cancellationToken = default)
+    {
+        var isLocationExist = await _dbContext.Locations
+            .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+        if (isLocationExist is null)
+            return Errors.General.NotFoundEntity("location");
+
+        return true;
     }
 
     public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)

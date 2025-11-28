@@ -75,7 +75,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         return Result.Success<Error>();
     }
 
-    internal static Result<Department,Error> Create(
+    public static Result<Department, Error> Create(
         Name name,
         Identifier identifier,
         Path path,
@@ -128,7 +128,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     public UnitResult<Error> RemoveLocation(LocationId locationId)
     {
         if (locationId == null || locationId == LocationId.EmptyLocationId())
-            return Errors.General.ValueIsInvalid(nameof(locationId));
+            return Errors.General.ValueIsInvalid("locationId");
 
         var departmentLocation = _departmentLocations.FirstOrDefault(dl => dl.LocationId == locationId);
         if (departmentLocation == null)
@@ -139,7 +139,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
         return Result.Success<Error>();
     }
-    public UnitResult<Error> AddPosition(PositionId positionId)
+    public UnitResult<Error> AddPosition(PositionId positionId, DepartmentId departmentId)
     {
         if (positionId == null || positionId == PositionId.EmptyPositionId())
             return Errors.General.ValueIsInvalid("locationId");
@@ -147,7 +147,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         if (_departmentPositions.Any(dl => dl.PositionId == positionId))
             return Errors.General.Duplicate("positionId");
 
-        var departmentPositionResult = DepartmentPosition.Create(positionId, Id);
+        var departmentPositionResult = DepartmentPosition.Create(positionId, departmentId);
         if (departmentPositionResult.IsFailure)
             return departmentPositionResult.Error;
 

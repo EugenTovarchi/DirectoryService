@@ -25,7 +25,6 @@ public sealed class Position : SoftDeletableEntity<PositionId>
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
-    //Локацию позиции если что будем доставить из Department? Чтобы не городить тут связи.
     private readonly List<DepartmentPosition> _departmentPositions = [];
     public IReadOnlyCollection<DepartmentPosition> DepartmentPositions => _departmentPositions.ToList();
     public override void Delete()
@@ -63,7 +62,7 @@ public sealed class Position : SoftDeletableEntity<PositionId>
         return this;
     }
 
-    public static Result<Position, Error> Create(
+    public static Result<Position, Error> CreateWithDescription(
         Name name,
         Description description)
     {
@@ -77,5 +76,48 @@ public sealed class Position : SoftDeletableEntity<PositionId>
         var position = new Position( positionId, name, description);
 
         return position;
+    }
+    public static Result<Position, Error> CreateWithoutDescription(Name name)
+    {
+        if (name is null)
+            return Errors.General.ValueIsInvalid("name");
+
+        var positionId = PositionId.NewPositionId();
+        var position = new Position( positionId, name, null);
+
+        return position;
+    }
+
+    public UnitResult<Error> AddDepartmentPosition(DepartmentId departmentId)
+    {
+        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
+            return Errors.General.ValueIsInvalid("locationId");
+
+        if (_departmentPositions.Any(dl => dl.DepartmentId == departmentId))
+            return Errors.General.Duplicate("departmentId");
+
+        var departmentPositionResult = DepartmentPosition.Create(Id, departmentId);
+        if (departmentPositionResult.IsFailure)
+            return departmentPositionResult.Error;
+
+        _departmentPositions.Add(departmentPositionResult.Value);
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    public UnitResult<Error> RemoveDepartmentPosition(DepartmentId departmentId)
+    {
+        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
+            return Errors.General.ValueIsInvalid("departmentId");
+
+        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.DepartmentId == departmentId);
+        if (departmentPosition == null)
+            return Errors.General.NotFound(departmentId.Value);
+
+        _departmentPositions.Remove(departmentPosition);
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
     }
 }
