@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DirectoryService.Infrastructure.Postgres.Migrations
 {
     [DbContext(typeof(DirectoryServiceDbContext))]
-    [Migration("20251126135751_CreateIndexes")]
+    [Migration("20251127123201_CreateIndexes")]
     partial class CreateIndexes
     {
         /// <inheritdoc />

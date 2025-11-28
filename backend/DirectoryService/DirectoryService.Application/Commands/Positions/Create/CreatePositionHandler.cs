@@ -1,0 +1,84 @@
+using CSharpFunctionalExtensions;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.Core.Validation;
+using DirectoryService.Domain.Entities;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
+using FluentValidation;
+using Microsoft.Extensions.Logging;
+
+namespace DirectoryService.Application.Commands.Positions.Create;
+
+public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand>
+{
+    private readonly IPositionRepository _positionRepository;
+    private readonly IDepartmentRepository _departmentRepository;
+    private readonly IValidator<CreatePositionCommand> _validator;
+    private readonly ILogger<CreatePositionHandler> _logger;
+    public CreatePositionHandler(
+        IPositionRepository positionRepository,
+        IDepartmentRepository departmentRepository,
+        IValidator<CreatePositionCommand> validator,
+        ILogger<CreatePositionHandler> logger)
+    {
+        _positionRepository = positionRepository;
+        _departmentRepository = departmentRepository;
+        _validator = validator;
+        _logger = logger;
+    }
+    public async Task<Result<Guid, Failure>> Handle(CreatePositionCommand command, CancellationToken cancellationToken)
+    {
+        if (command == null)
+            return Errors.General.ValueIsInvalid("command").ToFailure();
+
+        var validationResult = await _validator.ValidateAsync(command, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            _logger.LogWarning("Position: {command} is invalid!", command.Request.PositionName);
+
+            return validationResult.ToErrors();
+        }
+
+        var positionName = Name.Create(command.Request.PositionName);
+        if (positionName.IsFailure)
+            return positionName.Error.ToFailure();
+
+        var positionResult = command.Request.Description is not null
+            ? Position.CreateWithDescription(positionName.Value, Description.Create(command.Request.Description).Value)
+            : Position.CreateWithoutDescription(positionName.Value);
+        if(positionResult.IsFailure)
+            return positionResult.Error.ToFailure();
+
+        var position = positionResult.Value;
+
+        if (command.Request.DepartmentIds != null && command.Request.DepartmentIds.Any())
+        {
+            foreach (var departmentId in command.Request.DepartmentIds)
+            {
+                var addDepartmentPositionResult = position.AddDepartmentPosition(DepartmentId.Create(departmentId));
+                if (addDepartmentPositionResult.IsFailure)
+                    return addDepartmentPositionResult.Error.ToFailure();
+            }
+        }
+
+        var saveResult = await _positionRepository.AddAsync(position, cancellationToken);
+        if (saveResult.IsFailure)
+            return saveResult.Error.ToFailure();
+
+        _logger.LogInformation("Position {PositionId} created successfully", positionResult.Value.Id.Value);
+        return positionResult.Value.Id.Value;
+    }
+
+    private async Task<Result<bool, Error>> CheckDepartments(IEnumerable<Guid> departmentsIds, CancellationToken ct = default)
+    {
+        foreach (var departmentsId in departmentsIds)
+        {
+            var locationExists = await _departmentRepository.IsDepartmentExistAsync(departmentsId, ct);
+            if (locationExists.IsFailure)
+                return locationExists.Error;
+        }
+
+        return true;
+    }
+}

@@ -4,7 +4,7 @@ using DirectoryService.SharedKernel.ValueObjects;
 using FluentValidation;
 using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
-namespace DirectoryService.Application.Commands.Locations.CreateLocation;
+namespace DirectoryService.Application.Commands.Locations.Create;
 
 public class CreateLocationValidator : AbstractValidator<CreateLocationCommand>
 {

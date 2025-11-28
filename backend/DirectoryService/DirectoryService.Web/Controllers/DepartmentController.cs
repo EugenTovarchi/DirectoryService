@@ -1,20 +1,20 @@
-using DirectoryService.Application.Commands.Locations.Create;
-using DirectoryService.Contracts.Requests.Locations;
-using DirectoryService.Core.Abstractions;
+using DirectoryService.Application.Commands.Departments;
+using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Framework.ControllersResults;
+using DirectoryService.Core.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DirectoryService.Web.Controllers;
 
-public class LocationController : ApplicationController
+public class DepartmentController : ApplicationController
 {
-    [HttpPost("api/locations")]
+    [HttpPost("api/departments")]
     public async Task<IActionResult> Create(
-       [FromBody] CreateLocationRequest request,
-       [FromServices] CreateLocationHandler handler,
+       [FromBody] CreateDepartmentRequest request,
+       [FromServices] CreateDepartmentHandler handler,
        CancellationToken cancellationToken)
     {
-        var command = new CreateLocationCommand(request);
+        var command = new CreateDepartmentCommand(request);
 
         var result = await handler.Handle(command, cancellationToken);
 
