@@ -33,12 +33,21 @@ public static class DependencyInjection
                 throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
             }
 
+            options.LogTo(message =>
+            {
+                if (message.Contains("Error", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("Exception", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[EF] {message}");
+                }
+            }, LogLevel.Error); 
+
             if (hostEnvironment.IsDevelopment())
             {
                 options.EnableDetailedErrors();
             }
 
-            options.UseLoggerFactory(loggerFactory);
+            //options.UseLoggerFactory(loggerFactory);
         });
 
         return services;
