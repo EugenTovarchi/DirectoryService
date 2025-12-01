@@ -7,7 +7,6 @@ using DirectoryService.SharedKernel.ValueObjects;
 using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using Path = DirectoryService.SharedKernel.ValueObjects.Path;
 
 namespace DirectoryService.Application.Commands.Departments;
 
@@ -46,22 +45,32 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         if (departmentResult.IsFailure)
             return departmentResult.Error.ToFailure();
 
+        var department = departmentResult.Value;
+
+        if (command.Request.LocationIds.Any())
+        {
+            var locationsCheck = await CheckLocationsExist(command.Request.LocationIds, cancellationToken);
+            if (locationsCheck.IsFailure)
+                return locationsCheck.Error.ToFailure();
+
+
+            var addLocationsResult = AddLocations(command.Request.LocationIds, department);
+            if(addLocationsResult.IsFailure)
+                return addLocationsResult.Error.ToFailure();
+        }
+
         var saveResult = await _departmentRepository.AddAsync(departmentResult.Value, cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
 
         _logger.LogInformation("Department {DepartmentId} created successfully", departmentResult.Value.Id.Value);
-        return departmentResult.Value.Id.Value;
+        return department.Id.Value;
     }
 
     private async Task<Result<Department, Error>> CreateDepartment(
         CreateDepartmentCommand command,
         CancellationToken cancellationToken)
     {
-        var locationsCheck = await CheckLocations(command.Request.LocationIds, cancellationToken);
-        if (locationsCheck.IsFailure)
-            return locationsCheck.Error;
-
         var departmentName = Name.Create(command.Request.DepartmentName);
         if (departmentName.IsFailure)
             return departmentName.Error;
@@ -70,73 +79,47 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         if (identifier.IsFailure)
             return identifier.Error;
 
-        var pathInfoResult = await CalculatePathAndDepth(command, cancellationToken);
-        if (pathInfoResult.IsFailure)
-            return pathInfoResult.Error;
-
-        var pathInfo = pathInfoResult.Value;
-
-        var department = Department.Create(
-            departmentName.Value,
-            identifier.Value,
-            pathInfo.Path,
-            pathInfo.Depth,
-            pathInfo.ParentId);
-
-
-        foreach (var locationId in command.Request.LocationIds)
+        if (command.Request.ParentId is null)
         {
-            var addLocationResult = department.Value.AddLocation(LocationId.Create(locationId));
-            if (addLocationResult.IsFailure)
-                return addLocationResult.Error;
-        }
-
-        return department;
-    }
-
-    private async Task<Result<DepartmentPathInfo, Error>> CalculatePathAndDepth(
-        CreateDepartmentCommand command,
-        CancellationToken cancellationToken)
-    {
-        if (command.Request.ParentId == null)
-        {
-            var path = Path.Create(command.Request.Identifier);
-            if (path.IsFailure)
-                return path.Error;
-
-            return new DepartmentPathInfo(path.Value, 0, null);
+            return Department.CreateRoot(departmentName.Value, identifier.Value);
         }
         else
         {
-            var parentResult = await _departmentRepository.GetById(
+            var parent = await _departmentRepository.GetById(
                 DepartmentId.Create(command.Request.ParentId.Value),
                 cancellationToken);
 
-            if (parentResult.IsFailure)
-                return Errors.General.NotFoundEntity("parent_department");
+            if (parent.IsFailure)
+                return Errors.General.NotFoundEntity("parent");
 
-            var parent = parentResult.Value;
-
-            var fullPath = $"{parent.Path.Value}.{command.Request.Identifier}";
-            var path = Path.Create(fullPath);
-            if (path.IsFailure)
-                return path.Error;
-
-            short depth = (short)(parent.Depth + 1);
-
-            return new DepartmentPathInfo(path.Value, depth, command.Request.ParentId);
+            return Department.CreateChild(
+                departmentName.Value,
+                identifier.Value,
+                parent.Value);
         }
     }
 
-    private async Task<Result<bool, Error>> CheckLocations(IEnumerable<Guid> locationIds, CancellationToken ct = default)
+    private async Task<Result<bool, Error>> CheckLocationsExist(
+        IEnumerable<Guid> locationIds,
+        CancellationToken cancellationToken)
+    {
+        var distinctIds = locationIds.Distinct().ToList();
+
+        return await _locationRepository.AllLocationsExistAsync(
+            distinctIds,
+            cancellationToken);
+    }
+
+    private  UnitResult<Error> AddLocations(
+        IEnumerable<Guid> locationIds,
+        Department department)
     {
         foreach (var locationId in locationIds)
         {
-            var locationExists = await _locationRepository.IsLocationExistAsync(locationId, ct);
-            if (locationExists.IsFailure)
-                return locationExists.Error;
+            var addLocationResult = department.AddLocation(LocationId.Create(locationId));
+            if (addLocationResult.IsFailure)
+                return addLocationResult.Error;
         }
-
-        return true;
+        return Result.Success<Error>();
     }
 }

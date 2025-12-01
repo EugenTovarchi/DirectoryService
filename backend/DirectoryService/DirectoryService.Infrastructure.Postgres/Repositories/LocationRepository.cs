@@ -31,6 +31,29 @@ public class LocationRepository : ILocationRepository
         return true;
     }
 
+    public async Task<Result<bool, Error>> AllLocationsExistAsync(
+        IEnumerable<Guid> locationIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestedCount = locationIds.ToList().Count;
+
+            var existingCount = await _dbContext.Locations
+            .Where(l => locationIds.Contains(l.Id) && !l.IsDeleted)
+            .Select(l => l.Id)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+            return requestedCount == existingCount;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking location existence");
+            return Errors.General.DatabaseError("check.locations");
+        }
+    }
+
     public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)
     {
         await _dbContext.Locations.AddAsync(location, cancellationToken);

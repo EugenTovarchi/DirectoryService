@@ -47,19 +47,20 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         var positionResult = command.Request.Description is not null
             ? Position.CreateWithDescription(positionName.Value, Description.Create(command.Request.Description).Value)
             : Position.CreateWithoutDescription(positionName.Value);
-        if(positionResult.IsFailure)
+        if (positionResult.IsFailure)
             return positionResult.Error.ToFailure();
 
         var position = positionResult.Value;
 
         if (command.Request.DepartmentIds != null && command.Request.DepartmentIds.Any())
         {
-            foreach (var departmentId in command.Request.DepartmentIds)
-            {
-                var addDepartmentPositionResult = position.AddDepartmentPosition(DepartmentId.Create(departmentId));
-                if (addDepartmentPositionResult.IsFailure)
-                    return addDepartmentPositionResult.Error.ToFailure();
-            }
+            var departmentsCheck = await CheckDepartments(command.Request.DepartmentIds, cancellationToken);
+            if (departmentsCheck.IsFailure)
+                return departmentsCheck.Error.ToFailure();
+
+            var addDepartmentPositionResult = AddDepartmentPosition(command.Request.DepartmentIds, position);
+            if (addDepartmentPositionResult.IsFailure)
+                return addDepartmentPositionResult.Error.ToFailure();
         }
 
         var saveResult = await _positionRepository.AddAsync(position, cancellationToken);
@@ -70,15 +71,35 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         return positionResult.Value.Id.Value;
     }
 
-    private async Task<Result<bool, Error>> CheckDepartments(IEnumerable<Guid> departmentsIds, CancellationToken ct = default)
+    private async Task<UnitResult<Error>> CheckDepartments(
+    IEnumerable<Guid> departmentIds,
+    CancellationToken cancellationToken)
     {
-        foreach (var departmentsId in departmentsIds)
-        {
-            var locationExists = await _departmentRepository.IsDepartmentExistAsync(departmentsId, ct);
-            if (locationExists.IsFailure)
-                return locationExists.Error;
-        }
+        var distinctIds = departmentIds.Distinct().ToList();
 
-        return true;
+        var allExistResult = await _departmentRepository.AllDepartmentsExistAsync(
+            distinctIds,
+            cancellationToken);
+
+        if (allExistResult.IsFailure)
+            return allExistResult.Error;
+
+        if (!allExistResult.Value)
+            return Errors.General.NotFoundEntity("departments");
+
+        return Result.Success<Error>();
+    }
+
+    private static UnitResult<Error> AddDepartmentPosition(
+        IEnumerable<Guid> departmentIds,
+        Position position)
+    {
+        foreach (var departmentId in departmentIds)
+        {
+            var addLocationResult = position.AddDepartmentPosition(DepartmentId.Create(departmentId));
+            if (addLocationResult.IsFailure)
+                return addLocationResult.Error;
+        }
+        return Result.Success<Error>();
     }
 }

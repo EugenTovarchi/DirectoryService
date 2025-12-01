@@ -19,7 +19,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                     name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     identifier = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     parent_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    path = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    path = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Depth = table.Column<short>(type: "smallint", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "timezone('utc',now())"),

@@ -40,6 +40,28 @@ public  class DepartmentRepository: IDepartmentRepository
 
         return true;
     }
+    public async Task<Result<bool, Error>> AllDepartmentsExistAsync(
+        IEnumerable<Guid> departmentsIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestedCount = departmentsIds.ToList().Count;
+
+            var existingCount = await _dbContext.Departments
+            .Where(l => departmentsIds.Contains(l.Id) && !l.IsDeleted)
+            .Select(l => l.Id)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+            return requestedCount == existingCount;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking departments existence");
+            return Errors.General.DatabaseError("check.departments");
+        }
+    }
 
     public async Task<Result<Guid, Error>> AddAsync(Department department, CancellationToken cancellationToken = default)
     {
