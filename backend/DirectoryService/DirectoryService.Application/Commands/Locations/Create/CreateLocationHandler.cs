@@ -8,7 +8,7 @@ using FluentValidation;
 using Microsoft.Extensions.Logging;
 using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
-namespace DirectoryService.Application.Commands.Locations.CreateLocation;
+namespace DirectoryService.Application.Commands.Locations.Create;
 
 public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand>
 {
@@ -33,7 +33,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         var validationResult = await _validator.ValidateAsync(command, ct);
         if (!validationResult.IsValid)
         {
-            _logger.LogWarning("Вид с {command} не валиден!", command.Request.LocationName);
+            _logger.LogWarning("Location: {command} is invalid!", command.Request.LocationName);
 
             return validationResult.ToErrors();
         }
