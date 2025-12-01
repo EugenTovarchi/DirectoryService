@@ -208,8 +208,8 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
                             b1.Property<string>("Value")
                                 .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
                                 .HasColumnName("path");
 
                             b1.HasKey("DepartmentId");
@@ -233,7 +233,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
             modelBuilder.Entity("DirectoryService.Domain.Entities.DepartmentLocation", b =>
                 {
                     b.HasOne("DirectoryService.Domain.Entities.Department", null)
-                        .WithMany("DepartmentOffices")
+                        .WithMany("DepartmentLocations")
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -398,7 +398,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Department", b =>
                 {
-                    b.Navigation("DepartmentOffices");
+                    b.Navigation("DepartmentLocations");
 
                     b.Navigation("DepartmentPositions");
                 });

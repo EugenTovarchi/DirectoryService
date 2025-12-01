@@ -41,6 +41,7 @@ public class PositionRepository : IPositionRepository
         return true;
     }
 
+
     public async Task<Result<Guid, Error>> AddAsync(Position position, CancellationToken cancellationToken = default)
     {
         await _dbContext.Positions.AddAsync(position, cancellationToken);

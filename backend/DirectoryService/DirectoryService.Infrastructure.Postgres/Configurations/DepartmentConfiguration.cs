@@ -48,9 +48,10 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
         .HasColumnName("parent_id")
         .IsRequired(false);
 
-        builder.HasMany(d => d.DepartmentOffices)
+        builder.HasMany(d => d.DepartmentLocations)
             .WithOne()
             .HasForeignKey(dl => dl.DepartmentId)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(d => d.DepartmentPositions)

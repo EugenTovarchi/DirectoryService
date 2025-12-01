@@ -15,7 +15,7 @@ public sealed class Position : SoftDeletableEntity<PositionId>
         ) : base(positionId)
     {
         Name = name;
-        Description = description;
+        Description = description ?? null;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -58,7 +58,7 @@ public sealed class Position : SoftDeletableEntity<PositionId>
         if (newDescription.Length > 100)
             return Errors.General.ValueIsInvalid("newDescription");
 
-        Name = Name.Create(newDescription).Value;
+        Description = Description.Create(newDescription).Value;
         return this;
     }
 
