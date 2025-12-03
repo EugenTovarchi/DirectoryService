@@ -1,5 +1,5 @@
 using CSharpFunctionalExtensions;
-using IDepartmentRepository = DirectoryService.Application.IDepartmentRepository;
+using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;

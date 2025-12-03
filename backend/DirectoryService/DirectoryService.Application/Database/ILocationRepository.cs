@@ -2,7 +2,7 @@ using CSharpFunctionalExtensions;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
 
-namespace DirectoryService.Application;
+namespace DirectoryService.Application.Database;
 
 public interface ILocationRepository
 {

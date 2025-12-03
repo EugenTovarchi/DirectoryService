@@ -1,4 +1,4 @@
-using DirectoryService.Application;
+using DirectoryService.Application.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
 using Microsoft.EntityFrameworkCore;
