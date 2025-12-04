@@ -31,21 +31,31 @@ public class LocationRepository : ILocationRepository
         return true;
     }
 
-    public async Task<Result<bool, Error>> AllLocationsExistAsync(
+    public async Task<UnitResult<Error>> AllLocationsExistAsync(
         IEnumerable<Guid> locationIds,
         CancellationToken cancellationToken)
     {
         try
         {
-            var requestedCount = locationIds.ToList().Count;
+            var locationIdList = locationIds.Distinct().ToList();
 
-            var existingCount = await _dbContext.Locations
-            .Where(l => locationIds.Contains(l.Id) && !l.IsDeleted)
-            .Select(l => l.Id)
-            .Distinct()
-            .CountAsync(cancellationToken);
+            if (!locationIdList.Any())
+                return Errors.General.ValueIsEmpty("locationIds");
 
-            return requestedCount == existingCount;
+            var allLocationGuids = await _dbContext.Locations
+                .Where(l => !l.IsDeleted)
+                .Select(l => l.Id.Value) 
+                .ToListAsync(cancellationToken);
+
+            var missingIds = locationIdList.Except(allLocationGuids).ToList();
+
+            if (missingIds.Any())
+            {
+                _logger.LogWarning("Missing location IDs: {MissingIds}", missingIds);
+                return Errors.General.NotFoundEntity("locations");
+            }
+
+            return Result.Success<Error>();
         }
         catch (Exception ex)
         {

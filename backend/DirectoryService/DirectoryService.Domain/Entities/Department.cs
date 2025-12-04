@@ -129,6 +129,18 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         return Result.Success<Error>();
     }
 
+    public UnitResult<Error> AddDepartmentLocation(IEnumerable<DepartmentLocation> newLocations)
+    {
+        if (newLocations == null)
+            return Errors.General.ValueIsInvalid("newLocations");
+
+        _departmentLocations.AddRange(newLocations.ToList());
+
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
     public UnitResult<Error> RemoveLocation(LocationId locationId)
     {
         if (locationId == null || locationId == LocationId.EmptyLocationId())

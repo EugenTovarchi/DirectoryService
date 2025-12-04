@@ -6,6 +6,7 @@ using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -40,6 +41,18 @@ public  class DepartmentRepository: IDepartmentRepository
 
         return true;
     }
+    
+    public async Task<UnitResult<Error>>DeleteDepartmentLocationsByDepartmentId(
+        DepartmentId departmentId,
+        CancellationToken cancellationToken= default)
+    {
+        await _dbContext.DepartmentLocations
+           .Where(dl => dl.DepartmentId == departmentId)
+           .ExecuteDeleteAsync(cancellationToken);
+
+        return UnitResult.Success<Error>();
+    }
+
     public async Task<Result<bool, Error>> AllDepartmentsExistAsync(
         IEnumerable<Guid> departmentsIds,
         CancellationToken cancellationToken)

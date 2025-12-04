@@ -14,7 +14,7 @@ public class TransactionManager : ITrasactionManager
     private readonly ILoggerFactory _loggerFactory;
 
     public TransactionManager(
-        DirectoryServiceDbContext dbContext,
+        DirectoryServiceDbContext dbContext,    
         ILogger<TransactionManager> logger,
         ILoggerFactory loggerFactory)
     {
@@ -43,6 +43,7 @@ public class TransactionManager : ITrasactionManager
     {
         try
         {
+            var entries = _dbContext.ChangeTracker.Entries();
             await _dbContext.SaveChangesAsync(cancellationToken);
             return UnitResult.Success<Error>();
         }

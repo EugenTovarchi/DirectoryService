@@ -9,7 +9,7 @@ using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace DirectoryService.Application.Commands.Departments;
+namespace DirectoryService.Application.Commands.Departments.Create;
 
 public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCommand>
 {
@@ -100,15 +100,19 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         }
     }
 
-    private async Task<Result<bool, Error>> CheckLocationsExist(
+    private async Task<UnitResult<Error>> CheckLocationsExist(
         IEnumerable<Guid> locationIds,
         CancellationToken cancellationToken)
     {
         var distinctIds = locationIds.Distinct().ToList();
 
-        return await _locationRepository.AllLocationsExistAsync(
+        var checkResult =  await _locationRepository.AllLocationsExistAsync(
             distinctIds,
             cancellationToken);
+        if(checkResult.IsFailure)
+            return checkResult.Error;
+
+        return checkResult;
     }
 
     private  UnitResult<Error> AddLocations(
