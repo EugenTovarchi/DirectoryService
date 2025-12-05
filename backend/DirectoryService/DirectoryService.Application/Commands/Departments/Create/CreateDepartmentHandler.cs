@@ -50,13 +50,14 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
 
         if (command.Request.LocationIds.Any())
         {
-            var locationsCheck = await CheckLocationsExist(command.Request.LocationIds, cancellationToken);
+            var locationIds = command.Request.LocationIds.Select(id => LocationId.Create(id));
+
+            var locationsCheck = await CheckLocationsExist(locationIds, cancellationToken);
             if (locationsCheck.IsFailure)
                 return locationsCheck.Error.ToFailure();
 
-
-            var addLocationsResult = AddLocations(command.Request.LocationIds, department);
-            if(addLocationsResult.IsFailure)
+            var addLocationsResult = AddLocations(locationIds, department);
+            if (addLocationsResult.IsFailure)
                 return addLocationsResult.Error.ToFailure();
         }
 
@@ -101,27 +102,27 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
     }
 
     private async Task<UnitResult<Error>> CheckLocationsExist(
-        IEnumerable<Guid> locationIds,
+        IEnumerable<LocationId> locationIds,
         CancellationToken cancellationToken)
     {
         var distinctIds = locationIds.Distinct().ToList();
 
-        var checkResult =  await _locationRepository.AllLocationsExistAsync(
+        var checkResult = await _locationRepository.AllLocationsExistAsync(
             distinctIds,
             cancellationToken);
-        if(checkResult.IsFailure)
+        if (checkResult.IsFailure)
             return checkResult.Error;
 
         return checkResult;
     }
 
-    private  UnitResult<Error> AddLocations(
-        IEnumerable<Guid> locationIds,
+    private UnitResult<Error> AddLocations(
+        IEnumerable<LocationId> locationIds,
         Department department)
     {
         foreach (var locationId in locationIds)
         {
-            var addLocationResult = department.AddLocation(LocationId.Create(locationId));
+            var addLocationResult = department.AddLocation(locationId);
             if (addLocationResult.IsFailure)
                 return addLocationResult.Error;
         }

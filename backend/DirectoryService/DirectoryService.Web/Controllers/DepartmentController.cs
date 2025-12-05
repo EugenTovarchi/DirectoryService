@@ -25,7 +25,7 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPut("api/departments/{departmentId:guid}/locations")]
+    [HttpPatch("api/departments/{departmentId:guid}/locations")]
     public async Task<IActionResult> UpdateLocations(
        [FromRoute] Guid departmentId,
        [FromBody] UpdateDepartmentLocationsRequest request,

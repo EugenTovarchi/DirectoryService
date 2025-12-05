@@ -3,6 +3,7 @@ using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -32,36 +33,20 @@ public class LocationRepository : ILocationRepository
     }
 
     public async Task<UnitResult<Error>> AllLocationsExistAsync(
-        IEnumerable<Guid> locationIds,
-        CancellationToken cancellationToken)
+    IEnumerable<LocationId> locationIds,
+    CancellationToken cancellationToken)
     {
-        try
-        {
-            var locationIdList = locationIds.Distinct().ToList();
+        var idList = locationIds.ToList();
 
-            if (!locationIdList.Any())
-                return Errors.General.ValueIsEmpty("locationIds");
+        if (idList.Count == 0)
+            return Errors.General.ValueIsEmpty("locationIds");
 
-            var allLocationGuids = await _dbContext.Locations
-                .Where(l => !l.IsDeleted)
-                .Select(l => l.Id.Value) 
-                .ToListAsync(cancellationToken);
+        var count = await _dbContext.Locations
+            .CountAsync(l => idList.Contains(l.Id) && !l.IsDeleted, cancellationToken);
 
-            var missingIds = locationIdList.Except(allLocationGuids).ToList();
-
-            if (missingIds.Any())
-            {
-                _logger.LogWarning("Missing location IDs: {MissingIds}", missingIds);
-                return Errors.General.NotFoundEntity("locations");
-            }
-
-            return Result.Success<Error>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking location existence");
-            return Errors.General.DatabaseError("check.locations");
-        }
+        return count == idList.Count
+            ? Result.Success<Error>()
+            : Errors.General.NotFoundEntity("location");
     }
 
     public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)
