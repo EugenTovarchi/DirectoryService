@@ -1,5 +1,5 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.Application;
+using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;

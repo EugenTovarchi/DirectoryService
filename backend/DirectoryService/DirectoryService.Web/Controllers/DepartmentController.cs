@@ -1,8 +1,9 @@
-using DirectoryService.Application.Commands.Departments;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Framework.ControllersResults;
 using DirectoryService.Core.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using DirectoryService.Application.Commands.Departments.Create;
+using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 
 namespace DirectoryService.Web.Controllers;
 
@@ -15,6 +16,23 @@ public class DepartmentController : ApplicationController
        CancellationToken cancellationToken)
     {
         var command = new CreateDepartmentCommand(request);
+
+        var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsFailure)
+            return result.Error.ToResponse();
+
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
+    }
+
+    [HttpPatch("api/departments/{departmentId:guid}/locations")]
+    public async Task<IActionResult> UpdateLocations(
+       [FromRoute] Guid departmentId,
+       [FromBody] UpdateDepartmentLocationsRequest request,
+       [FromServices] UpdateDepartmentLocationsHandler handler,
+       CancellationToken cancellationToken)
+    {
+        var command = new UpdateDepartmentLocationsCommand(departmentId,request);
 
         var result = await handler.Handle(command, cancellationToken);
 

@@ -1,4 +1,5 @@
-using DirectoryService.Application;
+using DirectoryService.Application.Database;
+using DirectoryService.Infrastructure.Postgres.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+ using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
 
 namespace DirectoryService.Infrastructure.Postgres;
 
@@ -49,6 +51,8 @@ public static class DependencyInjection
 
             //options.UseLoggerFactory(loggerFactory);
         });
+
+        services.AddScoped<ITrasactionManager, TransactionManager>();
 
         return services;
     }

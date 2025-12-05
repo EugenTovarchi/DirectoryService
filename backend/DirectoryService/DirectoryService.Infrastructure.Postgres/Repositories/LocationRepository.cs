@@ -1,8 +1,9 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.Application;
+using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -31,27 +32,21 @@ public class LocationRepository : ILocationRepository
         return true;
     }
 
-    public async Task<Result<bool, Error>> AllLocationsExistAsync(
-        IEnumerable<Guid> locationIds,
-        CancellationToken cancellationToken)
+    public async Task<UnitResult<Error>> AllLocationsExistAsync(
+    IEnumerable<LocationId> locationIds,
+    CancellationToken cancellationToken)
     {
-        try
-        {
-            var requestedCount = locationIds.ToList().Count;
+        var idList = locationIds.ToList();
 
-            var existingCount = await _dbContext.Locations
-            .Where(l => locationIds.Contains(l.Id) && !l.IsDeleted)
-            .Select(l => l.Id)
-            .Distinct()
-            .CountAsync(cancellationToken);
+        if (idList.Count == 0)
+            return Errors.General.ValueIsEmpty("locationIds");
 
-            return requestedCount == existingCount;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking location existence");
-            return Errors.General.DatabaseError("check.locations");
-        }
+        var count = await _dbContext.Locations
+            .CountAsync(l => idList.Contains(l.Id) && !l.IsDeleted, cancellationToken);
+
+        return count == idList.Count
+            ? Result.Success<Error>()
+            : Errors.General.NotFoundEntity("location");
     }
 
     public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)
