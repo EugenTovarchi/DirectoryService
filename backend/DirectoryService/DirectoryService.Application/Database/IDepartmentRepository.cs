@@ -13,4 +13,7 @@ public interface IDepartmentRepository
     Task<Result<bool, Error>> AllDepartmentsExistAsync(IEnumerable<Guid> departmentsIds, CancellationToken cancellationToken = default);
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
         CancellationToken cancellationToken = default);
+
+    Task<Result<Department, Error>> GetByIdWithLock(Guid departmentId, CancellationToken cancellationToken);
+    Task<UnitResult<Error>> LockDescendantsByPath(string oldPath, CancellationToken cancellationToken);
 }

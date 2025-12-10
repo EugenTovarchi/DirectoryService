@@ -16,6 +16,7 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
         builder.HasKey(x => x.Id);
 
         builder.Property(d => d.Id)
+            .HasColumnName("id")
             .HasConversion(
             id => id.Value,
             value => DepartmentId.Create(value));
@@ -36,17 +37,29 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
            .IsRequired();
         });
 
-        builder.OwnsOne(d => d.Path, path =>
-        {
-            path.Property(path => path.Value)
-           .HasColumnName("path")
-           .HasMaxLength(Path.MAX_LENGTH)
-           .IsRequired();
-        });
+        builder.Property(d => d.Path)
+            .HasConversion(
+            value => value.Value,
+            value => Path.Create(value).Value)
+            .HasColumnName("path")
+            .HasMaxLength(Path.MAX_LENGTH)
+            .HasColumnType("ltree")
+            .IsRequired();
+
+        builder.Property(d => d.Depth)
+            .HasColumnName("depth")
+            .HasColumnType("smallint")
+            .IsRequired();
 
         builder.Property(d => d.ParentId)
         .HasColumnName("parent_id")
         .IsRequired(false);
+
+        builder.HasMany(d => d.ChildrenDepartment)
+            .WithOne()
+            .IsRequired(false)
+            .HasForeignKey(d => d.ParentId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(d => d.DepartmentLocations)
             .WithOne()
@@ -78,5 +91,7 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .IsRequired();
 
         builder.HasQueryFilter(d => !d.IsDeleted);
+
+        builder.HasIndex(d => d.Path).HasMethod("gist").HasDatabaseName("idx_departments_path");
     }
 }

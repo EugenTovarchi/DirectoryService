@@ -75,6 +75,12 @@ public static class Errors
                 "database.error",
                 $"Database {operation} failed");
         }
+        public static Error ResourceLocked(string? field = null)
+        {
+            return Error.Conflict(
+                "database.error",
+                $"{field}  already locked");
+        }
     }
 
 
