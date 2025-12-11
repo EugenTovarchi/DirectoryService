@@ -9,31 +9,35 @@ namespace DirectoryService.Domain.Entities;
 public sealed class Department : SoftDeletableEntity<DepartmentId>
 {
     private Department(DepartmentId id) : base(id) { }
-    private  Department(
+    private Department(
         DepartmentId departmentId,
         Name name,
         Identifier identifier,
         Path path,
         short depth,
-        Guid? parentId
-        ): base (departmentId)
+        DepartmentId? parentId
+        ) : base(departmentId)
     {
         Name = name;
         Identifier = identifier;
         Path = path;
-        Depth = depth; 
+        Depth = depth;
         ParentId = parentId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
     public Name Name { get; private set; } = null!;
     public Identifier Identifier { get; private set; } = null!;
-    public Guid? ParentId { get; private set; }
+    public DepartmentId? ParentId { get; private set; }
     public Path Path { get; private set; } = null!;
     public short Depth { get; private set; }
 
+
+    private readonly List<Department> _childrenDepartment = [];
     private readonly List<DepartmentLocation> _departmentLocations = [];
     private readonly List<DepartmentPosition> _departmentPositions = [];
+
+    public IReadOnlyCollection<Department> ChildrenDepartment => [.. _childrenDepartment];
     public IReadOnlyCollection<DepartmentLocation> DepartmentLocations => [.. _departmentLocations];
     public IReadOnlyCollection<DepartmentPosition> DepartmentPositions => [.. _departmentPositions];
 
@@ -67,9 +71,19 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         return Result.Success<Error>();
     }
 
-    internal UnitResult<Error> SetParentDepartment (Guid parentId)
+    internal UnitResult<Error> SetParentDepartment(DepartmentId parentId)
     {
         ParentId = parentId;
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+    public UnitResult<Error> AddChildren(Department children)
+    {
+        if (children is null)
+            return Errors.General.NotFoundEntity("children");
+
+        _childrenDepartment.Add(children);
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();
@@ -90,13 +104,41 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             parentId: null);
     }
 
+    public UnitResult<Error> MoveTo(Department? newParent)
+    {
+        if (newParent == null)
+        {
+            var pathResult = Path.Create(Identifier.Value);
+            if (pathResult.IsFailure)
+                return pathResult.Error;
+
+            Path = pathResult.Value;
+            Depth = 0;
+            ParentId = null;
+            UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            var pathResult = Path.CreateForChild(newParent.Path, Identifier);
+            if (pathResult.IsFailure)
+                return pathResult.Error;
+
+            Path = pathResult.Value;
+            Depth = (short)(newParent.Depth + 1);
+            ParentId = newParent.Id;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        return Result.Success<Error>();
+    }
+
     public static Result<Department, Error> CreateChild(
         Name name,
         Identifier identifier,
         Department parent)
     {
         if (parent == null)
-           return Errors.General.NotFoundEntity("parent"); 
+            return Errors.General.NotFoundEntity("parent");
 
         var pathResult = Path.CreateForChild(parent.Path, identifier);
         if (pathResult.IsFailure)
@@ -108,7 +150,26 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             identifier,
             pathResult.Value,
             depth: (short)(parent.Depth + 1),
-            parentId: parent.Id.Value);
+            parentId: parent.Id);
+    }
+
+    public UnitResult<Error> MoveAsChildDepartment(Department parent)
+    {
+        if (parent == null)
+            return Errors.General.NotFoundEntity("parent");
+
+        var pathResult = Path.CreateForChild(parent.Path, Identifier);
+        if (pathResult.IsFailure)
+            return pathResult.Error;
+
+        Path = pathResult.Value;
+        Depth = (short)(parent.Depth + 1);
+        ParentId = parent.Id;
+        UpdatedAt = DateTime.UtcNow;
+
+        parent.AddChildren(this);
+
+        return Result.Success<Error>();
     }
 
     public UnitResult<Error> AddLocation(LocationId locationId)

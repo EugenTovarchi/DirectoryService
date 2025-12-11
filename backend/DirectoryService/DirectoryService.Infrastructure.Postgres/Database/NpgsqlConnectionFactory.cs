@@ -1,3 +1,4 @@
+using DirectoryService.Application.Database;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -8,7 +9,7 @@ namespace DirectoryService.Infrastructure.Postgres.Database;
 /// <summary>
 /// Фабрика открывает соединение с БД.
 /// </summary>
-public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable
+public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
 {
     private readonly NpgsqlDataSource _dataSource;
 

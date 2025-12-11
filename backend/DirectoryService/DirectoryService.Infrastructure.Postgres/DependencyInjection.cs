@@ -53,6 +53,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ITrasactionManager, TransactionManager>();
+        services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
 
         return services;
     }

@@ -19,6 +19,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
     private readonly ILogger<UpdateDepartmentLocationsHandler> _logger;
 
     public UpdateDepartmentLocationsHandler(
+
         ITrasactionManager trasactionManager,
         ILocationRepository locationRepository,
         IDepartmentRepository departmentRepository,

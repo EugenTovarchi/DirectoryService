@@ -20,12 +20,14 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                 .HasAnnotation("ProductVersion", "9.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "ltree");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Department", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -38,7 +40,8 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnName("deletion_date");
 
                     b.Property<short>("Depth")
-                        .HasColumnType("smallint");
+                        .HasColumnType("smallint")
+                        .HasColumnName("depth");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -50,6 +53,12 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("parent_id");
 
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("ltree")
+                        .HasColumnName("path");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -57,6 +66,13 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasDefaultValueSql("timezone('utc',now())");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("Path")
+                        .HasDatabaseName("idx_departments_path");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Path"), "gist");
 
                     b.ToTable("departments", (string)null);
                 });
@@ -163,6 +179,11 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Department", b =>
                 {
+                    b.HasOne("DirectoryService.Domain.Entities.Department", null)
+                        .WithMany("ChildrenDepartment")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Name", "Name", b1 =>
                         {
                             b1.Property<Guid>("DepartmentId")
@@ -201,32 +222,10 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasForeignKey("DepartmentId");
                         });
 
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Path", "Path", b1 =>
-                        {
-                            b1.Property<Guid>("DepartmentId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)")
-                                .HasColumnName("path");
-
-                            b1.HasKey("DepartmentId");
-
-                            b1.ToTable("departments");
-
-                            b1.WithOwner()
-                                .HasForeignKey("DepartmentId");
-                        });
-
                     b.Navigation("Identifier")
                         .IsRequired();
 
                     b.Navigation("Name")
-                        .IsRequired();
-
-                    b.Navigation("Path")
                         .IsRequired();
                 });
 
@@ -398,6 +397,8 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Department", b =>
                 {
+                    b.Navigation("ChildrenDepartment");
+
                     b.Navigation("DepartmentLocations");
 
                     b.Navigation("DepartmentPositions");

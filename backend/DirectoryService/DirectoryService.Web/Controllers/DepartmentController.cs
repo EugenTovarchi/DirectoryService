@@ -4,6 +4,7 @@ using DirectoryService.Core.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
+using DirectoryService.Application.Commands.Departments.MoveDepartment;
 
 namespace DirectoryService.Web.Controllers;
 
@@ -33,6 +34,23 @@ public class DepartmentController : ApplicationController
        CancellationToken cancellationToken)
     {
         var command = new UpdateDepartmentLocationsCommand(departmentId,request);
+
+        var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsFailure)
+            return result.Error.ToResponse();
+
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
+    }
+
+    [HttpPut("api/departments/{departmentId}/parent")]
+    public async Task<IActionResult> MoveDepartment(
+       [FromRoute] Guid departmentId,
+       [FromBody] MoveDepartmentRequest request,
+       [FromServices] MoveDepartmentHandler handler,
+       CancellationToken cancellationToken)
+    {
+        var command = new MoveDepartmentCommand(departmentId, request);
 
         var result = await handler.Handle(command, cancellationToken);
 
