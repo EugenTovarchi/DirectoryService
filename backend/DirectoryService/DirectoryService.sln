@@ -28,6 +28,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Framework"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.SharedKernel", "Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj", "{971238B9-0693-4C9A-AFC9-32D6853A1D3F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E17FB8DD-2643-4B3D-8B62-E0D6DA502514}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.IntegrationTests", "tests\DirectoryService.IntegrationTests\DirectoryService.IntegrationTests.csproj", "{5A1506C5-021D-449D-8E34-76D525BED6DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +70,10 @@ Global
 		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +82,7 @@ Global
 		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{E24026D4-7BCD-4528-9DF4-D072F83DEC46} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{971238B9-0693-4C9A-AFC9-32D6853A1D3F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{5A1506C5-021D-449D-8E34-76D525BED6DD} = {E17FB8DD-2643-4B3D-8B62-E0D6DA502514}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1E77C11-7B55-4B7A-B834-5F462CA4C159}
