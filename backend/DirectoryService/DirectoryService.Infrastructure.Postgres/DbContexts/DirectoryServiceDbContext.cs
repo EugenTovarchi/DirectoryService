@@ -10,6 +10,11 @@ public class DirectoryServiceDbContext : DbContext
         : base(options)
     {
     }
+    public DirectoryServiceDbContext(string connectionString)
+       : base(CreateOptions(connectionString))
+    {
+    }
+
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Position> Positions => Set<Position>();
@@ -31,5 +36,12 @@ public class DirectoryServiceDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DepartmentLocationConfiguration());
         modelBuilder.ApplyConfiguration(new DepartmentPositionConfiguration());
         //AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
+    }
+    private static DbContextOptions<DirectoryServiceDbContext> CreateOptions(string connectionString)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<DirectoryServiceDbContext>();
+        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.EnableSensitiveDataLogging();
+        return optionsBuilder.Options;
     }
 }

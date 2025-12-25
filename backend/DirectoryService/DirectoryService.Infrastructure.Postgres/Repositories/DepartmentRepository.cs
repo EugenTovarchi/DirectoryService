@@ -71,7 +71,7 @@ public  class DepartmentRepository: IDepartmentRepository
            .FirstOrDefaultAsync(v => v.Id == departmentId, cancellationToken);
 
         if (department is null)
-            return Errors.General.ValueIsInvalid("department");
+            return Errors.General.NotFoundEntity("department");
 
         return department;
     }
@@ -107,6 +107,41 @@ public  class DepartmentRepository: IDepartmentRepository
         {
             _logger.LogError(ex, "Error locking descendants by path: {Path}", oldPath);
             return Errors.General.DatabaseError("lock.descendants");
+        }
+    }
+
+    public async Task<UnitResult<Error>> UpdateAllDescendants(
+     string oldPath,
+     string newPath,
+     DepartmentId movedDepartmentId,
+     CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+            """
+         UPDATE departments dept
+         SET 
+             path = @NewPath::ltree || subpath(dept.path, nlevel(@OldPath::ltree)),
+             depth = nlevel(@NewPath::ltree) + (dept.depth - nlevel(@OldPath::ltree)),
+             updated_at = @UpdatedAt
+         WHERE dept.is_deleted = false
+                 AND dept.path <@ @OldPath::ltree
+                 AND dept.path != @OldPath::ltree
+                 AND dept.id != @MovedDepartmentId
+         """,
+            new NpgsqlParameter("OldPath", oldPath),
+            new NpgsqlParameter("NewPath", newPath),
+            new NpgsqlParameter("MovedDepartmentId", movedDepartmentId.Value),
+            new NpgsqlParameter("UpdatedAt", DateTime.UtcNow));
+
+            return UnitResult.Success<Error>();
+        }
+
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Update error for descendats of department{movedDepartmentId}", movedDepartmentId);
+            return Errors.General.DatabaseError("update.descendants");
         }
     }
 

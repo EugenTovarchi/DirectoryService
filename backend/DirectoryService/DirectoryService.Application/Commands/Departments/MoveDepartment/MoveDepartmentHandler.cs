@@ -83,7 +83,9 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
 
         var newPath = department.Path.Value;
 
-        await UpdateAllDescendantsPaths(oldPath, newPath, department.Id, cancellationToken);
+        var updateDescendantsResult = await _departmentRepository.UpdateAllDescendants(oldPath, newPath, department.Id, cancellationToken);
+        if (updateDescendantsResult.IsFailure)
+            return updateDescendantsResult.Error.ToFailure();
 
         await _trasactionManager.SaveChangeAsync(cancellationToken);
 
@@ -94,34 +96,5 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         }
 
         return department.Id.Value;
-    }
-
-    private async Task UpdateAllDescendantsPaths(
-            string oldPath,
-            string newPath,
-            DepartmentId movedDepartmentId,
-            CancellationToken cancellationToken)
-    {
-        const string sql = """
-        UPDATE departments dept
-        SET 
-            path = @NewPath::ltree || subpath(dept.path, nlevel(@OldPath::ltree) - 1),
-            depth = nlevel(@NewPath::ltree) + 
-                    (dept.depth - nlevel(@OldPath::ltree)),
-            updated_at = @UpdatedAt
-        WHERE dept.is_deleted = false
-          AND dept.path <@ @OldPath::ltree
-          AND dept.id != @MovedDepartmentId
-        """;
-
-        using var connection = await _pgsqlConnectionFactory.CreateConnectionAsync(cancellationToken);
-
-        await connection.ExecuteAsync(sql, new
-        {
-            OldPath = oldPath,
-            NewPath = newPath,
-            MovedDepartmentId = movedDepartmentId.Value,
-            UpdatedAt = DateTime.UtcNow
-        });
     }
 }

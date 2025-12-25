@@ -19,7 +19,14 @@ public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlCon
         dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
 
         _dataSource = dataSourceBuilder.Build();
-    } 
+    }
+    public NpgsqlConnectionFactory(string connectionString)
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
+        _dataSource = dataSourceBuilder.Build();
+    }
+
 
     public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {
