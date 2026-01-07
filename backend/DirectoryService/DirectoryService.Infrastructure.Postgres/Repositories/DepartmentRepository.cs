@@ -111,10 +111,10 @@ public  class DepartmentRepository: IDepartmentRepository
     }
 
     public async Task<UnitResult<Error>> UpdateAllDescendants(
-     string oldPath,
-     string newPath,
-     DepartmentId movedDepartmentId,
-     CancellationToken cancellationToken)
+        string oldPath,
+        string newPath,
+        DepartmentId movedDepartmentId,
+        CancellationToken cancellationToken)
     {
         try
         {
