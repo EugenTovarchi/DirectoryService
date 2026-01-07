@@ -1,11 +1,9 @@
 using CSharpFunctionalExtensions;
-using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +12,6 @@ namespace DirectoryService.Application.Commands.Departments.MoveDepartment;
 public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand>
 {
     private readonly ITrasactionManager _trasactionManager;
-    private readonly INpgsqlConnectionFactory _pgsqlConnectionFactory;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<MoveDepartmentCommand> _validator;
     private readonly ILogger<MoveDepartmentHandler> _logger;
@@ -22,14 +19,12 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         IDepartmentRepository departmentRepository,
         IValidator<MoveDepartmentCommand> validator,
         ILogger<MoveDepartmentHandler> logger,
-        ITrasactionManager trasactionManager,
-        INpgsqlConnectionFactory pgsqlConnectionFactory)
+        ITrasactionManager trasactionManager)
     {
         _trasactionManager = trasactionManager;
         _departmentRepository = departmentRepository;
         _validator = validator;
         _logger = logger;
-        _pgsqlConnectionFactory = pgsqlConnectionFactory;
     }
     public async Task<Result<Guid, Failure>> Handle(MoveDepartmentCommand command, CancellationToken cancellationToken)
     {

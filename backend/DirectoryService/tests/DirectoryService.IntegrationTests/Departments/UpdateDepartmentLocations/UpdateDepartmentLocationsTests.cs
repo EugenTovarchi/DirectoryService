@@ -1,130 +1,202 @@
-using AutoFixture;
-using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
-using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Domain.Entities;
-using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.IntegrationTests.Departments.Create;
+using DirectoryService.SharedKernel;
 using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DirectoryService.IntegrationTests.Departments.UpdateDepartmentLocations;
 
-public class UpdateDepartmentLocationsTests : IClassFixture<UpdateDepartmentLocationsTestWebFactory>, IAsyncLifetime
+public class UpdateDepartmentLocationsTests : DirectoryBaseTests
 {
-    private readonly UpdateDepartmentLocationsTestWebFactory _factory;
-    private readonly IServiceScope _scope;
-    private readonly IDepartmentRepository _departmentRepository;
-    private readonly ILocationRepository _locationRepository;
-    private readonly DirectoryServiceDbContext _dbContext;
-    private readonly ICommandHandler<Guid, UpdateDepartmentLocationsCommand> _sut;
-    private readonly IFixture _fixture;
-
-    public UpdateDepartmentLocationsTests(UpdateDepartmentLocationsTestWebFactory factory)
-    {
-        _factory = factory;
-        _scope = _factory.Services.CreateScope();
-        _departmentRepository = _scope.ServiceProvider.GetRequiredService<IDepartmentRepository>();
-        _locationRepository = _scope.ServiceProvider.GetRequiredService<ILocationRepository>();
-        _dbContext = _scope.ServiceProvider.GetRequiredService<DirectoryServiceDbContext>();
-
-        _sut = _scope.ServiceProvider.GetRequiredService<ICommandHandler<Guid, UpdateDepartmentLocationsCommand>>();
-        _fixture = new Fixture();
-    }
+    public UpdateDepartmentLocationsTests(DirectoryTestWebFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task Update_One_DepartmentLocation_should_succeed()
+    public async Task Update_DepartmentLocation_should_succeed()
     {
         //Arrange
         var locationId = await CreateLocation("location1");
         var locationId2 = await CreateLocation("location2");
-        var request = new CreateDepartmentRequest("testName", "testIdentifier", [locationId.Value], null);
-        var command = new CreateDepartmentCommand(request);
+        List<Guid> locations = [locationId, locationId2];
+
+        var departmentId = await CreateTestDepartment();
+        var request = new UpdateDepartmentLocationsRequest(locations);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request );
 
         //Act
-        var result = await _sut.Handle(command, CancellationToken.None);
+        var result = await ExecuteHandler(async (_sut) =>
+        {
+            return await _sut.Handle(command, CancellationToken.None);
+        });
 
         //Assert
-        var department = await _departmentRepository.GetById(result.Value, CancellationToken.None);
+        await ExecuteInDb(async dbContext =>
+        {
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeEmpty();
 
-        Assert.NotEqual(Guid.Empty, result.Value);
-        Assert.Equal(result.Value, department.Value.Id.Value);
+            var department = await dbContext.Departments
+                .Include(d => d.DepartmentLocations)
+                .FirstAsync(d => d.Id == result.Value, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+            department.DepartmentLocations.Should().HaveCount(2);
+            department.DepartmentLocations
+                .Select(dl => dl.LocationId.Value)
+                .Should()
+                .BeEquivalentTo(locations);
+        });
     }
 
     [Fact]
-    public async Task CreateDepartment_with_few_locations_should_succeed()
+    public async Task Update_DepartmentLocation_should_failed()
     {
         //Arrange
-        var locationId1 = await CreateLocation("location1");
+        List<Guid> locations = [];
+
+        var departmentId = await CreateTestDepartment();
+        var request = new UpdateDepartmentLocationsRequest(locations);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request );
+
+        //Act
+        var result = await ExecuteHandler(async (_sut) =>
+        {
+            return await _sut.Handle(command, CancellationToken.None);
+        });
+
+        //Assert
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Update_DepartmentLocation_Should_Handle_Duplicate_LocationIds()
+    {
+        // Arrange
+        var location1 = await CreateLocation("location1");
+
+        List<Guid> duplicateLocations = [location1, location1, location1];
+
+        var departmentId = await CreateTestDepartment();
+        var request = new UpdateDepartmentLocationsRequest(duplicateLocations);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request);
+
+        // Act
+        var result = await ExecuteHandler(async (_sut) =>
+        {
+            return await _sut.Handle(command, CancellationToken.None);
+        });
+
+        // Assert
+        await ExecuteInDb(async dbContext =>
+        {
+            result.IsSuccess.Should().BeTrue();
+
+            var department = await dbContext.Departments
+                .Include(d => d.DepartmentLocations)
+                .FirstAsync(d => d.Id == departmentId, CancellationToken.None);
+
+            department.DepartmentLocations.Should().HaveCount(1);
+            department.DepartmentLocations.First().LocationId.Value.Should().Be(location1);
+        });
+    }
+
+    [Fact]
+    public async Task Update_DepartmentLocation_With_NonExistent_Department_Should_Fail()
+    {
+        // Arrange
+        var location1 = await CreateLocation("location1");
+        var location2 = await CreateLocation("location2");
+        List<Guid> locations = [location1, location2];
+
+        var nonExistentDepartmentId = Guid.NewGuid();
+        var request = new UpdateDepartmentLocationsRequest(locations);
+        var command = new UpdateDepartmentLocationsCommand(nonExistentDepartmentId, request);
+
+        // Act
+        var result = await ExecuteHandler(async (_sut) =>
+        {
+            return await _sut.Handle(command, CancellationToken.None);
+        });
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeEquivalentTo(Errors.General.NotFoundEntity("departmentId").ToFailure());
+    }
+
+    [Fact]
+    public async Task Update_DepartmentLocation_With_Duplicate_Locations_Should_Remove_Duplicates()
+    {
+        // Arrange
+        var locationId = await CreateLocation("location1");
         var locationId2 = await CreateLocation("location2");
 
-        List<Guid> locations = [locationId1, locationId2];
-        List<LocationId> locationsForCheck = [locationId1, locationId2];
+        List<Guid> locationsWithDuplicates = [locationId, locationId2, locationId];
 
-        var request = new CreateDepartmentRequest("testName", "testIdentifier", locations, null);
-        var command = new CreateDepartmentCommand(request);
+        var departmentId = await CreateTestDepartment();
+        var request = new UpdateDepartmentLocationsRequest(locationsWithDuplicates);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
-        //Act
-        var result = await _sut.Handle(command, CancellationToken.None);
+        // Act
+        var result = await ExecuteHandler(async (_sut) =>
+        {
+            return await _sut.Handle(command, CancellationToken.None);
+        });
 
-        //Assert
-        var department = await _departmentRepository.GetById(result.Value, CancellationToken.None);
-        var departmentLocationsExist = await _locationRepository.AllLocationsExistAsync(locationsForCheck, CancellationToken.None);
+        // Assert
+        await ExecuteInDb(async dbContext =>
+        {
+            result.IsSuccess.Should().BeTrue();
 
-        Assert.NotEqual(Guid.Empty, result.Value);
-        Assert.Equal(result.Value, department.Value.Id.Value);
-        departmentLocationsExist.IsSuccess.Should().BeTrue();
+            var department = await dbContext.Departments
+                .Include(d => d.DepartmentLocations)
+                .FirstAsync(d => d.Id == departmentId, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+            department.DepartmentLocations.Should().HaveCount(2);
+            department.DepartmentLocations
+                .Select(dl => dl.LocationId.Value)
+                .Should()
+                .OnlyHaveUniqueItems();
+        });
     }
 
-    [Fact]
-    public async Task CreateDepartment_with_invalid_data_should_false()
+    private async Task<Guid> CreateLocation(string name)
     {
-        //Arrange
-        var locationId = await CreateLocation("location1");
-        var request = new CreateDepartmentRequest("", "testIdentifier", [locationId.Value], null);
-        var command = new CreateDepartmentCommand(request);
+        return await ExecuteInDb(async dbContext =>
+        {
+            var address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
+            var location = Location.Create(
+                Name.Create(name).Value,
+                SharedKernel.ValueObjects.TimeZone.Create("Europe/Moscow").Value,
+                address);
 
-        //Act
-        var result = await _sut.Handle(command, CancellationToken.None);
+            await dbContext.Locations.AddAsync(location.Value, CancellationToken.None);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
 
-        //Assert
-        result.IsSuccess.Should().BeFalse();
-        Assert.True(result.IsFailure);
-        Assert.NotEmpty(result.Error);
-
-        var departments = await _dbContext.Departments.AnyAsync();
-        departments.Should().BeFalse();
+            return location.Value.Id.Value;
+        });
     }
 
-    private async Task<LocationId> CreateLocation(string name)
+    private async Task<Guid> CreateTestDepartment()
     {
+        return await ExecuteInDb(async dbContext =>
+        {
+            var departmentName = Name.Create("Отдел продаж");
+            var identifier = Identifier.Create("sales");
+            var department = Department.CreateRoot(departmentName.Value, identifier.Value).Value;
 
-        var address = Address.CreateWithFlat("RF", "moscov", "testStreet", "12", 3).Value;
-        var location = Location.Create(
-           Name.Create(name).Value,
-           SharedKernel.ValueObjects.TimeZone.Create("test/Moscov").Value,
-           address);
+            await dbContext.Departments.AddAsync(department, CancellationToken.None);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
 
-        _dbContext.Locations.Add(location.Value);
-        await _dbContext.SaveChangesAsync();
-
-        return location.Value.Id;
+            return department.Id.Value;
+        });
     }
 
-    public async Task DisposeAsync()
+    private async Task<T> ExecuteHandler<T>(Func<ICommandHandler<Guid, UpdateDepartmentLocationsCommand>, Task<T>> action)
     {
-        await _factory.ResetDatabaseAsync();
-        _scope.Dispose();
+        await using var scope = Services.CreateAsyncScope();
+        var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<Guid, UpdateDepartmentLocationsCommand>>();
+        return await action(handler);
     }
-
-    public Task InitializeAsync() => Task.CompletedTask;
 }
