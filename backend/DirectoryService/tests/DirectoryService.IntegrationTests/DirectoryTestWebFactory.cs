@@ -30,13 +30,12 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
     {
         builder.ConfigureTestServices(services =>
         {
-            // Удаляем все существующие регистрации
             services.RemoveAll<DirectoryServiceDbContext>();
             services.RemoveAll<IDepartmentRepository>();
             services.RemoveAll<ILocationRepository>();
 
-            services.AddScoped(provider =>
-                new DirectoryServiceDbContext(_dbContainer.GetConnectionString()));
+                services.AddScoped(provider =>
+                DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
 
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
             services.AddScoped<ILocationRepository, LocationRepository>();
@@ -59,7 +58,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
 
     private async Task CreateDatabaseDirectlyAsync()
     {
-        var dbContext = new DirectoryServiceDbContext(_dbContainer.GetConnectionString());
+        using var dbContext = DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString());
         await dbContext.Database.EnsureCreatedAsync();
         await dbContext.DisposeAsync();
     }

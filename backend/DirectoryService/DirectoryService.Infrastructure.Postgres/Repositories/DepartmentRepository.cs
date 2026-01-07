@@ -127,7 +127,6 @@ public  class DepartmentRepository: IDepartmentRepository
              updated_at = @UpdatedAt
          WHERE dept.is_deleted = false
                  AND dept.path <@ @OldPath::ltree
-                 AND dept.path != @OldPath::ltree
                  AND dept.id != @MovedDepartmentId
          """,
             new NpgsqlParameter("OldPath", oldPath),
