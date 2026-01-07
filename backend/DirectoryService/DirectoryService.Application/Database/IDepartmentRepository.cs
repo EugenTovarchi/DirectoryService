@@ -17,8 +17,8 @@ public interface IDepartmentRepository
     Task<Result<Department, Error>> GetByIdWithLock(Guid departmentId, CancellationToken cancellationToken);
     Task<UnitResult<Error>> LockDescendantsByPath(string oldPath, CancellationToken cancellationToken);
     Task<UnitResult<Error>> UpdateAllDescendants(
-     string oldPath,
-     string newPath,
-     DepartmentId movedDepartmentId,
-     CancellationToken cancellationToken);
+        string oldPath,
+        string newPath,
+        DepartmentId movedDepartmentId,
+        CancellationToken cancellationToken);
 }
