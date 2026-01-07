@@ -64,8 +64,11 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
 
             newParent = parentResult.Value;
 
-            if (newParent.Path.Value.StartsWith(oldPath + "."))
-                return Error.Conflict("department.in.conflict", "Child of department cannot be as parent").ToFailure();
+            if (command.Request.ParentId.Value == command.DepartmentId)
+            {
+                return Error.Conflict("department.in.conflict",
+                    "Cannot move department to itself").ToFailure();
+            }
         }
 
         var lockResult = await _departmentRepository.LockDescendantsByPath(oldPath, cancellationToken);
