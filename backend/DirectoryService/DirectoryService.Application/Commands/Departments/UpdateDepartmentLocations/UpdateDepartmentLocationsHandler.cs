@@ -61,8 +61,9 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         var department = departmentResult.Value;
 
         var locationIds = command.Request.LocationIds.Select(id => LocationId.Create(id));
+        var distinctLocationIds = locationIds.Distinct().ToList();
 
-        var locationsCheck = await CheckLocationsExist(locationIds, cancellationToken);
+        var locationsCheck = await CheckLocationsExist(distinctLocationIds, cancellationToken);
         if (locationsCheck.IsFailure)
         {
             transactionScope.Rollback();
@@ -70,7 +71,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         }
 
         List<DepartmentLocation> newDepartmentLocations = [];
-        foreach (var locationId in locationIds)
+        foreach (var locationId in distinctLocationIds)
         {
             var depLocation = DepartmentLocation.Create(locationId, department.Id);
             if(depLocation.IsFailure)
@@ -101,10 +102,10 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         IEnumerable<LocationId> locationIds,
         CancellationToken cancellationToken)
     {
-        var distinctIds = locationIds.Distinct().ToList();
+        var idList = locationIds.ToList();
 
         return await _locationRepository.AllLocationsExistAsync(
-            distinctIds,
+            idList,
             cancellationToken);
     }
 }

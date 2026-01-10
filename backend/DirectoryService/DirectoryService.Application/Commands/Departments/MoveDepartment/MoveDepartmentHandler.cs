@@ -12,7 +12,6 @@ namespace DirectoryService.Application.Commands.Departments.MoveDepartment;
 public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand>
 {
     private readonly ITrasactionManager _trasactionManager;
-    private readonly INpgsqlConnectionFactory _pgsqlConnectionFactory;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<MoveDepartmentCommand> _validator;
     private readonly ILogger<MoveDepartmentHandler> _logger;
@@ -20,14 +19,12 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         IDepartmentRepository departmentRepository,
         IValidator<MoveDepartmentCommand> validator,
         ILogger<MoveDepartmentHandler> logger,
-        ITrasactionManager trasactionManager,
-        INpgsqlConnectionFactory pgsqlConnectionFactory)
+        ITrasactionManager trasactionManager)
     {
         _trasactionManager = trasactionManager;
         _departmentRepository = departmentRepository;
         _validator = validator;
         _logger = logger;
-        _pgsqlConnectionFactory = pgsqlConnectionFactory;
     }
     public async Task<Result<Guid, Failure>> Handle(MoveDepartmentCommand command, CancellationToken cancellationToken)
     {
@@ -67,8 +64,11 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
 
             newParent = parentResult.Value;
 
-            if (newParent.Path.Value.StartsWith(oldPath + "."))
-                return Error.Conflict("department.in.conflict", "Child of department cannot be as parent").ToFailure();
+            if (command.Request.ParentId.Value == command.DepartmentId)
+            {
+                return Error.Conflict("department.in.conflict",
+                    "Cannot move department to itself").ToFailure();
+            }
         }
 
         var lockResult = await _departmentRepository.LockDescendantsByPath(oldPath, cancellationToken);
