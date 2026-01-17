@@ -30,7 +30,7 @@ public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlCon
 
     public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {
-        return await _dataSource.OpenConnectionAsync();
+        return await _dataSource.OpenConnectionAsync(cancellationToken);
     }
 
     public void Dispose()

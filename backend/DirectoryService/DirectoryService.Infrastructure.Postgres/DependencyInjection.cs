@@ -55,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<ITrasactionManager, TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
 
+        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
         return services;
     }
 
