@@ -1,6 +1,6 @@
 namespace DirectoryService.Contracts.Responses;
 
-public class GetLocationResponse
+public record GetLocationResponse
 {
     public string Name { get; init; } = string.Empty;
     public string Country { get; set; } = string.Empty;

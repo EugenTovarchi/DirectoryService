@@ -1,10 +1,12 @@
-using DirectoryService.Contracts.Requests.Departments;
-using DirectoryService.Framework.ControllersResults;
-using DirectoryService.Core.Abstractions;
-using Microsoft.AspNetCore.Mvc;
 using DirectoryService.Application.Commands.Departments.Create;
-using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
+using DirectoryService.Application.Commands.Departments.GetTopByPositions;
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
+using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
+using DirectoryService.Application.Commands.Locations.Get;
+using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.Framework.ControllersResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DirectoryService.Web.Controllers;
 
@@ -58,5 +60,18 @@ public class DepartmentController : ApplicationController
             return result.Error.ToResponse();
 
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
+    }
+
+    [HttpGet("api/departments/top-positions")]
+    public async Task<IActionResult> GetByFilters(
+       [FromQuery] GetDepartmentsRequest request,
+       [FromServices] GetTopByPositionsDepartmentsHandler handler,
+       CancellationToken cancellationToken)
+    {
+        var query = request.ToQuery();
+
+        var result = await handler.Handle(query, cancellationToken);
+
+        return Ok(result);
     }
 }

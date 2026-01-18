@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace DirectoryService.Application.Commands.Locations.Get;
 
 public record GetLocationsRequest(
