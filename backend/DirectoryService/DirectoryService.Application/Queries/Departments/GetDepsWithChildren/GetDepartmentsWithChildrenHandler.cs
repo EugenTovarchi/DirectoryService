@@ -23,25 +23,25 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
         parameters.Add("page_size", query.Page);
         parameters.Add("offset", (query.Page - 1) * query.PageSize);
 
-        parameters.Add("root_limit", query.RootLimit ?? 3);
-        parameters.Add("child_limit", query.ChildLimit ?? 3);
-
-
-        var direction = query.SortDirection?.ToLower() == "asc" ? "ASC"
-            : "DESC";
-
-        var orderByField = query.SortBy?.ToLower() switch
+        if (query.RootLimit.HasValue && query.RootLimit.Value > 0)
         {
-            "name" => "name",
-            "created_at" => "created_at",
-            "updated_at" => "updated_at",
-            "depth" => "depth",
-            _ => "created_at"
-        };
+            parameters.Add("root_limit", query.RootLimit.Value);
+        }
+        else
+        {
+            parameters.Add("root_limit", 3);
+        }
 
-        var orderByClause = $"ORDER BY {orderByField} {direction}";
+        if (query.ChildLimit.HasValue && query.ChildLimit.Value > 0)
+        {
+            parameters.Add("child_limit", query.ChildLimit.Value);
+        }
+        else
+        {
+            parameters.Add("child_limit", 3);
+        }
 
-        var departments = await connection.QueryAsync<GetDepartmentsWithChildrenResponse>(
+        const string sql =
             $"""
             WITH roots AS(
                 SELECT d.id,
@@ -55,8 +55,8 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
                        d.is_deleted
                 FROM departments d
                 WHERE d.parent_id IS NULL AND d.is_deleted = false
-                {orderByClause}
-                OFFSET @offset LIMIT @root_limit )
+                ORDER BY created_at ASC
+                OFFSET @offset LIMIT @root_limit)
 
                 SELECT *, 
                         (EXISTS (SELECT 1 from departments WHERE parent_id = roots.id OFFSET @child_limit LIMIT 1)) 
@@ -65,25 +65,27 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
 
                 UNION ALL
 
-                    SELECT ch.* , false AS has_more_children
+                    SELECT ch.* , (EXISTS (SELECT 1 from departments WHERE parent_id = ch.id)) 
+                                    AS has_more_children
                     FROM roots r
-                        CROSS JOIN LATERAL( 
-                            SELECT d.id,
-                                   d.parent_id,
-                                   d.name,
-                                   d.identifier,
-                                   d.path,
-                                   d.depth,
-                                   d.created_at,
-                                   d.updated_at,
-                                   d.is_deleted
-                            FROM departments d
-                            WHERE d.parent_id = r.id AND d.is_deleted = false
-                            {orderByClause} 
-                            LIMIT @child_limit) ch;
-            """,
-            parameters
-            );
+                        CROSS JOIN LATERAL (SELECT d.id,
+                                                   d.parent_id,
+                                                   d.name,
+                                                   d.identifier,
+                                                   d.path,
+                                                   d.depth,
+                                                   d.created_at,
+                                                   d.updated_at,
+                                                   d.is_deleted
+                                            FROM departments d
+                                            WHERE d.parent_id = r.id AND d.is_deleted = false
+                                            ORDER BY created_at ASC
+                                            LIMIT @child_limit) ch
+                  ORDER BY created_at ASC;
+            """;
+
+        var departments = await connection.QueryAsync<GetDepartmentsWithChildrenResponse>(sql, parameters);
+
 
         return departments.ToPagedList(query.Page, query.PageSize);
     }
