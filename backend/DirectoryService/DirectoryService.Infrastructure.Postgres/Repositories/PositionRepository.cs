@@ -44,23 +44,39 @@ public class PositionRepository : IPositionRepository
 
     public async Task<Result<Guid, Error>> AddAsync(Position position, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Positions.AddAsync(position, cancellationToken);
+        var existingPosition = await _dbContext.Positions
+            .FirstOrDefaultAsync(p => p.Name.Value == position.Name.Value, cancellationToken);
+
+        if (existingPosition != null)
+        {
+            _logger.LogWarning("Duplicate position name: {name}", position.Name.Value);
+            return Errors.General.Duplicate("position_name");
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
+            await _dbContext.Positions.AddAsync(position, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
             return position.Id.Value;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {
+            await transaction.RollbackAsync(cancellationToken);
             return HandlePostgresException(pgEx, position.Name.Value);
         }
         catch (OperationCanceledException ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Operation was cancelled while creating position with name {name}", position.Name.Value);
-            return Errors.General.DatabaseError("creating_department_error");
+            return Errors.General.DatabaseError("creating_position_error");
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Unexpected error while creating position with name {name}", position.Name.Value);
             return Errors.General.DatabaseError("creating_position_error");
         }
@@ -71,7 +87,7 @@ public class PositionRepository : IPositionRepository
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
             _logger.LogError("Database error while creating position {name}: {Message}", positionName, pgEx.MessageText);
-            return Errors.General.DatabaseError("creating_department_error");
+            return Errors.General.DatabaseError("creating_position_error");
         }
 
         var constraintName = pgEx.ConstraintName.ToLower();
@@ -79,7 +95,7 @@ public class PositionRepository : IPositionRepository
         if (constraintName == "ix_position_name")
         {
             _logger.LogWarning("Duplicate position name: {name}", positionName);
-            return Errors.General.Duplicate("department_name");
+            return Errors.General.Duplicate("position_name");
         }
         
         if (constraintName.Contains("name"))
