@@ -5,7 +5,7 @@ using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 
-public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<GetDepartmentsWithChildrenResponse>, GetDepartmentsWithChildrenQuery>
+public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<DepartmentResponse>, GetDepartmentsWithChildrenQuery>
 {
     private readonly INpgsqlConnectionFactory _connectionFactory;
 
@@ -14,13 +14,16 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<GetDepartmen
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<List<GetDepartmentsWithChildrenResponse>> Handle(GetDepartmentsWithChildrenQuery query, CancellationToken ct = default)
+    public async Task<List<DepartmentResponse>> Handle(GetDepartmentsWithChildrenQuery query, CancellationToken ct = default)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
 
         var parameters = new DynamicParameters();
 
-        parameters.Add("page_size", query.Page);
+        var page = query.Page > 0 ? query.Page : 1;
+        var pageSize = query.PageSize > 0 ? query.PageSize : 20;
+
+        parameters.Add("page_size", query.PageSize);
         parameters.Add("offset", (query.Page - 1) * query.PageSize);
 
         parameters.Add("root_limit", query.RootLimit > 0 ? query.RootLimit.Value : 3);
@@ -69,12 +72,12 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<GetDepartmen
                   ORDER BY created_at ASC;
             """;
 
-        var departmentsRaws = (await connection.QueryAsync<GetDepartmentsWithChildrenResponse>(sql,
+        var departmentsRaws = (await connection.QueryAsync<DepartmentResponse>(sql,
             parameters)).ToList();
 
         var departmentsDict = departmentsRaws.ToDictionary(x => x.Id);
 
-        var roots = new List<GetDepartmentsWithChildrenResponse>();
+        var roots = new List<DepartmentResponse>();
 
         foreach (var row in departmentsRaws)
         {
