@@ -1,6 +1,6 @@
 using DirectoryService.Core.Abstractions;
 
-namespace DirectoryService.Application.Commands.Locations.Get;
+namespace DirectoryService.Application.Queries.Locations.Get;
 
 public record GetLocationsQuery(
     List<Guid>? DepartmentsIds,

@@ -1,0 +1,12 @@
+using DirectoryService.Core.Abstractions;
+
+namespace DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
+
+public  record GetDepartmentsWithChildrenQuery(
+    int? RootLimit,
+    int? ChildLimit,
+    string? SortBy,
+    string? SortDirection,
+    int Page,
+    int PageSize): IQuery;
+

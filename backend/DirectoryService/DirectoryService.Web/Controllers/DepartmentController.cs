@@ -1,8 +1,8 @@
 using DirectoryService.Application.Commands.Departments.Create;
-using DirectoryService.Application.Commands.Departments.GetTopByPositions;
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
-using DirectoryService.Application.Commands.Locations.Get;
+using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
+using DirectoryService.Application.Queries.Departments.GetTopByPositions;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Framework.ControllersResults;
@@ -66,6 +66,19 @@ public class DepartmentController : ApplicationController
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetDepartmentsRequest request,
        [FromServices] GetTopByPositionsDepartmentsHandler handler,
+       CancellationToken cancellationToken)
+    {
+        var query = request.ToQuery();
+
+        var result = await handler.Handle(query, cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("/api/departments/roots")]
+    public async Task<IActionResult> GetDepartmentsWithChildren(
+       [FromQuery] GetDepartmentsWithChildrenRequest request,
+       [FromServices] GetDepartmentsWithChildrenHandler handler,
        CancellationToken cancellationToken)
     {
         var query = request.ToQuery();

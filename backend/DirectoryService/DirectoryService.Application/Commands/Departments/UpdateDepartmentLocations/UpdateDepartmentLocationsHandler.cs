@@ -54,7 +54,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         var departmentResult = await _departmentRepository.GetById(command.DepartmentId, cancellationToken);
         if (departmentResult.IsFailure)
         {
-            transactionScope.Rollback();
+            transactionScope.Rollback(); 
             return Errors.General.NotFoundEntity("departmentId").ToFailure();
         }
 
