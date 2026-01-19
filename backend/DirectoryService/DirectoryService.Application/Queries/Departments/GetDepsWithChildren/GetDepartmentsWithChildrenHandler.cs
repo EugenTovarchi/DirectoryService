@@ -5,7 +5,7 @@ using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 
-public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepartmentsWithChildrenResponse>, GetDepartmentsWithChildrenQuery>
+public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<GetDepartmentsWithChildrenResponse>, GetDepartmentsWithChildrenQuery>
 {
     private readonly INpgsqlConnectionFactory _connectionFactory;
 
@@ -14,7 +14,7 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<PagedList<GetDepartmentsWithChildrenResponse>> Handle(GetDepartmentsWithChildrenQuery query, CancellationToken ct = default)
+    public async Task<List<GetDepartmentsWithChildrenResponse>> Handle(GetDepartmentsWithChildrenQuery query, CancellationToken ct = default)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
 
@@ -23,23 +23,8 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
         parameters.Add("page_size", query.Page);
         parameters.Add("offset", (query.Page - 1) * query.PageSize);
 
-        if (query.RootLimit.HasValue && query.RootLimit.Value > 0)
-        {
-            parameters.Add("root_limit", query.RootLimit.Value);
-        }
-        else
-        {
-            parameters.Add("root_limit", 3);
-        }
-
-        if (query.ChildLimit.HasValue && query.ChildLimit.Value > 0)
-        {
-            parameters.Add("child_limit", query.ChildLimit.Value);
-        }
-        else
-        {
-            parameters.Add("child_limit", 3);
-        }
+        parameters.Add("root_limit", query.RootLimit > 0 ? query.RootLimit.Value : 3);
+        parameters.Add("child_limit", query.RootLimit > 0 ? query.RootLimit.Value : 3);
 
         const string sql =
             $"""
@@ -84,9 +69,25 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<PagedList<GetDepa
                   ORDER BY created_at ASC;
             """;
 
-        var departments = await connection.QueryAsync<GetDepartmentsWithChildrenResponse>(sql, parameters);
+        var departmentsRaws = (await connection.QueryAsync<GetDepartmentsWithChildrenResponse>(sql,
+            parameters)).ToList();
 
+        var departmentsDict = departmentsRaws.ToDictionary(x => x.Id);
 
-        return departments.ToPagedList(query.Page, query.PageSize);
+        var roots = new List<GetDepartmentsWithChildrenResponse>();
+
+        foreach (var row in departmentsRaws)
+        {
+            if (row.ParentId.HasValue && departmentsDict.TryGetValue(row.ParentId.Value, out var parent))
+            {
+                parent.Children.Add(departmentsDict[row.Id]);
+            }
+            else
+            {
+                roots.Add(departmentsDict[row.Id]);
+            }
+        }
+
+        return roots;
     }
 }
