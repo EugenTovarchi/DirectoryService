@@ -191,23 +191,39 @@ public  class DepartmentRepository: IDepartmentRepository
 
     public async Task<Result<Guid, Error>> AddAsync(Department department, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Departments.AddAsync(department, cancellationToken);
+        var existingDepartment = await _dbContext.Departments
+            .FirstOrDefaultAsync(p => p.Name.Value == department.Name.Value, cancellationToken);
+
+        if (existingDepartment != null)
+        {
+            _logger.LogWarning("Duplicate department name: {name}", department.Name.Value);
+            return Errors.General.Duplicate("department_name");
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
+            await _dbContext.Departments.AddAsync(department, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
             return department.Id.Value;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {
+            await transaction.RollbackAsync(cancellationToken);
             return HandlePostgresException(pgEx, department.Name.Value);
         }
         catch (OperationCanceledException ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Operation was cancelled while creating department with name {name}", department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Unexpected error while creating department with name {name}", department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }

@@ -1,4 +1,4 @@
-namespace DirectoryService.Application.Commands.Locations.Get;
+namespace DirectoryService.Application.Queries.Locations.Get;
 
 public record GetLocationsRequest(
     List<Guid>?DepartmentsIds,

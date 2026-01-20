@@ -3,7 +3,7 @@ using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
 using DirectoryService.Core.Abstractions;
 
-namespace DirectoryService.Application.Commands.Departments.GetTopByPositions;
+namespace DirectoryService.Application.Queries.Departments.GetTopByPositions;
 
 public class GetTopByPositionsDepartmentsHandler : IQueryHandler<List<GetTopDepartmentsResponse>, GetTopDepartmentsQuery>
 {

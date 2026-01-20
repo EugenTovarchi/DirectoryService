@@ -4,7 +4,7 @@ using DirectoryService.Contracts.Responses;
 using DirectoryService.Core.Abstractions;
 using System.Data;
 
-namespace DirectoryService.Application.Commands.Locations.Get;
+namespace DirectoryService.Application.Queries.Locations.Get;
 
 public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>, GetLocationsQuery>
 {
