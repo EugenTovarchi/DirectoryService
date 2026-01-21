@@ -167,7 +167,7 @@ public class DepartmentRepository : IDepartmentRepository
                 $"""
                  UPDATE departments dept
                  SET 
-                     path =  subpath(dept.path, 0, -1) || @Prefix|| subpath(dept.path, -1)::text)::ltree,
+                     path =  subpath(dept.path, 0, -1) || (@Prefix|| subpath(dept.path, -1)::text)::ltree,
                      updated_at = @UpdatedAt
                  WHERE dept.is_deleted = false
                          AND dept.path <@ @OldPath::ltree

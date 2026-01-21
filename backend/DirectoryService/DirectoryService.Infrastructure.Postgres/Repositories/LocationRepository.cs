@@ -44,13 +44,15 @@ public class LocationRepository : ILocationRepository
             .ToListAsync(cancellationToken);
 
          if (uniqLocationIds.Count == 0)
-             return Errors.General.ValueIsInvalid("dep.uniq_related_locations");
+         {
+             return new List<Location>();
+         }
          
-         var locations = _dbContext.Locations
+         var locations = await _dbContext.Locations
              .Where(l => uniqLocationIds.Contains(l.Id))
              .ToListAsync(cancellationToken);   
 
-         return locations.Result;
+         return locations;
     }
     
 

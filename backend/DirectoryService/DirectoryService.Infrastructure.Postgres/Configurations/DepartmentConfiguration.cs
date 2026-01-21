@@ -76,8 +76,8 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .HasColumnName("is_deleted")
             .HasDefaultValue(false);
 
-        builder.Property(d => d.DeletionDate)
-            .HasColumnName("deletion_date")
+        builder.Property(d => d.DeletedAt)
+            .HasColumnName("deleted_at")
             .IsRequired(false);
 
         builder.Property(d => d.CreatedAt)

@@ -40,15 +40,15 @@ public class PositionRepository : IPositionRepository
                             dp2.DepartmentId != departmentId))
             .Select(dp => dp.PositionId)
             .ToListAsync(cancellationToken);
-
-        if (uniqPositionIds.Count == 0)
-            return Errors.General.ValueIsInvalid("dep.uniq_related_positions");
+        
+         if(uniqPositionIds.Count == 0)
+             return new List<Position>();
          
-        var positions = _dbContext.Positions
-            .Where(l => uniqPositionIds.Contains(l.Id))
+        var positions =  await _dbContext.Positions
+            .Where(p => uniqPositionIds.Contains(p.Id))
             .ToListAsync(cancellationToken);   
 
-        return positions.Result;
+        return positions;
     }
 
     public async Task<Result<bool, Error>> IsPositionExistAsync(Guid positionId, CancellationToken cancellationToken = default)
