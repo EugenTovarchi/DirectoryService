@@ -8,5 +8,9 @@ namespace DirectoryService.Application.Database;
 public interface ILocationRepository
 {
     Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken);
-    Task<UnitResult<Error>> AllLocationsExistAsync(IEnumerable<LocationId> locationIds, CancellationToken cancellationToken);
+    Task<UnitResult<Error>> AllLocationsExistAsync(IEnumerable<LocationId> locationIds,
+        CancellationToken cancellationToken);
+
+    Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
+        CancellationToken cancellationToken = default);
 }

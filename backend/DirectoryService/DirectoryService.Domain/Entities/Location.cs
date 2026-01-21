@@ -39,9 +39,9 @@ public sealed class Location : SoftDeletableEntity<LocationId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Restore()
+    public override void Restore()
     {
-        base.Restor();
+        base.Restore();
         UpdatedAt = DateTime.UtcNow;
     }
 

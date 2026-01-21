@@ -11,9 +11,10 @@ public abstract class SoftDeletableEntity<TId> : Entity<TId> where TId : ICompar
         if (IsDeleted) return;
 
         IsDeleted = true;
-        DeletionDate = DateTime.Now;
+        DeletionDate = DateTime.UtcNow;
     }
-    public virtual void Restor()
+
+    public virtual void Restore()
     {
         if (!IsDeleted) return;
 

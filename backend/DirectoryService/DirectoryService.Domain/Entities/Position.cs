@@ -27,15 +27,16 @@ public sealed class Position : SoftDeletableEntity<PositionId>
 
     private readonly List<DepartmentPosition> _departmentPositions = [];
     public IReadOnlyCollection<DepartmentPosition> DepartmentPositions => _departmentPositions.ToList();
+
     public override void Delete()
     {
         base.Delete();
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Restore()
+    public override void Restore()
     {
-        base.Restor();
+        base.Restore();
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -50,9 +50,9 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Restore()
+    public override void Restore()
     {
-        base.Restor();
+        base.Restore();
         UpdatedAt = DateTime.UtcNow;
     }
 

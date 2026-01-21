@@ -9,7 +9,7 @@ using System.Data;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 
-public class TransactionManager : ITrasactionManager
+public class TransactionManager : ITransactionManager
 {
     private readonly DirectoryServiceDbContext _dbContext;
     private readonly ILogger<TransactionManager> _logger;
@@ -31,7 +31,8 @@ public class TransactionManager : ITrasactionManager
     {
         try
         {
-            var transaction = await _dbContext.Database.BeginTransactionAsync(level ?? IsolationLevel.ReadCommitted, cancellationToken);
+            var transaction = await _dbContext.Database.BeginTransactionAsync(level ?? IsolationLevel.ReadCommitted,
+                cancellationToken);
             var transactionScopeLogger = _loggerFactory.CreateLogger<TransactionScope>();
             var transactionScope = new TransactionScope(transaction.GetDbTransaction(), transactionScopeLogger);
 
@@ -43,11 +44,11 @@ public class TransactionManager : ITrasactionManager
             return Error.Failure("database", "Failed to begin transaction");
         }
     }
+    
     public async Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var entries = _dbContext.ChangeTracker.Entries();
             await _dbContext.SaveChangesAsync(cancellationToken);
             return UnitResult.Success<Error>();
         }

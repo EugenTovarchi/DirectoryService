@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
@@ -10,15 +11,31 @@ public interface IDepartmentRepository
     Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken = default);
     Task<Result<Guid, Error>> AddAsync(Department department, CancellationToken cancellationToken = default);
     Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId, CancellationToken cancellationToken = default);
-    Task<Result<bool, Error>> AllDepartmentsExistAsync(IEnumerable<Guid> departmentsIds, CancellationToken cancellationToken = default);
+    Task<Result<bool, Error>> AllDepartmentsExistAsync(IEnumerable<Guid> departmentsIds,
+        CancellationToken cancellationToken = default);
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<Department, Error>> GetBy(Expression<Func<Department, bool>> predicate,
         CancellationToken cancellationToken = default);
 
     Task<Result<Department, Error>> GetByIdWithLock(Guid departmentId, CancellationToken cancellationToken);
     Task<UnitResult<Error>> LockDescendantsByPath(string oldPath, CancellationToken cancellationToken);
-    Task<UnitResult<Error>> UpdateAllDescendants(
+    Task<UnitResult<Error>> UpdateAllDescendantsPath(
      string oldPath,
      string newPath,
      DepartmentId movedDepartmentId,
      CancellationToken cancellationToken);
+
+    Task<UnitResult<Error>> PutDescendantsPrefixToLastPathElement(
+        string oldPath,
+        string prefix,
+        DepartmentId parentDepartmentId,
+        CancellationToken cancellationToken);
+
+    Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
+        string oldPath,
+        string prefixToRemove,
+        DepartmentId parentDepartmentId,
+        CancellationToken cancellationToken);
 }

@@ -29,6 +29,27 @@ public class PositionRepository : IPositionRepository
 
         return position;
     }
+    
+    public async Task<Result<List<Position>, Error>> GetUniqDepRelatedPositions(Guid departmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var uniqPositionIds = await _dbContext.DepartmentPositions
+            .Where(dp => dp.DepartmentId == departmentId)
+            .Where(dp => !_dbContext.DepartmentPositions
+                .Any(dp2 => dp2.PositionId == dp.PositionId &&
+                            dp2.DepartmentId != departmentId))
+            .Select(dp => dp.PositionId)
+            .ToListAsync(cancellationToken);
+
+        if (uniqPositionIds.Count == 0)
+            return Errors.General.ValueIsInvalid("dep.uniq_related_positions");
+         
+        var positions = _dbContext.Positions
+            .Where(l => uniqPositionIds.Contains(l.Id))
+            .ToListAsync(cancellationToken);   
+
+        return positions.Result;
+    }
 
     public async Task<Result<bool, Error>> IsPositionExistAsync(Guid positionId, CancellationToken cancellationToken = default)
     {

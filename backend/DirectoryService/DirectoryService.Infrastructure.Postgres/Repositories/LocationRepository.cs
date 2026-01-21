@@ -32,6 +32,28 @@ public class LocationRepository : ILocationRepository
         return true;
     }
 
+    public async Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
+        CancellationToken cancellationToken = default)
+    {
+         var uniqLocationIds = await _dbContext.DepartmentLocations
+            .Where(dl => dl.DepartmentId == departmentId)
+            .Where(dl => !_dbContext.DepartmentLocations
+                .Any(dl2 => dl2.LocationId == dl.LocationId &&
+                            dl2.DepartmentId != departmentId))
+            .Select(dl => dl.LocationId)
+            .ToListAsync(cancellationToken);
+
+         if (uniqLocationIds.Count == 0)
+             return Errors.General.ValueIsInvalid("dep.uniq_related_locations");
+         
+         var locations = _dbContext.Locations
+             .Where(l => uniqLocationIds.Contains(l.Id))
+             .ToListAsync(cancellationToken);   
+
+         return locations.Result;
+    }
+    
+
     public async Task<UnitResult<Error>> AllLocationsExistAsync(
     IEnumerable<LocationId> locationIds,
     CancellationToken cancellationToken)
@@ -51,9 +73,9 @@ public class LocationRepository : ILocationRepository
 
     public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Locations.AddAsync(location, cancellationToken);
         try
         {
+            await _dbContext.Locations.AddAsync(location, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return location.Id.Value;
         }

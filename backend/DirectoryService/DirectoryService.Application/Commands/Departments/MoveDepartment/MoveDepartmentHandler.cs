@@ -11,7 +11,7 @@ namespace DirectoryService.Application.Commands.Departments.MoveDepartment;
 
 public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand>
 {
-    private readonly ITrasactionManager _trasactionManager;
+    private readonly ITransactionManager _transactionManager;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<MoveDepartmentCommand> _validator;
     private readonly ILogger<MoveDepartmentHandler> _logger;
@@ -19,9 +19,9 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         IDepartmentRepository departmentRepository,
         IValidator<MoveDepartmentCommand> validator,
         ILogger<MoveDepartmentHandler> logger,
-        ITrasactionManager trasactionManager)
+        ITransactionManager transactionManager)
     {
-        _trasactionManager = trasactionManager;
+        _transactionManager = transactionManager;
         _departmentRepository = departmentRepository;
         _validator = validator;
         _logger = logger;
@@ -39,13 +39,14 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
             return validationResult.ToErrors();
         }
 
-        var transactionScopeResult = await _trasactionManager.BeginTransactionAsync(cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 
         using var transactionScope = transactionScopeResult.Value;
 
-        var isDepartmentExistResult = await _departmentRepository.GetByIdWithLock(command.DepartmentId, cancellationToken);
+        var isDepartmentExistResult = await _departmentRepository.GetByIdWithLock(command.DepartmentId,
+            cancellationToken);
         if (isDepartmentExistResult.IsFailure)
             return Errors.General.NotFoundEntity("department").ToFailure();
 
@@ -81,11 +82,12 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
 
         var newPath = department.Path.Value;
 
-        var updateDescendantsResult = await _departmentRepository.UpdateAllDescendants(oldPath, newPath, department.Id, cancellationToken);
+        var updateDescendantsResult = await _departmentRepository.UpdateAllDescendantsPath(oldPath, newPath, department.Id,
+            cancellationToken);
         if (updateDescendantsResult.IsFailure)
             return updateDescendantsResult.Error.ToFailure();
 
-        await _trasactionManager.SaveChangeAsync(cancellationToken);
+        await _transactionManager.SaveChangeAsync(cancellationToken);
 
         var commitedResult = transactionScope.Commit();
         if (commitedResult.IsFailure)

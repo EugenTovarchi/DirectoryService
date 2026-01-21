@@ -1,5 +1,6 @@
 using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
+using DirectoryService.Application.Commands.Departments.SoftDelete;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
@@ -100,5 +101,17 @@ public class DepartmentController : ApplicationController
         var result = await handler.Handle(query, cancellationToken);
 
         return Ok(result);
+    }
+    
+    [HttpDelete("/api/departments/soft/{departmentId:guid}")]
+    public async Task<IActionResult> SoftDelete(
+        [FromRoute] Guid departmentId,
+        [FromServices] SoftDeleteHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var command = new SoftDeleteCommand(departmentId);
+        var result = await handler.Handle(command, cancellationToken);
+
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 }
