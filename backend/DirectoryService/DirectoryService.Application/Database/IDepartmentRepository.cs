@@ -11,7 +11,7 @@ public interface IDepartmentRepository
     Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken = default);
     Task<Result<Guid, Error>> AddAsync(Department department, CancellationToken cancellationToken = default);
     Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId, CancellationToken cancellationToken = default);
-    Task<Result<bool, Error>> AllDepartmentsExistAsync(IEnumerable<Guid> departmentsIds,
+    Task<Result<bool, Error>> AllDepartmentsExistAsync(List<Guid> departmentsIds,
         CancellationToken cancellationToken = default);
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
         CancellationToken cancellationToken = default);

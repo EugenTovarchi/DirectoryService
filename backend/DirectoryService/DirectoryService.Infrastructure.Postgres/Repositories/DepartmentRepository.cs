@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
+using Dapper;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
@@ -127,30 +128,34 @@ public class DepartmentRepository : IDepartmentRepository
         DepartmentId movedDepartmentId,
         CancellationToken cancellationToken)
     {
+        var parameters = new DynamicParameters();
+        
+        parameters.Add("oldPath", oldPath);
+        parameters.Add("newPath",  newPath);
+        parameters.Add("moved_department_id", movedDepartmentId.Value);
+        parameters.Add("updated_at", DateTime.UtcNow);
+        
         try
         {
             await _dbContext.Database.ExecuteSqlRawAsync(
                 $"""
                  UPDATE departments dept
                  SET 
-                     path = @NewPath::ltree || subpath(dept.path, nlevel(@OldPath::ltree)),
-                     depth = nlevel(@NewPath::ltree) + (dept.depth - nlevel(@OldPath::ltree)),
-                     updated_at = @UpdatedAt
+                     path = @newPath::ltree || subpath(dept.path, nlevel(@oldPath::ltree)),
+                     depth = nlevel(@newPath::ltree) + (dept.depth - nlevel(@oldPath::ltree)),
+                     updated_at = @updated_at
                  WHERE dept.is_deleted = false
-                         AND dept.path <@ @OldPath::ltree
-                         AND dept.id != @MovedDepartmentId
+                         AND dept.path <@ @oldPath::ltree
+                         AND dept.id != @moved_department_id
                  """,
-                new NpgsqlParameter("OldPath", oldPath),
-                new NpgsqlParameter("NewPath", newPath),
-                new NpgsqlParameter("MovedDepartmentId", movedDepartmentId.Value),
-                new NpgsqlParameter("UpdatedAt", DateTime.UtcNow));
+                parameters);
 
             return UnitResult.Success<Error>();
         }
 
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for descendats of department{movedDepartmentId}", movedDepartmentId);
+            _logger.LogError(ex, "Update error for descendants of department{movedDepartmentId}", movedDepartmentId);
             return Errors.General.DatabaseError("update.descendants");
         }
     }
@@ -161,29 +166,33 @@ public class DepartmentRepository : IDepartmentRepository
         DepartmentId parentDepartmentId,
         CancellationToken cancellationToken)
     {
+        var parameters = new DynamicParameters();
+        
+        parameters.Add("oldPath", oldPath);
+        parameters.Add("prefix",  prefix);
+        parameters.Add("parent_department_id", parentDepartmentId.Value);
+        parameters.Add("updated_at", DateTime.UtcNow);
+        
         try
         {
             await _dbContext.Database.ExecuteSqlRawAsync(
                 $"""
                  UPDATE departments dept
                  SET 
-                     path =  subpath(dept.path, 0, -1) || (@Prefix|| subpath(dept.path, -1)::text)::ltree,
-                     updated_at = @UpdatedAt
+                     path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree,
+                     updated_at = @updated_at
                  WHERE dept.is_deleted = false
-                         AND dept.path <@ @OldPath::ltree
-                         AND dept.id != @parentDepartmentId
+                         AND dept.path <@ @oldPath::ltree
+                         AND dept.id != @parent_department_id
                  """,
-                new NpgsqlParameter("OldPath", oldPath),
-                new NpgsqlParameter("Prefix", prefix),
-                new NpgsqlParameter("parentDepartmentId", parentDepartmentId.Value),
-                new NpgsqlParameter("UpdatedAt", DateTime.UtcNow));
+                parameters);
 
             return UnitResult.Success<Error>();
         }
 
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for descendats path of department{parentDepartmentId}", parentDepartmentId);
+            _logger.LogError(ex, "Update error for descendats path of department {parentDepartmentId}", parentDepartmentId);
             return Errors.General.DatabaseError("update.descendants_path");
         }
     }
@@ -194,23 +203,27 @@ public class DepartmentRepository : IDepartmentRepository
         DepartmentId parentDepartmentId,
         CancellationToken cancellationToken)
     {
+        var parameters = new DynamicParameters();
+        
+        parameters.Add("oldPath", oldPath);
+        parameters.Add("prefix_to_remove",  prefixToRemove);
+        parameters.Add("parent_department_id", parentDepartmentId.Value);
+        parameters.Add("updated_at", DateTime.UtcNow);
+        
         try
         {
             await _dbContext.Database.ExecuteSqlRawAsync(
                 $"""
                  UPDATE departments dept
                  SET 
-                     path =  subpath(dept.path, 0, -1) || replace(subpath(dept.path, -1)::text, @PrefixToremove, '')::ltree,
-                     updated_at = @UpdatedAt
+                     path =  subpath(dept.path, 0, -1) || replace(subpath(dept.path, -1)::text, @prefix_to_remove, '')::ltree,
+                     updated_at = @updated_at
                  WHERE dept.is_deleted = false
-                         AND dept.path <@ @OldPath::ltree
-                         AND dept.id != @parentDepartmentId
-                         AND subpath(dept.path, -1)::text LIKE @PrefixToRemove || '%'
+                         AND dept.path <@ @oldPath::ltree
+                         AND dept.id != @parent_department_id
+                         AND subpath(dept.path, -1)::text LIKE @prefix_to_remove || '%'
                  """,
-                new NpgsqlParameter("OldPath", oldPath),
-                new NpgsqlParameter("PrefixToRemove", prefixToRemove),
-                new NpgsqlParameter("parentDepartmentId", parentDepartmentId.Value),
-                new NpgsqlParameter("UpdatedAt", DateTime.UtcNow));
+                parameters);
 
             return UnitResult.Success<Error>();
         }
@@ -246,7 +259,7 @@ public class DepartmentRepository : IDepartmentRepository
     }
 
     public async Task<Result<bool, Error>> AllDepartmentsExistAsync(
-        IEnumerable<Guid> departmentsIds,
+        List<Guid> departmentsIds,
         CancellationToken cancellationToken)
     {
         try
