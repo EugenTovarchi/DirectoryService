@@ -4,7 +4,7 @@ using System.Data;
 
 namespace DirectoryService.Application.Database;
 
-public interface ITrasactionManager
+public interface ITransactionManager
 {
     Task<Result<ITransactionScope, Error>> BeginTransactionAsync(
         CancellationToken cancellationToken = default,

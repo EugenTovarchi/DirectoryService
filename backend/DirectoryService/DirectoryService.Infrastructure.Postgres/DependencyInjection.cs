@@ -1,4 +1,5 @@
 using DirectoryService.Application.Database;
+using DirectoryService.Core.Abstractions;
 using DirectoryService.Infrastructure.Postgres.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
@@ -52,7 +53,7 @@ public static class DependencyInjection
             //options.UseLoggerFactory(loggerFactory);
         });
 
-        services.AddScoped<ITrasactionManager, TransactionManager>();
+        services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
 
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;

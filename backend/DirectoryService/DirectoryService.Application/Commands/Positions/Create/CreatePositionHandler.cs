@@ -53,7 +53,7 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
 
         var position = positionResult.Value;
 
-        if (command.Request.DepartmentIds != null && command.Request.DepartmentIds.Any())
+        if (command.Request.DepartmentIds.Any())
         {
             var departmentsCheck = await CheckDepartments(command.Request.DepartmentIds, cancellationToken);
             if (departmentsCheck.IsFailure)

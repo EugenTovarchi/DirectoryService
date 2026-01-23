@@ -45,8 +45,8 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
             .HasColumnName("is_deleted")
             .HasDefaultValue(false);
 
-        builder.Property(p => p.DeletionDate)
-            .HasColumnName("deletion_date")
+        builder.Property(p => p.DeletedAt)
+            .HasColumnName("deleted_at")
             .IsRequired(false);
 
         builder.Property(p => p.CreatedAt)

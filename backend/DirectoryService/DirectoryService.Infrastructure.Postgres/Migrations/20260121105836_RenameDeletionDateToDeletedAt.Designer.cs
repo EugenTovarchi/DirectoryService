@@ -3,6 +3,7 @@ using System;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DirectoryService.Infrastructure.Postgres.Migrations
 {
     [DbContext(typeof(DirectoryServiceDbContext))]
-    partial class DirectoryServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260121105836_RenameDeletionDateToDeletedAt")]
+    partial class RenameDeletionDateToDeletedAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,9 +38,9 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("timezone('utc',now())");
 
-                    b.Property<DateTime?>("DeletedAt")
+                    b.Property<DateTime?>("DeletionDate")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnName("deletion_date");
 
                     b.Property<short>("Depth")
                         .HasColumnType("smallint")
@@ -123,9 +126,9 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("timezone('utc',now())");
 
-                    b.Property<DateTime?>("DeletedAt")
+                    b.Property<DateTime?>("DeletionDate")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnName("deletion_date");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -156,9 +159,9 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("timezone('utc',now())");
 
-                    b.Property<DateTime?>("DeletedAt")
+                    b.Property<DateTime?>("DeletionDate")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnName("deletion_date");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()

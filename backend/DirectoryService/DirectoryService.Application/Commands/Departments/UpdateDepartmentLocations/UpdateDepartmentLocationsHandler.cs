@@ -12,7 +12,7 @@ namespace DirectoryService.Application.Commands.Departments.UpdateDepartmentLoca
 
 public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepartmentLocationsCommand>
 {
-    private readonly ITrasactionManager _trasactionManager;
+    private readonly ITransactionManager _transactionManager;
     private readonly ILocationRepository _locationRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<UpdateDepartmentLocationsCommand> _validator;
@@ -20,19 +20,20 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
 
     public UpdateDepartmentLocationsHandler(
 
-        ITrasactionManager trasactionManager,
+        ITransactionManager transactionManager,
         ILocationRepository locationRepository,
         IDepartmentRepository departmentRepository,
         IValidator<UpdateDepartmentLocationsCommand> validator,
         ILogger<UpdateDepartmentLocationsHandler> logger)
     {
-        _trasactionManager = trasactionManager;
+        _transactionManager = transactionManager;
         _locationRepository = locationRepository;
         _departmentRepository = departmentRepository;
         _validator = validator;
         _logger = logger;
     }
-    public async Task<Result<Guid, Failure>> Handle(UpdateDepartmentLocationsCommand command, CancellationToken cancellationToken)
+    public async Task<Result<Guid, Failure>> Handle(UpdateDepartmentLocationsCommand command,
+        CancellationToken cancellationToken)
     {
         if (command == null)
             return Errors.General.ValueIsInvalid("command").ToFailure();
@@ -45,7 +46,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
             return validationResult.ToErrors();
         }
 
-        var transactionScopeResult = await _trasactionManager.BeginTransactionAsync(cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 
@@ -87,7 +88,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
 
         department.AddDepartmentLocation(newDepartmentLocations);
 
-        await _trasactionManager.SaveChangeAsync(cancellationToken);
+        await _transactionManager.SaveChangeAsync(cancellationToken);
 
         var commitedResult = transactionScope.Commit();
         if (commitedResult.IsFailure)
