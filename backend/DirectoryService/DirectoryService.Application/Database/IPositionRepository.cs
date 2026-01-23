@@ -10,4 +10,7 @@ public interface IPositionRepository
 
     Task<Result<List<Position>, Error>> GetUniqDepRelatedPositions(Guid departmentId,
         CancellationToken cancellationToken = default);
+
+    Task<UnitResult<Error>> SoftDeleteUniqDepRelatedPositions(Guid departmentId,
+        CancellationToken cancellationToken = default);
 }

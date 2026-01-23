@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
@@ -21,7 +22,8 @@ public class LocationRepository : ILocationRepository
         _logger = logger;
     }
 
-    public async Task<Result<bool, Error>> IsLocationExistAsync(Guid locationId, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, Error>> IsLocationExistAsync(Guid locationId,
+        CancellationToken cancellationToken = default)
     {
         var isLocationExist = await _dbContext.Locations
             .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
@@ -35,7 +37,7 @@ public class LocationRepository : ILocationRepository
     public async Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
-         var uniqLocationIds = await _dbContext.DepartmentLocations
+        var uniqLocationIds = await _dbContext.DepartmentLocations
             .Where(dl => dl.DepartmentId == departmentId)
             .Where(dl => !_dbContext.DepartmentLocations
                 .Any(dl2 => dl2.LocationId == dl.LocationId &&
@@ -43,22 +45,66 @@ public class LocationRepository : ILocationRepository
             .Select(dl => dl.LocationId)
             .ToListAsync(cancellationToken);
 
-         if (uniqLocationIds.Count == 0)
-         {
-             return new List<Location>();
-         }
-         
-         var locations = await _dbContext.Locations
-             .Where(l => uniqLocationIds.Contains(l.Id))
-             .ToListAsync(cancellationToken);   
+        if (uniqLocationIds.Count == 0)
+        {
+            return new List<Location>();
+        }
 
-         return locations;
+        var locations = await _dbContext.Locations
+            .Where(l => uniqLocationIds.Contains(l.Id))
+            .ToListAsync(cancellationToken);
+
+        return locations;
     }
-    
+
+    public async Task<UnitResult<Error>> SoftDeleteUniqDepRelatedLocations(Guid departmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("@department_id", departmentId);
+        parameters.Add("@deleted_at", DateTime.UtcNow);
+        parameters.Add("@updated_at", DateTime.UtcNow);
+
+        try
+        {
+            const string sql =
+                """
+                    WITH unique_locations AS (
+                    SELECT dl1.location_id
+                    FROM department_locations dl1
+                    WHERE dl1.department_id = @department_id
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM department_locations dl2
+                        WHERE dl2.location_id = dl1.location_id
+                          AND dl2.department_id != @department_id
+                    )
+                )
+                UPDATE locations l
+                SET is_deleted = true,
+                    deleted_at = @deleted_at,
+                    updated_at = @updated_at
+                FROM unique_locations 
+                WHERE l.id = unique_locations.location_id AND l.is_deleted = false;
+                """;
+
+            var connection = _dbContext.Database.GetDbConnection();
+            var updatedLocations = await connection.ExecuteAsync(sql, parameters);
+
+            _logger.LogInformation("Count of updated locations: {updatedLocations}", updatedLocations);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Update error for locations of department{departmentId}", departmentId);
+            return Errors.General.DatabaseError("update.locations");
+        }
+
+        return UnitResult.Success<Error>();
+    }
 
     public async Task<UnitResult<Error>> AllLocationsExistAsync(
-    IEnumerable<LocationId> locationIds,
-    CancellationToken cancellationToken)
+        IEnumerable<LocationId> locationIds,
+        CancellationToken cancellationToken)
     {
         var idList = locationIds.ToList();
 
@@ -81,13 +127,14 @@ public class LocationRepository : ILocationRepository
             await _dbContext.SaveChangesAsync(cancellationToken);
             return location.Id.Value;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)             
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {
             return HandlePostgresException(pgEx, location.Name.Value);
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogError(ex, "Operation was cancelled while creating location with name {name}", location.Name.Value);
+            _logger.LogError(ex, "Operation was cancelled while creating location with name {name}",
+                location.Name.Value);
             return Errors.General.DatabaseError("creating_location_error");
         }
         catch (Exception ex)
@@ -101,7 +148,8 @@ public class LocationRepository : ILocationRepository
     {
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
-            _logger.LogError("Database error while creating location {name}: {Message}", locationName, pgEx.MessageText);
+            _logger.LogError("Database error while creating location {name}: {Message}", locationName,
+                pgEx.MessageText);
             return Errors.General.DatabaseError("creating_location_error");
         }
 
@@ -131,7 +179,8 @@ public class LocationRepository : ILocationRepository
             return Errors.General.Duplicate("address");
         }
 
-        _logger.LogError("Unknown unique constraint violation for location {name}: {Constraint}", locationName, pgEx.ConstraintName);
+        _logger.LogError("Unknown unique constraint violation for location {name}: {Constraint}", locationName,
+            pgEx.ConstraintName);
         return Errors.General.Duplicate("record");
     }
 }

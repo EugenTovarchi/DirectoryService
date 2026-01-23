@@ -13,4 +13,7 @@ public interface ILocationRepository
 
     Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
         CancellationToken cancellationToken = default);
+
+    Task<UnitResult<Error>> SoftDeleteUniqDepRelatedLocations(Guid departmentId,
+        CancellationToken cancellationToken = default);
 }
