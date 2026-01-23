@@ -188,7 +188,7 @@ public class DepartmentRepository : IDepartmentRepository
                  """;
             
             var connection = _dbContext.Database.GetDbConnection();
-            var result = await connection.ExecuteAsync(sql, parameters);
+            await connection.ExecuteAsync(sql, parameters);
 
             return UnitResult.Success<Error>();
         }
