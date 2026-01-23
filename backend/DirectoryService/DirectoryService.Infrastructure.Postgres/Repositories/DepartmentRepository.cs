@@ -1,3 +1,4 @@
+using System.Data;
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Dapper;
@@ -130,10 +131,10 @@ public class DepartmentRepository : IDepartmentRepository
     {
         var parameters = new DynamicParameters();
         
-        parameters.Add("oldPath", oldPath);
-        parameters.Add("newPath",  newPath);
-        parameters.Add("moved_department_id", movedDepartmentId.Value);
-        parameters.Add("updated_at", DateTime.UtcNow);
+        parameters.Add("@oldPath", oldPath);
+        parameters.Add("@newPath",  newPath);
+        parameters.Add("@moved_department_id", movedDepartmentId.Value);
+        parameters.Add("@updated_at", DateTime.UtcNow);
         
         try
         {
@@ -168,15 +169,15 @@ public class DepartmentRepository : IDepartmentRepository
     {
         var parameters = new DynamicParameters();
         
-        parameters.Add("oldPath", oldPath);
-        parameters.Add("prefix",  prefix);
-        parameters.Add("parent_department_id", parentDepartmentId.Value);
-        parameters.Add("updated_at", DateTime.UtcNow);
+        parameters.Add("@oldPath", oldPath);
+        parameters.Add("@prefix",  prefix);
+        parameters.Add("@parent_department_id", parentDepartmentId.Value);
+        parameters.Add("@updated_at", DateTime.UtcNow, DbType.DateTime);
         
         try
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(
-                $"""
+            const string sql = 
+                """
                  UPDATE departments dept
                  SET 
                      path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree,
@@ -184,8 +185,10 @@ public class DepartmentRepository : IDepartmentRepository
                  WHERE dept.is_deleted = false
                          AND dept.path <@ @oldPath::ltree
                          AND dept.id != @parent_department_id
-                 """,
-                parameters);
+                 """;
+            
+            var connection = _dbContext.Database.GetDbConnection();
+            var result = await connection.ExecuteAsync(sql, parameters);
 
             return UnitResult.Success<Error>();
         }
@@ -205,10 +208,10 @@ public class DepartmentRepository : IDepartmentRepository
     {
         var parameters = new DynamicParameters();
         
-        parameters.Add("oldPath", oldPath);
-        parameters.Add("prefix_to_remove",  prefixToRemove);
-        parameters.Add("parent_department_id", parentDepartmentId.Value);
-        parameters.Add("updated_at", DateTime.UtcNow);
+        parameters.Add("@oldPath", oldPath);
+        parameters.Add("@prefix_to_remove",  prefixToRemove);
+        parameters.Add("@parent_department_id", parentDepartmentId.Value);
+        parameters.Add("@updated_at", DateTime.UtcNow, DbType.DateTime);
         
         try
         {
