@@ -33,30 +33,7 @@ public class LocationRepository : ILocationRepository
 
         return true;
     }
-
-    public async Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
-        CancellationToken cancellationToken = default)
-    {
-        var uniqLocationIds = await _dbContext.DepartmentLocations
-            .Where(dl => dl.DepartmentId == departmentId)
-            .Where(dl => !_dbContext.DepartmentLocations
-                .Any(dl2 => dl2.LocationId == dl.LocationId &&
-                            dl2.DepartmentId != departmentId))
-            .Select(dl => dl.LocationId)
-            .ToListAsync(cancellationToken);
-
-        if (uniqLocationIds.Count == 0)
-        {
-            return new List<Location>();
-        }
-
-        var locations = await _dbContext.Locations
-            .Where(l => uniqLocationIds.Contains(l.Id))
-            .ToListAsync(cancellationToken);
-
-        return locations;
-    }
-
+    
     public async Task<UnitResult<Error>> SoftDeleteUniqDepRelatedLocations(Guid departmentId,
         CancellationToken cancellationToken = default)
     {

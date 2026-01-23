@@ -11,9 +11,6 @@ public interface ILocationRepository
     Task<UnitResult<Error>> AllLocationsExistAsync(IEnumerable<LocationId> locationIds,
         CancellationToken cancellationToken);
 
-    Task<Result<List<Location>, Error>> GetUniqDepRelatedLocations(Guid departmentId,
-        CancellationToken cancellationToken = default);
-
     Task<UnitResult<Error>> SoftDeleteUniqDepRelatedLocations(Guid departmentId,
         CancellationToken cancellationToken = default);
 }
