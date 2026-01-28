@@ -1,4 +1,3 @@
-using System.Data;
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Dapper;
@@ -13,25 +12,89 @@ using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentR
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
-public class DepartmentRepository : IDepartmentRepository
+public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<DepartmentRepository> logger)
+    : IDepartmentRepository
 {
-    private readonly DirectoryServiceDbContext _dbContext;
-    private readonly ILogger<DepartmentRepository> _logger;
-
-    public DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<DepartmentRepository> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
-
     public async Task<Result<Department, Error>> GetBy(Expression<Func<Department, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        var department = await _dbContext.Departments.FirstOrDefaultAsync(predicate, cancellationToken);
+        var department = await dbContext.Departments.FirstOrDefaultAsync(predicate, cancellationToken);
         if (department is null)
             return Errors.General.NotFoundEntity("department");
 
         return department;
+    }
+
+    public async Task<List<DepartmentId>> GetExpiredDepartmentsIds(int daysBeforeDeletion,
+        CancellationToken cancellationToken = default)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysBeforeDeletion);
+
+        return await dbContext.Departments
+            .Where(d => d.IsDeleted && d.DeletedAt < cutoffDate)
+            .Select(d => DepartmentId.Create(d.Id))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<Guid>> GetDescendantDepartmentIds(
+        List<DepartmentId> expiredDepartmentsIds,
+        CancellationToken cancellationToken)
+    {
+        if (!expiredDepartmentsIds.Any())
+            return new List<Guid>();
+
+        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var parameters = new DynamicParameters();
+        parameters.Add("@expiredDepartmentsIds", ids);
+
+        const string sql = """
+                               SELECT DISTINCT d.id
+                               FROM departments d
+                               INNER JOIN departments del ON d.path <@ del.path 
+                                                          AND d.path != del.path
+                                                          AND del.id = ANY(@expiredDepartmentsIds)
+                               WHERE d.is_deleted = false
+                           """;
+
+        var connection = dbContext.Database.GetDbConnection();
+        var descendants = await connection.QueryAsync<Guid>(sql, parameters);
+
+        return descendants.ToList();
+    }
+
+    public async Task<int> CleanExpiredDepartmentsWithRelatesAsync(List<DepartmentId> expiredDepartmentsIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (expiredDepartmentsIds.Count == 0)
+            return 0;
+
+        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var parameters = new DynamicParameters();
+        parameters.Add("@ids", ids);
+
+        const string sql = """
+
+                           WITH deleted_dep_locations AS (
+                               DELETE FROM department_locations 
+                               WHERE department_id = ANY @ids
+                           ),
+                           deleted_dep_positions AS (
+                               DELETE FROM department_positions 
+                               WHERE department_id = ANY @ids
+                           ),
+
+                           deleted_departments AS (
+                           DELETE FROM departments 
+                           WHERE id = ANY @ids
+                           RETURNING 1
+                           )
+                           SELECT COUNT(*) FROM deleted_departments;
+                           """;
+
+        var connection = dbContext.Database.GetDbConnection();
+        var countCleanedDepartments = await connection.ExecuteAsync(sql, parameters);
+
+        return countCleanedDepartments;
     }
 
     public async Task<UnitResult<Error>> UpdateAsRoot(Department department)
@@ -40,7 +103,7 @@ public class DepartmentRepository : IDepartmentRepository
         if (pathResult.IsFailure)
             return pathResult.Error;
 
-        await _dbContext.Departments
+        await dbContext.Departments
             .Where(d => d.Id == department.Id)
             .ExecuteUpdateAsync(setter => setter
                 .SetProperty(d => d.Path, pathResult.Value)
@@ -67,7 +130,7 @@ public class DepartmentRepository : IDepartmentRepository
         var newParentId = parent.Id;
         var updatedAt = DateTime.UtcNow;
 
-        await _dbContext.Departments
+        await dbContext.Departments
             .Where(d => d.Id == department.Id)
             .ExecuteUpdateAsync(setter => setter
                 .SetProperty(d => d.Path, newPath)
@@ -80,7 +143,7 @@ public class DepartmentRepository : IDepartmentRepository
 
     public async Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken)
     {
-        var department = await _dbContext.Departments
+        var department = await dbContext.Departments
             .FirstOrDefaultAsync(v => v.Id == departmentId, cancellationToken);
 
         if (department is null)
@@ -91,7 +154,7 @@ public class DepartmentRepository : IDepartmentRepository
 
     public async Task<Result<Department, Error>> GetByIdWithLock(Guid departmentId, CancellationToken cancellationToken)
     {
-        var department = await _dbContext.Departments
+        var department = await dbContext.Departments
             .FromSql($"SELECT * FROM departments WHERE id = {departmentId} AND is_deleted = false FOR UPDATE")
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -105,7 +168,7 @@ public class DepartmentRepository : IDepartmentRepository
     {
         try
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(
+            await dbContext.Database.ExecuteSqlRawAsync(
                 "SELECT id FROM departments WHERE path <@ @oldPath::ltree AND is_deleted = false FOR UPDATE",
                 new NpgsqlParameter("oldPath", oldPath));
 
@@ -113,32 +176,77 @@ public class DepartmentRepository : IDepartmentRepository
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
         {
-            _logger.LogWarning("Could not lock descendants of {Path} - already locked", oldPath);
+            logger.LogWarning("Could not lock descendants of {Path} - already locked", oldPath);
             return Errors.General.ResourceLocked("department.descendants");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error locking descendants by path: {Path}", oldPath);
+            logger.LogError(ex, "Error locking descendants by path: {Path}", oldPath);
             return Errors.General.DatabaseError("lock.descendants");
+        }
+    }
+
+    public async Task<UnitResult<Error>> LockDescendantsByIds(List<Guid> departmentIdsToLock,
+        CancellationToken cancellationToken = default)
+    {
+        if (departmentIdsToLock.Count == 0)
+            return Errors.Validation.RecordIsInvalid("descendantIdsToLock");
+
+        var ids = departmentIdsToLock.ToArray();
+
+        var parameters = new DynamicParameters();
+        parameters.Add("@ids", ids);
+
+        try
+        {
+            await using var connection = dbContext.Database.GetDbConnection();
+
+            const string sql = """  
+                                       SELECT id FROM departments WHERE id = ANY(@ids)   
+                                         AND is_deleted = false   
+                                       FOR UPDATE  NOWAIT
+                               """;
+            
+            var lockedDepIds = await connection.QueryAsync(sql, parameters);
+            var lockedCount = lockedDepIds.Count(); 
+
+            if (departmentIdsToLock.Count != lockedCount)
+            {
+                logger.LogWarning("Not all departments locked!");
+                return Errors.Database.ResourceLocked("locked_dep_descendants");
+            }
+
+            logger.LogInformation("Successfully locked descendants: {lockedCount}", lockedCount);
+            return UnitResult.Success<Error>();
+        }
+        catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
+        {
+            logger.LogWarning("Descendants are already locked by other transactions");
+            return Errors.Database.ResourceLocked("department_descendants");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error locking department_descendants");
+            return Errors.General.DatabaseError("lock.department_descendants");
         }
     }
 
     public async Task<UnitResult<Error>> UpdateAllDescendantsPath(
         string oldPath,
         string newPath,
-        DepartmentId movedDepartmentId,
+        DepartmentId parentDepartmentId,
         CancellationToken cancellationToken)
     {
         var parameters = new DynamicParameters();
-        
+
         parameters.Add("@oldPath", oldPath);
-        parameters.Add("@newPath",  newPath);
-        parameters.Add("@moved_department_id", movedDepartmentId.Value);
+        parameters.Add("@newPath", newPath);
+        parameters.Add("@parent_department_id", parentDepartmentId.Value);
         parameters.Add("@updated_at", DateTime.UtcNow);
-        
+
         try
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(
+            await dbContext.Database.ExecuteSqlRawAsync(
                 $"""
                  UPDATE departments dept
                  SET 
@@ -147,101 +255,132 @@ public class DepartmentRepository : IDepartmentRepository
                      updated_at = @updated_at
                  WHERE dept.is_deleted = false
                          AND dept.path <@ @oldPath::ltree
-                         AND dept.id != @moved_department_id
+                         AND dept.id != @parent_department_id
                  """,
                 parameters);
 
             return UnitResult.Success<Error>();
         }
-
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for descendants of department{movedDepartmentId}", movedDepartmentId);
+            logger.LogError(ex, "Update error for descendants of department{parentDepartmentId}", parentDepartmentId);
             return Errors.General.DatabaseError("update.descendants");
         }
     }
-    
-    public async Task<UnitResult<Error>> PutDescendantsPrefixToLastPathElement(
-        string oldPath,
+
+    public async Task<UnitResult<Error>> MarkDepartmentAsDeleted(
         string prefix,
-        DepartmentId parentDepartmentId,
+        DepartmentId deletedDepartmentId,
         CancellationToken cancellationToken)
     {
         var parameters = new DynamicParameters();
-        
-        parameters.Add("@oldPath", oldPath);
-        parameters.Add("@prefix",  prefix);
-        parameters.Add("@parent_department_id", parentDepartmentId.Value);
-        parameters.Add("@updated_at", DateTime.UtcNow, DbType.DateTime);
-        
+
+        parameters.Add("@prefix", prefix);
+        parameters.Add("@deleted_department_id", deletedDepartmentId.Value);
+
         try
         {
-            const string sql = 
+            const string sql =
                 """
-                 UPDATE departments dept
-                 SET 
-                     path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree,
-                     updated_at = @updated_at
-                 WHERE dept.is_deleted = false
-                         AND dept.path <@ @oldPath::ltree
-                         AND dept.id != @parent_department_id
-                 """;
-            
-            var connection = _dbContext.Database.GetDbConnection();
+                UPDATE departments dept
+                SET 
+                    path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree
+                    WHERE dept.is_deleted = true
+                        AND dept.id = @deleted_department_id
+                """;
+
+            var connection = dbContext.Database.GetDbConnection();
             await connection.ExecuteAsync(sql, parameters);
 
             return UnitResult.Success<Error>();
         }
-
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for descendats path of department {parentDepartmentId}", parentDepartmentId);
-            return Errors.General.DatabaseError("update.descendants_path");
+            logger.LogError(ex, "Path of department: {deletedDepartmentId} was updated",
+                deletedDepartmentId.Value);
+            return Errors.General.DatabaseError("update.descendant_path");
         }
     }
-    
-    public async Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
-        string oldPath,
-        string prefixToRemove,
-        DepartmentId parentDepartmentId,
+
+    public async Task<UnitResult<Error>> UpdateDescendantsInfoAfterCleanUp(
+        List<DepartmentId> deletedDepartmentIds,
+        List<Guid> descendantIds,
         CancellationToken cancellationToken)
     {
+        if (deletedDepartmentIds.Count == 0)
+            return Errors.Validation.RecordIsInvalid("deletedDepartmentIds");
+        if (descendantIds.Count == 0)
+            return Errors.Validation.RecordIsInvalid("descendantIds");
+
+        var deletedIds = deletedDepartmentIds.Select(id => id.Value).ToArray();
+        
         var parameters = new DynamicParameters();
-        
-        parameters.Add("@oldPath", oldPath);
-        parameters.Add("@prefix_to_remove",  prefixToRemove);
-        parameters.Add("@parent_department_id", parentDepartmentId.Value);
-        parameters.Add("@updated_at", DateTime.UtcNow, DbType.DateTime);
-        
+        parameters.Add("@deleted_dep_ids", deletedIds);
+        parameters.Add("@descendant_ids", descendantIds);
+        parameters.Add("@now", DateTime.UtcNow);
+
         try
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(
-                $"""
-                 UPDATE departments dept
-                 SET 
-                     path =  subpath(dept.path, 0, -1) || replace(subpath(dept.path, -1)::text, @prefix_to_remove, '')::ltree,
-                     updated_at = @updated_at
-                 WHERE dept.is_deleted = false
-                         AND dept.path <@ @oldPath::ltree
-                         AND dept.id != @parent_department_id
-                         AND subpath(dept.path, -1)::text LIKE @prefix_to_remove || '%'
-                 """,
-                parameters);
+            const string sql =
+                """
+                WITH deleted_departments AS (
+                    SELECT identifier
+                    FROM departments
+                    WHERE id = ANY(@deleted_dep_ids)
+                ),
+                departments_to_update AS (
+                    SELECT 
+                        d.id,
+                        d.path,
+                        string_to_array(d.path::text, '.') as elements
+                    FROM departments d
+                    WHERE d.id = ANY(@descendant_ids)
+                ),
+                updated_paths AS (
+                    SELECT 
+                        dtu.id,
+                        (
+                            SELECT string_agg(elem, '.')::ltree
+                            FROM unnest(dtu.elements) as elem
+                            WHERE elem NOT IN (SELECT identifier FROM deleted_departments)
+                        ) as new_path
+                    FROM departments_to_update dtu
+                )
+                UPDATE departments d
+                SET 
+                    path = up.new_path,
+                    depth = nlevel(up.new_path),
+                    parent_id = CASE 
+                        WHEN nlevel(up.new_path) = 1 THEN NULL
+                        ELSE (
+                            SELECT p.id
+                            FROM departments p
+                            WHERE p.path = subpath(up.new_path, 0, -1)
+                              AND p.is_deleted = false
+                            LIMIT 1
+                        )
+                    END,
+                    updated_at = @now
+                FROM updated_paths up
+                WHERE d.id = up.id
+                  AND up.new_path IS NOT NULL
+                  AND up.new_path != ''::ltree;
+                """;
 
+            await dbContext.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
             return UnitResult.Success<Error>();
         }
-
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for descendats path of department{parentDepartmentId}", parentDepartmentId);
-            return Errors.General.DatabaseError("update.descendants_path");
+            logger.LogError(ex, "Error during updated department descendants info");
+            return Errors.General.DatabaseError("update.descendant_info");
         }
     }
 
     public async Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
-        var isDepartmentExist = await _dbContext.Departments
+        var isDepartmentExist = await dbContext.Departments
             .FirstOrDefaultAsync(l => l.Id == departmentId, cancellationToken);
 
         if (isDepartmentExist is null)
@@ -254,7 +393,7 @@ public class DepartmentRepository : IDepartmentRepository
         DepartmentId departmentId,
         CancellationToken cancellationToken = default)
     {
-        await _dbContext.DepartmentLocations
+        await dbContext.DepartmentLocations
             .Where(dl => dl.DepartmentId == departmentId)
             .ExecuteDeleteAsync(cancellationToken);
 
@@ -269,7 +408,7 @@ public class DepartmentRepository : IDepartmentRepository
         {
             var requestedCount = departmentsIds.ToList().Count;
 
-            var existingCount = await _dbContext.Departments
+            var existingCount = await dbContext.Departments
                 .Where(l => departmentsIds.Contains(l.Id) && !l.IsDeleted)
                 .Select(l => l.Id)
                 .Distinct()
@@ -279,7 +418,7 @@ public class DepartmentRepository : IDepartmentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking departments existence");
+            logger.LogError(ex, "Error checking departments existence");
             return Errors.General.DatabaseError("check.departments");
         }
     }
@@ -287,21 +426,21 @@ public class DepartmentRepository : IDepartmentRepository
     public async Task<Result<Guid, Error>> AddAsync(Department department,
         CancellationToken cancellationToken = default)
     {
-        var existingDepartment = await _dbContext.Departments
+        var existingDepartment = await dbContext.Departments
             .FirstOrDefaultAsync(p => p.Name.Value == department.Name.Value, cancellationToken);
 
         if (existingDepartment != null)
         {
-            _logger.LogWarning("Duplicate department name: {name}", department.Name.Value);
+            logger.LogWarning("Duplicate department name: {name}", department.Name.Value);
             return Errors.General.Duplicate("department_name");
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            await _dbContext.Departments.AddAsync(department, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.Departments.AddAsync(department, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
             return department.Id.Value;
@@ -314,14 +453,14 @@ public class DepartmentRepository : IDepartmentRepository
         catch (OperationCanceledException ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Operation was cancelled while creating department with name {name}",
+            logger.LogError(ex, "Operation was cancelled while creating department with name {name}",
                 department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Unexpected error while creating department with name {name}", department.Name.Value);
+            logger.LogError(ex, "Unexpected error while creating department with name {name}", department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }
     }
@@ -330,7 +469,7 @@ public class DepartmentRepository : IDepartmentRepository
     {
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
-            _logger.LogError("Database error while creating department {name}: {Message}", departmentName,
+            logger.LogError("Database error while creating department {name}: {Message}", departmentName,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_department_error");
         }
@@ -339,24 +478,24 @@ public class DepartmentRepository : IDepartmentRepository
 
         if (constraintName == "ix_department_name")
         {
-            _logger.LogWarning("Duplicate department name: {name}", departmentName);
+            logger.LogWarning("Duplicate department name: {name}", departmentName);
             return Errors.General.Duplicate("department_name");
         }
 
-        if (constraintName == "ix_department_idenfier")
+        if (constraintName == "ix_department_identifier")
         {
-            _logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
+            logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
             return Errors.General.Duplicate("department_name");
         }
 
         if (constraintName.Contains("name"))
         {
-            _logger.LogWarning("Duplicate name constraint violation for department: {name}", departmentName);
+            logger.LogWarning("Duplicate name constraint violation for department: {name}", departmentName);
             return Errors.General.Duplicate("name");
         }
 
 
-        _logger.LogError("Unknown unique constraint violation for department {name}: {Constraint}", departmentName,
+        logger.LogError("Unknown unique constraint violation for department {name}: {Constraint}", departmentName,
             pgEx.ConstraintName);
         return Errors.General.Duplicate("record");
     }

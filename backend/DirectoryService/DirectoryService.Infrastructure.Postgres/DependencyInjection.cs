@@ -1,8 +1,10 @@
 using DirectoryService.Application.Database;
 using DirectoryService.Core.Abstractions;
+using DirectoryService.Infrastructure.Postgres.BackgroundServices;
 using DirectoryService.Infrastructure.Postgres.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
+using DirectoryService.Infrastructure.Postgres.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,11 +16,13 @@ namespace DirectoryService.Infrastructure.Postgres;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddDirectoryServiceInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddDirectoryServiceInfrastructure(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services
             .AddDatabase(configuration)
-            .AddRepositories();
+            .AddRepositories()
+            .AddServices();
 
         return services;
     }
@@ -66,6 +70,13 @@ public static class DependencyInjection
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();
+
+        return services;
+    }
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<DeleteExpiredDepartmentsService>();
+        services.AddHostedService<DeleteExpireDepartmentsBackgroundService>();
 
         return services;
     }

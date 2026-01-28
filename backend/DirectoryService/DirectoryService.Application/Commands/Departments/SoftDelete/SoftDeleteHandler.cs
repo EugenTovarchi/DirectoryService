@@ -53,19 +53,30 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         department.Delete();
-
+        
         var deletionPrefix = Constants.DELETION_PREFIX;
-
-        var markedDescendentsResult = await _departmentRepository.PutDescendantsPrefixToLastPathElement(
+        
+        var updateDepPathResult = await _departmentRepository
+            .MarkDepartmentAsDeleted(deletionPrefix , department.Id, cancellationToken);
+        if (updateDepPathResult.IsFailure)
+        {
+            _logger.LogError("Error when update path  of department:{department}", department.Id);
+            transactionScope.Rollback();
+            return updateDepPathResult.Error.ToFailure();
+        }
+        
+        var newPath = department.Path.Value;
+        
+        var updateDescendantsPathResult = await _departmentRepository.UpdateAllDescendantsPath(
             oldPath,
-            deletionPrefix,
+            newPath,
             department.Id,
             cancellationToken);
-        if (markedDescendentsResult.IsFailure)
+        if (updateDescendantsPathResult.IsFailure)
         {
             _logger.LogError("Error when update path descendants of department:{department}", department.Id);
             transactionScope.Rollback();
-            return markedDescendentsResult.Error.ToFailure();
+            return updateDescendantsPathResult.Error.ToFailure();
         }
 
         var updatedPositionsResult = await _positionRepository.SoftDeleteUniqDepRelatedPositions(department.Id,
