@@ -5,19 +5,13 @@ using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 
-public class GetDepartmentChildrenHandler : IQueryHandler<List<GetDepChildrenResponse>, GetDepartmentChildrenQuery>
+public class GetDepartmentChildrenHandler(INpgsqlConnectionFactory connectionFactory)
+    : IQueryHandler<List<GetDepChildrenResponse>, GetDepartmentChildrenQuery>
 {
-    private readonly INpgsqlConnectionFactory _connectionFactory;
-
-    public GetDepartmentChildrenHandler(INpgsqlConnectionFactory connectionFactory)
-    {
-        _connectionFactory = connectionFactory;
-    }
-
     public async Task<List<GetDepChildrenResponse>> Handle(GetDepartmentChildrenQuery query,
         CancellationToken ct = default)
     {
-        using var connection = await _connectionFactory.CreateConnectionAsync(ct);
+        using var connection = await connectionFactory.CreateConnectionAsync(ct);
 
         var parameters = new DynamicParameters();
 

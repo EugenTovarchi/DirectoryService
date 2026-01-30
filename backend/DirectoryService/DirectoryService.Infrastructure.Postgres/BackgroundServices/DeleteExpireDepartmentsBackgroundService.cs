@@ -6,28 +6,21 @@ using Microsoft.Extensions.Logging;
 
 namespace DirectoryService.Infrastructure.Postgres.BackgroundServices;
 
-public class DeleteExpireDepartmentsBackgroundService : BackgroundService
+public class DeleteExpireDepartmentsBackgroundService(
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<DeleteExpireDepartmentsBackgroundService> logger)
+    : BackgroundService
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
-    private readonly ILogger<DeleteExpireDepartmentsBackgroundService> _logger;
-
-    public DeleteExpireDepartmentsBackgroundService(
-        IServiceScopeFactory serviceScopeFactory,
-        ILogger<DeleteExpireDepartmentsBackgroundService> logger)
-    {
-        _serviceScopeFactory = serviceScopeFactory;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting delete expired departments background service");
+        logger.LogInformation("Starting delete expired departments background service");
 
         using var timer =
             new PeriodicTimer(TimeSpan.FromHours(Constants.DELETE_EXPIRED_DEPARTMENT_SERVICE_INTERVAL_HOURS));
 
         try
         {
+            await RunCleanUpAsync(cancellationToken);
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 await RunCleanUpAsync(cancellationToken);
@@ -35,34 +28,34 @@ public class DeleteExpireDepartmentsBackgroundService : BackgroundService
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Background service stopping");
+            logger.LogInformation("Background service stopping");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in delete expired departments service");
+            logger.LogError(ex, "Error in delete expired departments service");
         }
         
-        _logger.LogInformation("Delete expired departments background service stopped");
+        logger.LogInformation("Delete expired departments background service stopped");
     }
 
     private async Task RunCleanUpAsync(CancellationToken cancellationToken)
     {
         try
         {
-            using var scope = _serviceScopeFactory.CreateScope();
+            using var scope = serviceScopeFactory.CreateScope();
             var deleteService = scope.ServiceProvider
                 .GetRequiredService<DeleteExpiredDepartmentsService>();
 
             var result = await deleteService.Process(cancellationToken);
             if (result.IsFailure)
             {
-                _logger.LogError("Delete expired departments background service failed:" +
+                logger.LogError("Delete expired departments background service failed:" +
                                  "{Error}", result.Error);
             }
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error in delete expired departments service");
+            logger.LogError(e, "Error in delete expired departments service");
         }
     }
 }

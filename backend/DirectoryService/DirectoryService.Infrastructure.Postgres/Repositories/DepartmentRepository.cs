@@ -6,13 +6,16 @@ using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
 using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
-public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<DepartmentRepository> logger)
+public class DepartmentRepository(
+    DirectoryServiceDbContext dbContext,
+    ILogger<DepartmentRepository> logger)
     : IDepartmentRepository
 {
     public async Task<Result<Department, Error>> GetBy(Expression<Func<Department, bool>> predicate,
@@ -25,25 +28,34 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         return department;
     }
 
-    public async Task<List<DepartmentId>> GetExpiredDepartmentsIds(int daysBeforeDeletion,
+    public async Task<List<Guid>> GetExpiredDepartmentsIds(int daysBeforeDeletion,
         CancellationToken cancellationToken = default)
     {
         var cutoffDate = DateTime.UtcNow.AddDays(-daysBeforeDeletion);
 
-        return await dbContext.Departments
-            .Where(d => d.IsDeleted && d.DeletedAt < cutoffDate)
-            .Select(d => DepartmentId.Create(d.Id))
-            .ToListAsync(cancellationToken);
+        var parameters = new DynamicParameters();
+        parameters.Add("@cut_off_date", cutoffDate);
+
+        const string sql = """
+                               SELECT  d.id
+                               FROM departments d
+                               WHERE d.is_deleted = true AND  d.deleted_at <= @cut_off_date 
+                           """;
+
+        var connection = dbContext.Database.GetDbConnection();
+        var expiredDepartments = await connection.QueryAsync<Guid>(sql, parameters);
+
+        return expiredDepartments.ToList();
     }
 
     public async Task<List<Guid>> GetDescendantDepartmentIds(
-        List<DepartmentId> expiredDepartmentsIds,
+        List<Guid> expiredDepartmentsIds,
         CancellationToken cancellationToken)
     {
-        if (!expiredDepartmentsIds.Any())
-            return new List<Guid>();
+        if (expiredDepartmentsIds.Count == 0)
+            return [];
 
-        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var ids = expiredDepartmentsIds.ToArray();
         var parameters = new DynamicParameters();
         parameters.Add("@expiredDepartmentsIds", ids);
 
@@ -62,13 +74,13 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         return descendants.ToList();
     }
 
-    public async Task<int> CleanExpiredDepartmentsWithRelatesAsync(List<DepartmentId> expiredDepartmentsIds,
+    public async Task<int> CleanExpiredDepartmentsWithRelatesAsync(List<Guid> expiredDepartmentsIds,
         CancellationToken cancellationToken = default)
     {
         if (expiredDepartmentsIds.Count == 0)
             return 0;
 
-        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var ids = expiredDepartmentsIds.ToArray();
         var parameters = new DynamicParameters();
         parameters.Add("@ids", ids);
 
@@ -76,23 +88,28 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
 
                            WITH deleted_dep_locations AS (
                                DELETE FROM department_locations 
-                               WHERE department_id = ANY @ids
+                               WHERE department_id = ANY(@ids)
                            ),
                            deleted_dep_positions AS (
                                DELETE FROM department_positions 
-                               WHERE department_id = ANY @ids
+                               WHERE department_id = ANY(@ids)
                            ),
 
                            deleted_departments AS (
                            DELETE FROM departments 
-                           WHERE id = ANY @ids
+                           WHERE id = ANY(@ids)
                            RETURNING 1
                            )
                            SELECT COUNT(*) FROM deleted_departments;
                            """;
 
         var connection = dbContext.Database.GetDbConnection();
-        var countCleanedDepartments = await connection.ExecuteAsync(sql, parameters);
+
+        var countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
+            sql,
+            parameters,
+            transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+            commandTimeout: 30);
 
         return countCleanedDepartments;
     }
@@ -199,16 +216,16 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
 
         try
         {
-            await using var connection = dbContext.Database.GetDbConnection();
+            var connection = dbContext.Database.GetDbConnection();
 
             const string sql = """  
                                        SELECT id FROM departments WHERE id = ANY(@ids)   
                                          AND is_deleted = false   
                                        FOR UPDATE  NOWAIT
                                """;
-            
+
             var lockedDepIds = await connection.QueryAsync(sql, parameters);
-            var lockedCount = lockedDepIds.Count(); 
+            var lockedCount = lockedDepIds.Count();
 
             if (departmentIdsToLock.Count != lockedCount)
             {
@@ -302,72 +319,86 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         }
     }
 
+    /// <summary>
+    /// Обновляет иерархическую информацию (path, parent_id, depth) для департаментов-потомков
+    /// после удаления родительских департаментов. Удаляет из путей элементов с префиксом 'deleted_'
+    /// и пересчитывает родительские связи.
+    /// </summary>
+    /// <param name="descendantIds">Список id департаментов-потомков для обновления</param>
+    /// <param name="cancellationToken">Токен отмены операции</param>
+    /// <returns>Результат операции: успех или ошибка</returns>
     public async Task<UnitResult<Error>> UpdateDescendantsInfoAfterCleanUp(
-        List<DepartmentId> deletedDepartmentIds,
         List<Guid> descendantIds,
         CancellationToken cancellationToken)
     {
-        if (deletedDepartmentIds.Count == 0)
-            return Errors.Validation.RecordIsInvalid("deletedDepartmentIds");
         if (descendantIds.Count == 0)
             return Errors.Validation.RecordIsInvalid("descendantIds");
 
-        var deletedIds = deletedDepartmentIds.Select(id => id.Value).ToArray();
-        
+        var descendants = descendantIds.ToArray();
+
         var parameters = new DynamicParameters();
-        parameters.Add("@deleted_dep_ids", deletedIds);
-        parameters.Add("@descendant_ids", descendantIds);
+        parameters.Add("@descendant_ids", descendants);
         parameters.Add("@now", DateTime.UtcNow);
 
         try
         {
             const string sql =
                 """
-                WITH deleted_departments AS (
-                    SELECT identifier
-                    FROM departments
-                    WHERE id = ANY(@deleted_dep_ids)
-                ),
-                departments_to_update AS (
+                WITH updated_paths AS (
                     SELECT 
                         d.id,
-                        d.path,
-                        string_to_array(d.path::text, '.') as elements
-                    FROM departments d
-                    WHERE d.id = ANY(@descendant_ids)
-                ),
-                updated_paths AS (
-                    SELECT 
-                        dtu.id,
+                        d.identifier,
+                        d.path as old_path,
                         (
                             SELECT string_agg(elem, '.')::ltree
-                            FROM unnest(dtu.elements) as elem
-                            WHERE elem NOT IN (SELECT identifier FROM deleted_departments)
+                            FROM (
+                                SELECT unnest(string_to_array(d.path::text, '.')) as elem
+                            ) as elements
+                            WHERE NOT elem LIKE 'deleted_%'
                         ) as new_path
-                    FROM departments_to_update dtu
+                    FROM departments d
+                    WHERE d.id = ANY(@descendant_ids)
+                      AND d.is_deleted = false
+                      AND d.path::text LIKE '%deleted_%' 
+                ),
+                paths_with_parents AS (
+                    SELECT 
+                        up.id,
+                        up.identifier,
+                        up.old_path,
+                        up.new_path,
+                        CASE 
+                            WHEN nlevel(up.new_path) = 1 THEN NULL
+                            ELSE (
+                                SELECT p.id
+                                FROM departments p
+                                WHERE p.path = subpath(up.new_path, 0, -1)
+                                  AND p.is_deleted = false
+                                LIMIT 1
+                            )
+                        END as parent_id
+                    FROM updated_paths up
+                    WHERE up.new_path IS NOT NULL
+                      AND up.new_path != ''::ltree
                 )
                 UPDATE departments d
                 SET 
-                    path = up.new_path,
-                    depth = nlevel(up.new_path),
-                    parent_id = CASE 
-                        WHEN nlevel(up.new_path) = 1 THEN NULL
-                        ELSE (
-                            SELECT p.id
-                            FROM departments p
-                            WHERE p.path = subpath(up.new_path, 0, -1)
-                              AND p.is_deleted = false
-                            LIMIT 1
-                        )
-                    END,
+                    path = pwp.new_path,
+                    parent_id = pwp.parent_id,
+                    depth = nlevel(pwp.new_path),
                     updated_at = @now
-                FROM updated_paths up
-                WHERE d.id = up.id
-                  AND up.new_path IS NOT NULL
-                  AND up.new_path != ''::ltree;
+                FROM paths_with_parents pwp
+                WHERE d.id = pwp.id;
                 """;
 
-            await dbContext.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
+            var connection = dbContext.Database.GetDbConnection();
+
+            await connection.ExecuteAsync(
+                sql,
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30);
+
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)
