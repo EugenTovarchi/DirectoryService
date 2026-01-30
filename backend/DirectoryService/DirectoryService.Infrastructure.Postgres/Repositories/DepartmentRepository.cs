@@ -6,13 +6,15 @@ using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
 using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
-public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<DepartmentRepository> logger)
+public class DepartmentRepository(DirectoryServiceDbContext dbContext, 
+    ILogger<DepartmentRepository> logger)
     : IDepartmentRepository
 {
     public async Task<Result<Department, Error>> GetBy(Expression<Func<Department, bool>> predicate,
@@ -25,25 +27,34 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         return department;
     }
 
-    public async Task<List<DepartmentId>> GetExpiredDepartmentsIds(int daysBeforeDeletion,
+    public async Task<List<Guid>> GetExpiredDepartmentsIds(int daysBeforeDeletion,
         CancellationToken cancellationToken = default)
     {
         var cutoffDate = DateTime.UtcNow.AddDays(-daysBeforeDeletion);
+        
+        var parameters = new DynamicParameters();
+        parameters.Add("@cut_off_date", cutoffDate);
 
-        return await dbContext.Departments
-            .Where(d => d.IsDeleted && d.DeletedAt < cutoffDate)
-            .Select(d => DepartmentId.Create(d.Id))
-            .ToListAsync(cancellationToken);
+        const string sql = """
+                               SELECT  d.id
+                               FROM departments d
+                               WHERE d.is_deleted = true AND  d.deleted_at <= @cut_off_date 
+                           """;
+
+        var connection = dbContext.Database.GetDbConnection();
+        var expiredDepartments = await connection.QueryAsync<Guid>(sql, parameters);
+
+        return expiredDepartments.ToList();
     }
 
     public async Task<List<Guid>> GetDescendantDepartmentIds(
-        List<DepartmentId> expiredDepartmentsIds,
+        List<Guid> expiredDepartmentsIds,
         CancellationToken cancellationToken)
     {
-        if (!expiredDepartmentsIds.Any())
-            return new List<Guid>();
+        if (expiredDepartmentsIds.Count == 0)
+            return [];
 
-        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var ids = expiredDepartmentsIds.ToArray();
         var parameters = new DynamicParameters();
         parameters.Add("@expiredDepartmentsIds", ids);
 
@@ -62,13 +73,13 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         return descendants.ToList();
     }
 
-    public async Task<int> CleanExpiredDepartmentsWithRelatesAsync(List<DepartmentId> expiredDepartmentsIds,
+    public async Task<int> CleanExpiredDepartmentsWithRelatesAsync(List<Guid> expiredDepartmentsIds,
         CancellationToken cancellationToken = default)
     {
         if (expiredDepartmentsIds.Count == 0)
             return 0;
 
-        var ids = expiredDepartmentsIds.Select(id => id.Value).ToArray();
+        var ids = expiredDepartmentsIds.ToArray();
         var parameters = new DynamicParameters();
         parameters.Add("@ids", ids);
 
@@ -76,23 +87,33 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
 
                            WITH deleted_dep_locations AS (
                                DELETE FROM department_locations 
-                               WHERE department_id = ANY @ids
+                               WHERE department_id = ANY(@ids)
                            ),
                            deleted_dep_positions AS (
                                DELETE FROM department_positions 
-                               WHERE department_id = ANY @ids
+                               WHERE department_id = ANY(@ids)
                            ),
 
                            deleted_departments AS (
                            DELETE FROM departments 
-                           WHERE id = ANY @ids
+                           WHERE id = ANY(@ids)
                            RETURNING 1
                            )
                            SELECT COUNT(*) FROM deleted_departments;
                            """;
 
         var connection = dbContext.Database.GetDbConnection();
-        var countCleanedDepartments = await connection.ExecuteAsync(sql, parameters);
+        
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+    
+        var countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
+            sql, 
+            parameters,
+            transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(), 
+            commandTimeout: 30);
 
         return countCleanedDepartments;
     }
@@ -303,7 +324,7 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
     }
 
     public async Task<UnitResult<Error>> UpdateDescendantsInfoAfterCleanUp(
-        List<DepartmentId> deletedDepartmentIds,
+        List<Guid> deletedDepartmentIds,
         List<Guid> descendantIds,
         CancellationToken cancellationToken)
     {
@@ -312,11 +333,12 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
         if (descendantIds.Count == 0)
             return Errors.Validation.RecordIsInvalid("descendantIds");
 
-        var deletedIds = deletedDepartmentIds.Select(id => id.Value).ToArray();
-        
+        var deletedIds = deletedDepartmentIds.ToArray();
+        var descendants = descendantIds.ToArray();
+
         var parameters = new DynamicParameters();
         parameters.Add("@deleted_dep_ids", deletedIds);
-        parameters.Add("@descendant_ids", descendantIds);
+        parameters.Add("@descendant_ids", descendants);
         parameters.Add("@now", DateTime.UtcNow);
 
         try
@@ -367,7 +389,19 @@ public class DepartmentRepository(DirectoryServiceDbContext dbContext, ILogger<D
                   AND up.new_path != ''::ltree;
                 """;
 
-            await dbContext.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
+            var connection = dbContext.Database.GetDbConnection();
+        
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync(cancellationToken);
+            }
+        
+            await connection.ExecuteAsync(
+                sql, 
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30);
+            
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)

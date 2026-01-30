@@ -58,8 +58,10 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ITransactionManager, TransactionManager>();
+        services.AddScoped<TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
-
+        services.AddScoped<NpgsqlConnectionFactory>();
+        
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         return services;
@@ -69,6 +71,7 @@ public static class DependencyInjection
     {
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+        services.AddScoped<DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();
 
         return services;
