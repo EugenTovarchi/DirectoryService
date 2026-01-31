@@ -91,6 +91,14 @@ public static class Errors
             return Error.Validation("record.is.invalid", $"{field} is invalid.");
         }
     }
+    
+    public static class Database
+    {
+        public static Error ResourceLocked(string? field = null)
+        {
+            return Error.Validation("resource.is.invalid", $"{field} is invalid.");
+        }
+    }
 
 
     public static class Minio

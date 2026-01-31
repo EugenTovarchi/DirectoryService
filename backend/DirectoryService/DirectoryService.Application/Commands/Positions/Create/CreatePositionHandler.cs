@@ -85,7 +85,7 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         if (allExistResult.IsFailure)
             return allExistResult.Error;
 
-        if (!allExistResult.Value)
+        if(!allExistResult.Value)
             return Errors.General.NotFoundEntity("departments");
 
         return Result.Success<Error>();

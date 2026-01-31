@@ -16,6 +16,11 @@ public interface IDepartmentRepository
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
         CancellationToken cancellationToken = default);
 
+    Task<UnitResult<Error>> MarkDepartmentAsDeleted(
+        string prefix,
+        DepartmentId deletedDepartmentId,
+        CancellationToken cancellationToken);
+
     Task<Result<Department, Error>> GetBy(Expression<Func<Department, bool>> predicate,
         CancellationToken cancellationToken = default);
 
@@ -26,16 +31,11 @@ public interface IDepartmentRepository
      string newPath,
      DepartmentId movedDepartmentId,
      CancellationToken cancellationToken);
+    
 
-    Task<UnitResult<Error>> PutDescendantsPrefixToLastPathElement(
-        string oldPath,
-        string prefix,
-        DepartmentId parentDepartmentId,
-        CancellationToken cancellationToken);
-
-    Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
-        string oldPath,
-        string prefixToRemove,
-        DepartmentId parentDepartmentId,
-        CancellationToken cancellationToken);
+    // Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
+    //     string oldPath,
+    //     string prefixToRemove,
+    //     DepartmentId parentDepartmentId,
+    //     CancellationToken cancellationToken);
 }

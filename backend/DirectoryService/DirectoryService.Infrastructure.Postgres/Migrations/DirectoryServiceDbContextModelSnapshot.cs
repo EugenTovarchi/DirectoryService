@@ -377,8 +377,10 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("Value")
+                                .ValueGeneratedOnAdd()
                                 .HasMaxLength(1000)
                                 .HasColumnType("character varying(1000)")
+                                .HasDefaultValue("")
                                 .HasColumnName("description");
 
                             b1.HasKey("PositionId");
