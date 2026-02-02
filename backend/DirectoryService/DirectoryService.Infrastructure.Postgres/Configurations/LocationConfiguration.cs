@@ -60,7 +60,7 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
                 .HasColumnName("flat")
                 .IsRequired(false);
         });
-       
+
         builder.OwnsOne(l => l.TimeZone, timeZone =>
         {
             timeZone.Property(tz => tz.Value)
@@ -95,4 +95,3 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
         builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }
-

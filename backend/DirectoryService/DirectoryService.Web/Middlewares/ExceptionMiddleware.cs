@@ -1,25 +1,16 @@
+using System.Security.Authentication;
 using DirectoryService.SharedKernel;
 using DirectoryService.SharedKernel.Exceptions;
-using System.Security.Authentication;
 
 namespace DirectoryService.Web.Middlewares;
 
-public class ExceptionMiddleware
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
-    public readonly RequestDelegate _next;
-    public readonly ILogger<ExceptionMiddleware> _logger;
-
-    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
+            await next(context);
         }
         catch (Exception ex)
         {
@@ -29,7 +20,7 @@ public class ExceptionMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        _logger.LogError(exception, "Exception was thrown in DirectoryService!");
+        logger.LogError(exception, "Exception was thrown in DirectoryService!");
 
         (int statusCode, Error error) = exception switch
         {
@@ -37,8 +28,8 @@ public class ExceptionMiddleware
             ValidationException ex => (StatusCodes.Status400BadRequest, ex.Error),
             ConflictException ex => (StatusCodes.Status409Conflict, ex.Error),
             FailureException ex => (StatusCodes.Status500InternalServerError, ex.Error),
-            AuthenticationException  => (StatusCodes.Status401Unauthorized, Error.Failure("authentication.failed", exception.Message)),
-            _ => (StatusCodes.Status500InternalServerError, Error.Failure("server.interanl", exception.Message)) 
+            AuthenticationException => (StatusCodes.Status401Unauthorized, Error.Failure("authentication.failed", exception.Message)),
+            _ => (StatusCodes.Status500InternalServerError, Error.Failure("server.interanl", exception.Message))
         };
 
         var envelope = Envelope.Error(error);

@@ -7,27 +7,21 @@ namespace DirectoryService.Web.Middlewares;
 /// Отслеживаем логи запроса по этому id в Seq (CorrelationId="0GHJQKRj000f:0000231")
 /// По сути тоже самое что и RequestId
 /// </summary>
-public class RequestCorrelationIdMiddleware
+public class RequestCorrelationIdMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
     private const string CORRELATION_ID_HEADER_NAME = "X-Correlation-Id";
+
     private const string CORRELATION_ID = "Correlation-Id";
 
-    public RequestCorrelationIdMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
-    public  Task Invoke(HttpContext httpContext)
+    public Task Invoke(HttpContext httpContext)
     {
         httpContext.Request.Headers.TryGetValue(CORRELATION_ID_HEADER_NAME, out StringValues correlationIdValues);
 
-        var coreelationId = correlationIdValues.FirstOrDefault() ?? httpContext.TraceIdentifier;
+        string coreelationId = correlationIdValues.FirstOrDefault() ?? httpContext.TraceIdentifier;
 
         using (LogContext.PushProperty(CORRELATION_ID, coreelationId))
         {
-            return _next(httpContext);
+            return next(httpContext);
         }
     }
 }

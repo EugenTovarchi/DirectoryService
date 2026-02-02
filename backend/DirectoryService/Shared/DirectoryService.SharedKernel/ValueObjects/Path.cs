@@ -1,11 +1,11 @@
-using CSharpFunctionalExtensions;
 using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
-public  record Path
+public record Path
 {
-    public const int MAX_LENGTH = 500; 
+    public const int MAX_LENGTH = 500;
     private const char SEPARATOR = '.';
     public string Value { get; } = string.Empty;
     private Path(string value)
@@ -38,7 +38,7 @@ public  record Path
         if (string.IsNullOrEmpty(parentPath.Value))
             return Errors.General.ValueIsInvalid("parentPath");
 
-        var fullPath = string.IsNullOrEmpty(parentPath.Value)
+        string fullPath = string.IsNullOrEmpty(parentPath.Value)
             ? childIdentifier.Value
             : $"{parentPath.Value}{SEPARATOR}{childIdentifier.Value}";
 

@@ -35,7 +35,7 @@ public class PositionRepository : IPositionRepository
 
         return position;
     }
-    
+
     public async Task<UnitResult<Error>> SoftDeleteUniqDepRelatedPositions(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
@@ -67,11 +67,11 @@ public class PositionRepository : IPositionRepository
                  FROM unique_positions 
                  WHERE p.id = unique_positions.position_id AND p.is_deleted = false;
                  """;
-            
-            var connection = _dbContext.Database.GetDbConnection();
-            var updatedPositions = await connection.ExecuteAsync(sql, parameters);
-            
-            _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
+
+             var connection = _dbContext.Database.GetDbConnection();
+             int updatedPositions = await connection.ExecuteAsync(sql, parameters);
+
+             _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
         }
         catch (Exception ex)
         {
@@ -93,7 +93,6 @@ public class PositionRepository : IPositionRepository
 
         return true;
     }
-
 
     public async Task<Result<Guid, Error>> AddAsync(Position position, CancellationToken cancellationToken = default)
     {
@@ -145,7 +144,7 @@ public class PositionRepository : IPositionRepository
             return Errors.General.DatabaseError("creating_position_error");
         }
 
-        var constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLower();
 
         if (constraintName == "ix_position_name")
         {
@@ -158,7 +157,6 @@ public class PositionRepository : IPositionRepository
             _logger.LogWarning("Duplicate name constraint violation for position: {name}", positionName);
             return Errors.General.Duplicate("name");
         }
-
 
         _logger.LogError("Unknown unique constraint violation for position {name}: {Constraint}", positionName,
             pgEx.ConstraintName);

@@ -1,3 +1,4 @@
+using System.Data;
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
@@ -5,7 +6,6 @@ using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
-using System.Data;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 
@@ -16,18 +16,17 @@ public class TransactionManager : ITransactionManager
     private readonly ILoggerFactory _loggerFactory;
 
     public TransactionManager(
-        DirectoryServiceDbContext dbContext,    
+        DirectoryServiceDbContext dbContext,
         ILogger<TransactionManager> logger,
         ILoggerFactory loggerFactory)
     {
-        _dbContext = dbContext; 
+        _dbContext = dbContext;
         _logger = logger;
         _loggerFactory = loggerFactory;
     }
 
-    public async Task<Result<ITransactionScope, Error>> BeginTransactionAsync(
-        CancellationToken cancellationToken = default,
-        IsolationLevel? level = null)
+    public async Task<Result<ITransactionScope, Error>> BeginTransactionAsync(IsolationLevel? level = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -44,7 +43,7 @@ public class TransactionManager : ITransactionManager
             return Error.Failure("database", "Failed to begin transaction");
         }
     }
-    
+
     public async Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken)
     {
         try

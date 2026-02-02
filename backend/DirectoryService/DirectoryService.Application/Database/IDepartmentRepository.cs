@@ -11,8 +11,7 @@ public interface IDepartmentRepository
     Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken = default);
     Task<Result<Guid, Error>> AddAsync(Department department, CancellationToken cancellationToken = default);
     Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId, CancellationToken cancellationToken = default);
-    Task<Result<bool, Error>> AllDepartmentsExistAsync(List<Guid> departmentsIds,
-        CancellationToken cancellationToken = default);
+    Task<Result<bool, Error>> AllDepartmentsExistAsync(List<Guid> departmentsIds, CancellationToken cancellationToken = default);
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
         CancellationToken cancellationToken = default);
 
@@ -29,13 +28,6 @@ public interface IDepartmentRepository
     Task<UnitResult<Error>> UpdateAllDescendantsPath(
      string oldPath,
      string newPath,
-     DepartmentId movedDepartmentId,
+     DepartmentId parentDepartmentId,
      CancellationToken cancellationToken);
-    
-
-    // Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
-    //     string oldPath,
-    //     string prefixToRemove,
-    //     DepartmentId parentDepartmentId,
-    //     CancellationToken cancellationToken);
 }

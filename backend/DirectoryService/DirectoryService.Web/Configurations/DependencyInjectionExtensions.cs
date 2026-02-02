@@ -6,7 +6,7 @@ namespace DirectoryService.Web.Configurations;
 
 public static class DependencyInjectionExtensions
 {
-    public static IServiceCollection AddConfiguration (this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSerilogLogging(configuration);
         services.AddOpenApiSpec();
@@ -34,9 +34,9 @@ public static class DependencyInjectionExtensions
 
     public static IServiceCollection AddSerilogLogging(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddSerilog((services, lc) => lc 
+        services.AddSerilog((serviceProvider, lc) => lc
         .ReadFrom.Configuration(configuration)
-        .ReadFrom.Services(services)
+        .ReadFrom.Services(serviceProvider)
         .Enrich.FromLogContext()
         .Enrich.WithExceptionDetails()
         .Enrich.WithProperty("ServiceName", "DirectoryService"));

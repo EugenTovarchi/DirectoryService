@@ -28,6 +28,7 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         _validator = validator;
         _logger = logger;
     }
+
     public async Task<Result<Guid, Failure>> Handle(CreatePositionCommand command, CancellationToken cancellationToken)
     {
         if (command == null)
@@ -101,6 +102,7 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
             if (addLocationResult.IsFailure)
                 return addLocationResult.Error;
         }
+
         return Result.Success<Error>();
     }
 }

@@ -42,11 +42,10 @@ public static class ResponseExtensions
     private static int GetStatusCodeFromErrorType(ErrorType errorType) =>
         errorType switch
         {
-            ErrorType.Validation => StatusCodes.Status400BadRequest,
-            ErrorType.NotFound => StatusCodes.Status404NotFound,
-            ErrorType.Conflict => StatusCodes.Status409Conflict,
-            ErrorType.Failure => StatusCodes.Status500InternalServerError,
+            ErrorType.VALIDATION => StatusCodes.Status400BadRequest,
+            ErrorType.NOT_FOUND => StatusCodes.Status404NotFound,
+            ErrorType.CONFLICT => StatusCodes.Status409Conflict,
+            ErrorType.FAILURE => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status500InternalServerError
         };
 }
-

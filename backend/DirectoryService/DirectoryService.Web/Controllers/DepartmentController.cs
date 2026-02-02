@@ -37,7 +37,7 @@ public class DepartmentController : ApplicationController
        [FromServices] UpdateDepartmentLocationsHandler handler,
        CancellationToken cancellationToken)
     {
-        var command = new UpdateDepartmentLocationsCommand(departmentId,request);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         var result = await handler.Handle(command, cancellationToken);
 
@@ -102,7 +102,7 @@ public class DepartmentController : ApplicationController
 
         return Ok(result);
     }
-    
+
     [HttpDelete("/api/departments/soft/{departmentId:guid}")]
     public async Task<IActionResult> SoftDelete(
         [FromRoute] Guid departmentId,

@@ -6,12 +6,13 @@ public static class Errors
     {
         public static Error ValueIsInvalid(string? name = null)
         {
-            var label = name ?? "value";
+            string label = name ?? "value";
             return Error.Validation("value.is.invalid", $"{label} is invalid.");
         }
+
         public static Error NotFound(Guid? id = null)
         {
-            var forId = id == null ? " " : $"for id '{id}'";
+            string forId = id == null ? " " : $"for id '{id}'";
             return Error.NotFound("record.not.found", $"record not found {forId}");
         }
 
@@ -22,7 +23,7 @@ public static class Errors
 
         public static Error ValueIsRequired(string? name = null)
         {
-            var label = name == null ? " " : " " + name + " ";
+            string label = name == null ? " " : " " + name + " ";
             return Error.Validation("length.is.invalid", $"invalid {label} length");
         }
 
@@ -75,6 +76,7 @@ public static class Errors
                 "database.error",
                 $"Database {operation} failed");
         }
+
         public static Error ResourceLocked(string? field = null)
         {
             return Error.Conflict(
@@ -83,7 +85,6 @@ public static class Errors
         }
     }
 
-
     public static class Validation
     {
         public static Error RecordIsInvalid(string? field = null)
@@ -91,7 +92,7 @@ public static class Errors
             return Error.Validation("record.is.invalid", $"{field} is invalid.");
         }
     }
-    
+
     public static class Database
     {
         public static Error ResourceLocked(string? field = null)
@@ -99,7 +100,6 @@ public static class Errors
             return Error.Validation("resource.is.invalid", $"{field} is invalid.");
         }
     }
-
 
     public static class Minio
     {
@@ -109,14 +109,12 @@ public static class Errors
         }
     }
 
-
     public static class User
     {
         public static Error InvalidCredentials(string? field = null)
         {
             return Error.Validation("credentials.is.invalid", "User credentials is invalid");
         }
-
     }
 
     public static class Tokens
@@ -130,7 +128,5 @@ public static class Errors
         {
             return Error.Validation("token.is.invalid", "Your token is invalid");
         }
-
     }
-} 
-
+}

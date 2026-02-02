@@ -33,9 +33,9 @@ public class CreateLocationValidator : AbstractValidator<CreateLocationCommand>
                         address.Country,
                         address.City,
                         address.Street,
-                        address.House)
-            );
+                        address.House));
     }
+
     private bool BeValidTimeZoneFormat(string timeZone)
     {
         if (string.IsNullOrWhiteSpace(timeZone))

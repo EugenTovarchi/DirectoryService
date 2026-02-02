@@ -19,7 +19,6 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
     private readonly ILogger<UpdateDepartmentLocationsHandler> _logger;
 
     public UpdateDepartmentLocationsHandler(
-
         ITransactionManager transactionManager,
         ILocationRepository locationRepository,
         IDepartmentRepository departmentRepository,
@@ -32,6 +31,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         _validator = validator;
         _logger = logger;
     }
+
     public async Task<Result<Guid, Failure>> Handle(UpdateDepartmentLocationsCommand command,
         CancellationToken cancellationToken)
     {
@@ -46,7 +46,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
             return validationResult.ToErrors();
         }
 
-        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 
@@ -55,7 +55,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         var departmentResult = await _departmentRepository.GetById(command.DepartmentId, cancellationToken);
         if (departmentResult.IsFailure)
         {
-            transactionScope.Rollback(); 
+            transactionScope.Rollback();
             return Errors.General.NotFoundEntity("departmentId").ToFailure();
         }
 

@@ -28,6 +28,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         _validator = validator;
         _logger = logger;
     }
+
     public async Task<Result<Guid, Failure>> Handle(CreateDepartmentCommand command,
         CancellationToken cancellationToken = default)
     {
@@ -110,10 +111,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         var checkResult = await _locationRepository.AllLocationsExistAsync(
             distinctIds,
             cancellationToken);
-        if (checkResult.IsFailure)
-            return checkResult.Error;
-
-        return checkResult;
+        return checkResult.IsFailure ? checkResult.Error : checkResult;
     }
 
     private UnitResult<Error> AddLocations(
@@ -126,6 +124,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
             if (addLocationResult.IsFailure)
                 return addLocationResult.Error;
         }
+
         return Result.Success<Error>();
     }
 }

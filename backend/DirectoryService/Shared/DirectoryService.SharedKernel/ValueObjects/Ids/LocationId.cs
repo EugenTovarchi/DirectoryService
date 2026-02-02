@@ -2,7 +2,7 @@ namespace DirectoryService.SharedKernel.ValueObjects.Ids;
 
 public class LocationId : ValueObject, IComparable<LocationId>
 {
-    private LocationId() {}
+    private LocationId() { }
     private LocationId(Guid value) => Value = value;
 
     public Guid Value { get; }
@@ -18,17 +18,15 @@ public class LocationId : ValueObject, IComparable<LocationId>
         ArgumentNullException.ThrowIfNull(locationId);
         return locationId.Value;
     }
+
+    public int CompareTo(LocationId? other)
+    {
+        return other is null ? 1 : // Все ненулевые объекты больше null
+            Value.CompareTo(other.Value);
+    }
+
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Value;
     }
-
-    public int CompareTo(LocationId? other)
-    {
-        if (other is null)
-            return 1; // Все ненулевые объекты больше null
-
-        return Value.CompareTo(other.Value);
-    }
 }
-

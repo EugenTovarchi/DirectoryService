@@ -2,13 +2,13 @@ namespace DirectoryService.SharedKernel.ValueObjects.Ids;
 
 public class DepartmentId : ValueObject, IComparable<DepartmentId>
 {
+    public Guid Value { get; }
+
     private DepartmentId()
     {
-
     }
-    private DepartmentId(Guid value) => Value = value;
 
-    public Guid Value { get; }
+    private DepartmentId(Guid value) => Value = value;
 
     public static DepartmentId NewDepartmentId() => new(Guid.NewGuid());
 
@@ -21,16 +21,15 @@ public class DepartmentId : ValueObject, IComparable<DepartmentId>
         ArgumentNullException.ThrowIfNull(departmentId);
         return departmentId.Value;
     }
-    protected override IEnumerable<object> GetEqualityComponents()
-    {
-        yield return Value;
-    }
 
     public int CompareTo(DepartmentId? other)
     {
-        if (other is null)
-            return 1; // Все ненулевые объекты больше null
+        return other is null ? 1 : // Все ненулевые объекты больше null
+            Value.CompareTo(other.Value);
+    }
 
-        return Value.CompareTo(other.Value);
+    protected override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return Value;
     }
 }

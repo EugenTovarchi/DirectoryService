@@ -10,11 +10,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
- using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
+using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
 
 namespace DirectoryService.Infrastructure.Postgres;
 
-public static class DependencyInjection
+public static class InfrastructureDependencyInjection
 {
     public static IServiceCollection AddDirectoryServiceInfrastructure(this IServiceCollection services,
         IConfiguration configuration)
@@ -26,6 +26,7 @@ public static class DependencyInjection
 
         return services;
     }
+
     private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContextPool<DirectoryServiceDbContext>((sp, options) =>
@@ -43,25 +44,22 @@ public static class DependencyInjection
             options.LogTo(message =>
             {
                 if (message.Contains("Error", StringComparison.OrdinalIgnoreCase) ||
-                    message.Contains("Exception", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.WriteLine($"[EF] {message}");
-                }
-            }, LogLevel.Error); 
+                    message.Contains("Exception", StringComparison.OrdinalIgnoreCase)) Console.WriteLine($"[EF] {message}");
+            }, LogLevel.Error);
 
             if (hostEnvironment.IsDevelopment())
             {
                 options.EnableDetailedErrors();
             }
 
-            //options.UseLoggerFactory(loggerFactory);
+            // options.UseLoggerFactory(loggerFactory);
         });
 
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
         services.AddScoped<NpgsqlConnectionFactory>();
-        
+
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         return services;
@@ -76,6 +74,7 @@ public static class DependencyInjection
 
         return services;
     }
+
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<DeleteExpiredDepartmentsService>();

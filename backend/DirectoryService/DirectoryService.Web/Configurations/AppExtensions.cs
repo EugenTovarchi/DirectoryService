@@ -5,10 +5,10 @@ namespace DirectoryService.Web.Configurations;
 
 public static class AppExtensions
 {
-    public static IApplicationBuilder WebConfigure (this WebApplication app)
+    public static IApplicationBuilder WebConfigure(this WebApplication app)
     {
         app.UseRouting();
-        app.UseExceptionMiddleware(); 
+        app.UseExceptionMiddleware();
         app.UseRequestCorrelationId();
 
         app.UseAuthorization();
@@ -23,7 +23,7 @@ public static class AppExtensions
                 c.RoutePrefix = "swagger";
             });
         }
-        
+
         app.UseSerilogRequestLogging();
 
         return app;

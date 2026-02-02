@@ -11,7 +11,7 @@ public class DeleteExpireDepartmentsBackgroundService(
     ILogger<DeleteExpireDepartmentsBackgroundService> logger)
     : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Starting delete expired departments background service");
 
@@ -20,13 +20,13 @@ public class DeleteExpireDepartmentsBackgroundService(
 
         try
         {
-            await RunCleanUpAsync(cancellationToken);
-            while (await timer.WaitForNextTickAsync(cancellationToken))
+            await RunCleanUpAsync(stoppingToken);
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                await RunCleanUpAsync(cancellationToken);
+                await RunCleanUpAsync(stoppingToken);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
             logger.LogInformation("Background service stopping");
         }
@@ -34,7 +34,7 @@ public class DeleteExpireDepartmentsBackgroundService(
         {
             logger.LogError(ex, "Error in delete expired departments service");
         }
-        
+
         logger.LogInformation("Delete expired departments background service stopped");
     }
 
@@ -59,4 +59,3 @@ public class DeleteExpireDepartmentsBackgroundService(
         }
     }
 }
-

@@ -1,5 +1,5 @@
-using CSharpFunctionalExtensions;
 using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 

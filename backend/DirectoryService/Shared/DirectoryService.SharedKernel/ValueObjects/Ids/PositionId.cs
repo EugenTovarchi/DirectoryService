@@ -2,13 +2,13 @@ namespace DirectoryService.SharedKernel.ValueObjects.Ids;
 
 public class PositionId : ValueObject, IComparable<PositionId>
 {
+    public Guid Value { get; }
+
     private PositionId()
     {
-
     }
-    private PositionId(Guid value) => Value = value;
 
-    public Guid Value { get; }
+    private PositionId(Guid value) => Value = value;
 
     public static PositionId NewPositionId() => new(Guid.NewGuid());
 
@@ -21,6 +21,7 @@ public class PositionId : ValueObject, IComparable<PositionId>
         ArgumentNullException.ThrowIfNull(positionId);
         return positionId.Value;
     }
+
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Value;
@@ -28,9 +29,7 @@ public class PositionId : ValueObject, IComparable<PositionId>
 
     public int CompareTo(PositionId? other)
     {
-        if (other is null)
-            return 1; // Все ненулевые объекты больше null
-
-        return Value.CompareTo(other.Value);
+        return other is null ? 1 : // Все ненулевые объекты больше null
+            Value.CompareTo(other.Value);
     }
 }

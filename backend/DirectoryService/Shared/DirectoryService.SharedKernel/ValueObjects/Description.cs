@@ -1,5 +1,5 @@
-using CSharpFunctionalExtensions;
 using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -14,7 +14,7 @@ public record Description
 
     private Description() { }
 
-    public static Result<Description, Error> Create (string value)
+    public static Result<Description, Error> Create(string value)
     {
         if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH)
         {

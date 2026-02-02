@@ -12,7 +12,8 @@ namespace DirectoryService.IntegrationTests.Departments.MoveDepartment;
 
 public class MoveDepartmentTests : DirectoryBaseTests
 {
-    public MoveDepartmentTests(DirectoryTestWebFactory factory) : base(factory) { }
+    public MoveDepartmentTests(DirectoryTestWebFactory factory)
+        : base(factory) { }
 
     [Fact]
     public async Task Move_department_to_itself_should_failed()
@@ -78,7 +79,7 @@ public class MoveDepartmentTests : DirectoryBaseTests
     {
         // Arrange
         var rootId = await CreateRootTestDepartment("Root department", "root");
-        var parentId = await CreateChildTestDepartment(rootId,"Parent department", "parent");
+        var parentId = await CreateChildTestDepartment(rootId, "Parent department", "parent");
         var childId = await CreateChildTestDepartment(parentId, "Child department", "child");
         var grandChildId = await CreateChildTestDepartment(childId, "GrandChild department", "grandchild");
 
@@ -151,8 +152,8 @@ public class MoveDepartmentTests : DirectoryBaseTests
     {
         await using var scope = Services.CreateAsyncScope();
 
-        var _sut = scope.ServiceProvider.GetRequiredService<MoveDepartmentHandler>();
+        var sut = scope.ServiceProvider.GetRequiredService<MoveDepartmentHandler>();
 
-        return await action(_sut);
+        return await action(sut);
     }
 }

@@ -4,8 +4,8 @@ namespace DirectoryService.Core.Abstractions;
 
 public static class QueriesExtensions
 {
-    public static async Task<PagedList<T>> ToPagedList<T>
-        (this IQueryable<T> source,
+    public static async Task<PagedList<T>> ToPagedList<T>(
+        this IQueryable<T> source,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
@@ -49,4 +49,3 @@ public static class QueriesExtensions
         };
     }
 }
-

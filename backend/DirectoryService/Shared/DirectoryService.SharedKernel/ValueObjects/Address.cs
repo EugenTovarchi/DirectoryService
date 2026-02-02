@@ -1,5 +1,5 @@
-using CSharpFunctionalExtensions;
 using System.Text.Json.Serialization;
+using CSharpFunctionalExtensions;
 
 namespace DirectoryService.SharedKernel.ValueObjects;
 
@@ -58,6 +58,7 @@ public record Address
             street.Trim(),
             house);
     }
+
     public static Result<Address, Error> CreateWithFlat(string country, string city, string street, string house, int flat)
     {
         var addressResult = Create(country, city, street, house);
@@ -79,4 +80,3 @@ public record Address
         House = string.Empty;
     }
 }
-

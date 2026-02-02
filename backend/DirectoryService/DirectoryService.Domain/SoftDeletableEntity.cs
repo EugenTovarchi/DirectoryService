@@ -2,10 +2,9 @@ using DirectoryService.SharedKernel;
 
 namespace DirectoryService.Domain;
 
-public abstract class SoftDeletableEntity<TId> : Entity<TId> where TId : IComparable<TId>
+public abstract class SoftDeletableEntity<TId>(TId id) : Entity<TId>(id)
+    where TId : IComparable<TId>
 {
-    protected SoftDeletableEntity(TId id) : base(id) { }
-
     public virtual void Delete()
     {
         if (IsDeleted) return;
