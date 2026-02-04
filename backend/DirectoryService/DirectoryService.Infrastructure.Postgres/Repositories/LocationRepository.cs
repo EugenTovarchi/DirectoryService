@@ -4,10 +4,10 @@ using DirectoryService.Application.Database;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -59,7 +59,7 @@ public class LocationRepository(DirectoryServiceDbContext dbContext, ILogger<Loc
                 """;
 
             var connection = dbContext.Database.GetDbConnection();
-            var updatedLocations = await connection.ExecuteAsync(sql, parameters);
+            int updatedLocations = await connection.ExecuteAsync(sql, parameters);
 
             logger.LogInformation("Count of updated locations: {updatedLocations}", updatedLocations);
         }

@@ -1,6 +1,6 @@
 using System.Security.Authentication;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.Exceptions;
+using SharedService.SharedKernel;
+using SharedService.SharedKernel.Exceptions;
 
 namespace DirectoryService.Web.Middlewares;
 
@@ -29,7 +29,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             ConflictException ex => (StatusCodes.Status409Conflict, ex.Error),
             FailureException ex => (StatusCodes.Status500InternalServerError, ex.Error),
             AuthenticationException => (StatusCodes.Status401Unauthorized, Error.Failure("authentication.failed", exception.Message)),
-            _ => (StatusCodes.Status500InternalServerError, Error.Failure("server.interanl", exception.Message))
+            _ => (StatusCodes.Status500InternalServerError, Error.Failure("server.internal", exception.Message))
         };
 
         var envelope = Envelope.Error(error);

@@ -6,9 +6,9 @@ using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
 using DirectoryService.Contracts.Requests.Departments;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.Framework.ControllersResults;
 using Microsoft.AspNetCore.Mvc;
+using SharedService.Framework;
+using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 

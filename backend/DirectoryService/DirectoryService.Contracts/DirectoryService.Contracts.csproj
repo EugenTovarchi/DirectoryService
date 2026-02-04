@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <ItemGroup>
-    <ProjectReference Include="..\Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj" />
+    <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>
-
 </Project>

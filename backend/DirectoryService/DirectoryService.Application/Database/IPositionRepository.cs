@@ -1,6 +1,6 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Database;
 

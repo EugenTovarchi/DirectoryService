@@ -3,10 +3,10 @@ using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.IntegrationTests.Departments.MoveDepartment;
 

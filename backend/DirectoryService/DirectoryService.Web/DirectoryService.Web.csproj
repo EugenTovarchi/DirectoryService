@@ -6,6 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="istreddev.core" />
+    <PackageReference Include="istreddev.framework" />
+    <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.EntityFrameworkCore"/>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions"/>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers"/>
@@ -32,7 +35,6 @@
     <ProjectReference Include="..\DirectoryService.Application\DirectoryService.Application.csproj" />
     <ProjectReference Include="..\DirectoryService.Domain\DirectoryService.Domain.csproj" />
     <ProjectReference Include="..\DirectoryService.Infrastructure.Postgres\DirectoryService.Infrastructure.Postgres.csproj" />
-    <ProjectReference Include="..\Shared\DirectoryService.Framework\DirectoryService.Framework.csproj" />
   </ItemGroup>
 
   <ItemGroup>

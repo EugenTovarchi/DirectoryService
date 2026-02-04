@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using CSharpFunctionalExtensions;
-using DirectoryService.SharedKernel;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 

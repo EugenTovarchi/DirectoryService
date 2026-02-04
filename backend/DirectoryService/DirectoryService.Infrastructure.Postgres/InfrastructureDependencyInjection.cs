@@ -1,5 +1,4 @@
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
 using DirectoryService.Infrastructure.Postgres.BackgroundServices;
 using DirectoryService.Infrastructure.Postgres.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharedService.Core.Abstractions;
 using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
 
 namespace DirectoryService.Infrastructure.Postgres;

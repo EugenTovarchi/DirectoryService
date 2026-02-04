@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="istreddev.core" />
+    <PackageReference Include="istreddev.framework" />
+    <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational"/>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
@@ -12,8 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DirectoryService.Application\DirectoryService.Application.csproj"/>
     <ProjectReference Include="..\DirectoryService.Domain\DirectoryService.Domain.csproj"/>
-    <ProjectReference Include="..\Shared\DirectoryService.Core\DirectoryService.Core.csproj"/>
-    <ProjectReference Include="..\Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj"/>
   </ItemGroup>
 
 </Project>

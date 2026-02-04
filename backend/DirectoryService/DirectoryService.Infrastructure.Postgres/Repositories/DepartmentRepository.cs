@@ -4,11 +4,11 @@ using Dapper;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
 using Path = DirectoryService.Contracts.ValueObjects.Path;
 
@@ -227,7 +227,7 @@ public class DepartmentRepository(
                                """;
 
             var lockedDepIds = await connection.QueryAsync(sql, parameters);
-            var lockedCount = lockedDepIds.Count();
+            int lockedCount = lockedDepIds.Count();
 
             if (departmentIdsToLock.Count != lockedCount)
             {

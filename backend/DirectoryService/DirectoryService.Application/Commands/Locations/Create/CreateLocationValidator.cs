@@ -1,7 +1,7 @@
 using DirectoryService.Contracts.ValueObjects;
-using DirectoryService.Core.Validation;
-using DirectoryService.SharedKernel;
 using FluentValidation;
+using SharedService.Core.Validation;
+using SharedService.SharedKernel;
 using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.Application.Commands.Locations.Create;

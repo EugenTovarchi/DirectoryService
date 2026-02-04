@@ -2,10 +2,10 @@ using System.Data;
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 

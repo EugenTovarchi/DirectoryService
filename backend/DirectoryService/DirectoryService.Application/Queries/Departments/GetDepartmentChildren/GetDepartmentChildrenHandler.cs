@@ -1,7 +1,7 @@
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using DirectoryService.Core.Abstractions;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 

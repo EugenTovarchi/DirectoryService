@@ -1,9 +1,9 @@
 using System.Data;
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 

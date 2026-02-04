@@ -1,5 +1,5 @@
 using System.Net;
-using DirectoryService.SharedKernel;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Web.Extensions;
 

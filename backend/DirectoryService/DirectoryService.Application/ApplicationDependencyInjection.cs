@@ -1,6 +1,6 @@
-using DirectoryService.Core.Abstractions;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application;
 

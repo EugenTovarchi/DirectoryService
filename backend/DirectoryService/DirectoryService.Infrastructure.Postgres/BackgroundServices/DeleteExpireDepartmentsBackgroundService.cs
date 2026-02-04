@@ -1,8 +1,8 @@
-﻿using DirectoryService.Core.Abstractions;
-using DirectoryService.Infrastructure.Postgres.Services;
+﻿using DirectoryService.Infrastructure.Postgres.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Infrastructure.Postgres.BackgroundServices;
 
@@ -49,8 +49,7 @@ public class DeleteExpireDepartmentsBackgroundService(
             var result = await deleteService.Process(cancellationToken);
             if (result.IsFailure)
             {
-                logger.LogError("Delete expired departments background service failed:" +
-                                 "{Error}", result.Error);
+                logger.LogError("Delete expired departments background service failed:{Error}", result.Error);
             }
         }
         catch (Exception e)

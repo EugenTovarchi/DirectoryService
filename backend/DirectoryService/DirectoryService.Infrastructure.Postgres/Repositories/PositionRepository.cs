@@ -3,10 +3,10 @@ using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 

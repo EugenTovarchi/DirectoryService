@@ -2,12 +2,12 @@ using CSharpFunctionalExtensions;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Contracts.ValueObjects;
-using DirectoryService.Core.Abstractions;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.Core.Abstractions;
+using SharedService.SharedKernel;
 using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.UpdateDepartmentLocations;
@@ -30,9 +30,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request );
 
         // Act
-        var result = await ExecuteHandler(async (_sut) =>
+        var result = await ExecuteHandler(async (sut) =>
         {
-            return await _sut.Handle(command, CancellationToken.None);
+            return await sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -64,9 +64,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request );
 
         // Act
-        var result = await ExecuteHandler(async (_sut) =>
+        var result = await ExecuteHandler(async (sut) =>
         {
-            return await _sut.Handle(command, CancellationToken.None);
+            return await sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -86,9 +86,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (_sut) =>
+        var result = await ExecuteHandler(async (sut) =>
         {
-            return await _sut.Handle(command, CancellationToken.None);
+            return await sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -118,9 +118,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(nonExistentDepartmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (_sut) =>
+        var result = await ExecuteHandler(async (sut) =>
         {
-            return await _sut.Handle(command, CancellationToken.None);
+            return await sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -142,9 +142,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (_sut) =>
+        var result = await ExecuteHandler(async (sut) =>
         {
-            return await _sut.Handle(command, CancellationToken.None);
+            return await sut.Handle(command, CancellationToken.None);
         });
 
         // Assert

@@ -2,7 +2,10 @@
   
   <ItemGroup>
     <ProjectReference Include="..\DirectoryService.Contracts\DirectoryService.Contracts.csproj" />
-    <ProjectReference Include="..\Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>
 
 </Project>
