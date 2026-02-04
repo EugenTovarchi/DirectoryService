@@ -1,13 +1,13 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
+using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
+using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.Application.Commands.Locations.Create;
 

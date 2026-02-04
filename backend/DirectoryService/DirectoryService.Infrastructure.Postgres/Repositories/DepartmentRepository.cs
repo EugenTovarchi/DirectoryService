@@ -1,15 +1,16 @@
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Dapper;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
+using Path = DirectoryService.Contracts.ValueObjects.Path;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -116,7 +117,7 @@ public class DepartmentRepository(
 
     public async Task<UnitResult<Error>> UpdateAsRoot(Department department)
     {
-        var pathResult = SharedKernel.ValueObjects.Path.Create(department.Identifier.Value);
+        var pathResult = Path.Create(department.Identifier.Value);
         if (pathResult.IsFailure)
             return pathResult.Error;
 
@@ -135,7 +136,7 @@ public class DepartmentRepository(
         Department department,
         Department parent)
     {
-        var pathResult = SharedKernel.ValueObjects.Path.CreateForChild(
+        var pathResult = Path.CreateForChild(
             parent.Path,
             department.Identifier);
 

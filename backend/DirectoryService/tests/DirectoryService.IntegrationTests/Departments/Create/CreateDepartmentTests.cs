@@ -1,19 +1,17 @@
 using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.Create;
 
-public class CreateDepartmentTests : DirectoryBaseTests
+public class CreateDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBaseTests(factory)
 {
-    public CreateDepartmentTests(DirectoryTestWebFactory factory)
-        : base(factory) { }
-
     [Fact]
     public async Task CreateDepartment_with_valid_data_should_succeed()
     {
@@ -55,9 +53,9 @@ public class CreateDepartmentTests : DirectoryBaseTests
         var command = new CreateDepartmentCommand(request);
 
         // Act
-        var result = await ExecuteHandler((_sut) =>
+        var result = await ExecuteHandler((sut) =>
         {
-            return _sut.Handle(command, CancellationToken.None);
+            return sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -110,7 +108,7 @@ public class CreateDepartmentTests : DirectoryBaseTests
             var address = Address.CreateWithFlat("RF", "moscov", "testStreet", "12", 3).Value;
             var location = Location.Create(
                Name.Create(name).Value,
-               SharedKernel.ValueObjects.TimeZone.Create("test/Moscov").Value,
+               TimeZone.Create("test/Moscov").Value,
                address);
 
             dbContext.Locations.Add(location.Value);

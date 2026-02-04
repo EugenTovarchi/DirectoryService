@@ -1,4 +1,4 @@
-namespace DirectoryService.SharedKernel.ValueObjects.Ids;
+namespace DirectoryService.Contracts.ValueObjects.Ids;
 
 public class PositionId : ValueObject, IComparable<PositionId>
 {

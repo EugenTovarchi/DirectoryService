@@ -1,4 +1,4 @@
-namespace DirectoryService.SharedKernel.ValueObjects;
+namespace DirectoryService.Contracts.ValueObjects;
 
 public abstract class ValueObject
 {

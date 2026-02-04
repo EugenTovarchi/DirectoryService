@@ -1,7 +1,8 @@
 using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
+using DirectoryService.SharedKernel;
 
-namespace DirectoryService.SharedKernel.ValueObjects;
+namespace DirectoryService.Contracts.ValueObjects;
 
 public record Path
 {

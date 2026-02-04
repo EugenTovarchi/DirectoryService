@@ -1,7 +1,7 @@
 using CSharpFunctionalExtensions;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 
 namespace DirectoryService.Domain.Entities;
 

@@ -1,13 +1,14 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.UpdateDepartmentLocations;
 
@@ -170,7 +171,7 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
             Address? address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
             Result<Location, Error> location = Location.Create(
                 Name.Create(name).Value,
-                SharedKernel.ValueObjects.TimeZone.Create("Europe/Moscow").Value,
+                TimeZone.Create("Europe/Moscow").Value,
                 address);
 
             await dbContext.Locations.AddAsync(location.Value, CancellationToken.None);

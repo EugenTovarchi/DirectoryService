@@ -1,10 +1,10 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Core.Abstractions;
 using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 

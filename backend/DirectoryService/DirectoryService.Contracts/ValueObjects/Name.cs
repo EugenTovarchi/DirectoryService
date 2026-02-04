@@ -1,30 +1,30 @@
 using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
+using DirectoryService.SharedKernel;
 
-namespace DirectoryService.SharedKernel.ValueObjects;
+namespace DirectoryService.Contracts.ValueObjects;
 
-public record Identifier
+public record Name
 {
-    public const int MAX_LENGTH = 150;
+    public const int MAX_LENGTH = 120;
     public const int MIN_LENGTH = 3;
-
     public string Value { get; } = string.Empty;
-    private Identifier(string value)
+    private Name(string value)
     {
         Value = value;
     }
 
-    private Identifier() { }
+    private Name() { }
 
-    public static Result<Identifier, Error> Create(string value)
+    public static Result<Name, Error> Create(string value)
     {
         if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH || value.Length < MIN_LENGTH)
         {
-            return Errors.General.ValueIsInvalid("identifier");
+            return Errors.General.ValueIsInvalid("name");
         }
 
         string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
 
-        return new Identifier(normilized);
+        return new Name(normilized);
     }
 }

@@ -1,8 +1,8 @@
 using CSharpFunctionalExtensions;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
-using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
+using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.Domain.Entities;
 

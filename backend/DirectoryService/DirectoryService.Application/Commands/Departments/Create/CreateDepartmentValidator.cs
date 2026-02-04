@@ -1,6 +1,6 @@
+using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Core.Validation;
 using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
 using FluentValidation;
 
 namespace DirectoryService.Application.Commands.Departments.Create;
