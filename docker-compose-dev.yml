@@ -12,8 +12,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker   
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=directory_service;Username=postgresUser;Password=postgresPassword
-      - Serilog__WriteTo__1__Args__serverUrl=http://seq:5341
     depends_on:
       postgres:
         condition: service_healthy
