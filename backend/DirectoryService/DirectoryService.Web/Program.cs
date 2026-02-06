@@ -1,4 +1,3 @@
-using System.Globalization;
 using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
@@ -10,11 +9,6 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
-            .CreateLogger();
-
         try
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -26,14 +20,14 @@ public class Program
 
             builder.Configuration.AddEnvironmentVariables();
 
+            builder.Services.AddControllers();
+
             builder.Services.AddConfiguration(builder.Configuration);
 
             builder.Services.AddAuthorization();
-            builder.Services.AddControllers();
 
-            builder.Services
-                .AddDirectoryServiceInfrastructure(builder.Configuration)
-                .AddDirectoryServiceApplication();
+            builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
+                            .AddDirectoryServiceApplication();
 
             var app = builder.Build();
 

@@ -2,12 +2,19 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 USER $APP_UID
 WORKDIR /app
+ARG NUGET_USERNAME
+ARG NUGET_PASSWORD
 EXPOSE 8080
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Packages.props", "."]
+COPY ["nuget.config", "."]
+COPY [".editorconfig", "."]
 
 # Копируем файлы проектов
 COPY ["backend/DirectoryService/DirectoryService.Web/DirectoryService.Web.csproj", "backend/DirectoryService/DirectoryService.Web/"]

@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\backend",
+    "\\backend\\DirectoryService",
+    "\\backend\\DirectoryService\\DirectoryService.Application",
+    "\\backend\\DirectoryService\\DirectoryService.Domain",
+    "\\backend\\DirectoryService\\DirectoryService.Domain\\Entities",
+    "\\backend\\DirectoryService\\DirectoryService.Infrastructure.Postgres",
+    "\\backend\\DirectoryService\\DirectoryService.Infrastructure.Postgres\\Configurations"
+  ],
+  "SelectedNode": "\\backend",
+  "PreviewInSolutionExplorer": false
+}

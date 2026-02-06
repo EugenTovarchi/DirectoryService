@@ -4,10 +4,13 @@ services:
     build:
         context: .
         dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
+        args:
+         - NUGET_USERNAME=${NUGET_USERNAME}
+         - NUGET_PASSWORD=${NUGET_PASSWORD}
     ports:
       - "9002:8080" 
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development  
+      - ASPNETCORE_ENVIRONMENT=Docker   
       - ASPNETCORE_URLS=http://+:8080"
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=directory_service;Username=postgresUser;Password=postgresPassword
       - Serilog__WriteTo__1__Args__serverUrl=http://seq:5341- 
