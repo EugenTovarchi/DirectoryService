@@ -44,4 +44,5 @@ COPY --from=publish /app/publish .
 # Копируем конфиги
 COPY ["backend/DirectoryService/DirectoryService.Web/appsettings.json", "./"]
 COPY ["backend/DirectoryService/DirectoryService.Web/appsettings.Development.json", "./"]
+COPY ["backend/DirectoryService/DirectoryService.Web/appsettings.Docker.json", "./"]
 ENTRYPOINT ["dotnet", "DirectoryService.Web.dll"]
