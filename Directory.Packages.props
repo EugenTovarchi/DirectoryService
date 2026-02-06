@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="istreddev.core" Version="0.0.1" />
-    <PackageVersion Include="istreddev.framework" Version="0.0.3" />
+    <PackageVersion Include="istreddev.framework" Version="0.0.4" />
     <PackageVersion Include="IstredDev.SharedKernel" Version="0.0.1" />
     <PackageVersion Include="istreddev.sharedkernel" Version="0.0.1" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
