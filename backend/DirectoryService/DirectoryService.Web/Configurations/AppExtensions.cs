@@ -1,5 +1,5 @@
-using DirectoryService.Web.Middlewares;
 using Serilog;
+using SharedService.Framework.Middlewares;
 
 namespace DirectoryService.Web.Configurations;
 
