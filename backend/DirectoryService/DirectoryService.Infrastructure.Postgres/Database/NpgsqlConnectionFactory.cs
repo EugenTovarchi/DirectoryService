@@ -1,16 +1,16 @@
+using System.Data;
 using DirectoryService.Application.Database;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using System.Data;
-using DirectoryService.Core.Abstractions;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 
 /// <summary>
 /// Фабрика открывает соединение с БД.
 /// </summary>
-public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
+public class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -21,13 +21,13 @@ public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlCon
 
         _dataSource = dataSourceBuilder.Build();
     }
+
     public NpgsqlConnectionFactory(string connectionString)
     {
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
         dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
         _dataSource = dataSourceBuilder.Build();
     }
-
 
     public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {
@@ -41,7 +41,7 @@ public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlCon
 
     public async ValueTask DisposeAsync()
     {
-        await _dataSource.DisposeAsync();   
+        await _dataSource.DisposeAsync();
     }
 
     private ILoggerFactory CreateLoggerFactory() =>

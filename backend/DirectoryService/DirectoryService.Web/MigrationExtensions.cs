@@ -5,7 +5,7 @@ namespace DirectoryService.Web;
 
 public static class MigrationExtensions
 {
-    public async static Task ApplyMigrations(this WebApplication app)
+    public static async Task ApplyMigrations(this WebApplication app)
     {
         await using var scope = app.Services.CreateAsyncScope();
 
@@ -15,4 +15,3 @@ public static class MigrationExtensions
         app.Logger.LogInformation("All migrations applied successfully");
     }
 }
-

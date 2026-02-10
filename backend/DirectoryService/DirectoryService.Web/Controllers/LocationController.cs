@@ -1,9 +1,9 @@
 using DirectoryService.Application.Commands.Locations.Create;
 using DirectoryService.Application.Queries.Locations.Get;
 using DirectoryService.Contracts.Requests.Locations;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.Framework.ControllersResults;
 using Microsoft.AspNetCore.Mvc;
+using SharedService.Framework;
+using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 

@@ -1,13 +1,13 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.Core.Validation;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using SharedService.Core.Abstractions;
+using SharedService.Core.Validation;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Departments.Create;
 
@@ -28,6 +28,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         _validator = validator;
         _logger = logger;
     }
+
     public async Task<Result<Guid, Failure>> Handle(CreateDepartmentCommand command,
         CancellationToken cancellationToken = default)
     {
@@ -110,10 +111,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         var checkResult = await _locationRepository.AllLocationsExistAsync(
             distinctIds,
             cancellationToken);
-        if (checkResult.IsFailure)
-            return checkResult.Error;
-
-        return checkResult;
+        return checkResult.IsFailure ? checkResult.Error : checkResult;
     }
 
     private UnitResult<Error> AddLocations(
@@ -126,6 +124,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
             if (addLocationResult.IsFailure)
                 return addLocationResult.Error;
         }
+
         return Result.Success<Error>();
     }
 }

@@ -1,5 +1,5 @@
-using DirectoryService.Core.Abstractions;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 
-public record GetDepartmentChildrenQuery (Guid ParentId, GetDepartmentChildrenRequest Request) : IQuery;
+public record GetDepartmentChildrenQuery(Guid ParentId, GetDepartmentChildrenRequest Request) : IQuery;

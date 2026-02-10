@@ -6,9 +6,9 @@ using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
 using DirectoryService.Contracts.Requests.Departments;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.Framework.ControllersResults;
 using Microsoft.AspNetCore.Mvc;
+using SharedService.Framework;
+using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 
@@ -37,7 +37,7 @@ public class DepartmentController : ApplicationController
        [FromServices] UpdateDepartmentLocationsHandler handler,
        CancellationToken cancellationToken)
     {
-        var command = new UpdateDepartmentLocationsCommand(departmentId,request);
+        var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         var result = await handler.Handle(command, cancellationToken);
 
@@ -102,7 +102,7 @@ public class DepartmentController : ApplicationController
 
         return Ok(result);
     }
-    
+
     [HttpDelete("/api/departments/soft/{departmentId:guid}")]
     public async Task<IActionResult> SoftDelete(
         [FromRoute] Guid departmentId,

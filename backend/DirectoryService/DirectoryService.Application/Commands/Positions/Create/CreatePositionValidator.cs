@@ -1,7 +1,7 @@
-using DirectoryService.Core.Validation;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
+using DirectoryService.Contracts.ValueObjects;
 using FluentValidation;
+using SharedService.Core.Validation;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Positions.Create;
 

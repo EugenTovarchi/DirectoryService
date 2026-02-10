@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		..\..\.gitignore = ..\..\.gitignore
 		..\..\docker-compose-dev.yml = ..\..\docker-compose-dev.yml
-		editorconfig.txt = editorconfig.txt
+		..\..\.env = ..\..\.env
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Domain", "DirectoryService.Domain\DirectoryService.Domain.csproj", "{6B274094-6243-4DB0-8236-34209BE065C4}"
@@ -19,14 +19,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Infrastructure.Postgres", "DirectoryService.Infrastructure.Postgres\DirectoryService.Infrastructure.Postgres.csproj", "{9C0B0F74-5C36-4A80-8D1D-B95BB8CBE224}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Contracts", "DirectoryService.Contracts\DirectoryService.Contracts.csproj", "{FBD444AE-04B8-4710-9D83-3F76B610D8DF}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Core", "Shared\DirectoryService.Core\DirectoryService.Core.csproj", "{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Framework", "Shared\DirectoryService.Framework\DirectoryService.Framework.csproj", "{E24026D4-7BCD-4528-9DF4-D072F83DEC46}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.SharedKernel", "Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj", "{971238B9-0693-4C9A-AFC9-32D6853A1D3F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E17FB8DD-2643-4B3D-8B62-E0D6DA502514}"
 EndProject
@@ -58,18 +50,6 @@ Global
 		{FBD444AE-04B8-4710-9D83-3F76B610D8DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBD444AE-04B8-4710-9D83-3F76B610D8DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBD444AE-04B8-4710-9D83-3F76B610D8DF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E24026D4-7BCD-4528-9DF4-D072F83DEC46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E24026D4-7BCD-4528-9DF4-D072F83DEC46}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E24026D4-7BCD-4528-9DF4-D072F83DEC46}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E24026D4-7BCD-4528-9DF4-D072F83DEC46}.Release|Any CPU.Build.0 = Release|Any CPU
-		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{971238B9-0693-4C9A-AFC9-32D6853A1D3F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A1506C5-021D-449D-8E34-76D525BED6DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -79,9 +59,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{5C1C0D44-0CF0-4131-A25C-C3EBAAB5CE18} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{E24026D4-7BCD-4528-9DF4-D072F83DEC46} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{971238B9-0693-4C9A-AFC9-32D6853A1D3F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{5A1506C5-021D-449D-8E34-76D525BED6DD} = {E17FB8DD-2643-4B3D-8B62-E0D6DA502514}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
