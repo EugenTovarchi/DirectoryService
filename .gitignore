@@ -6,4 +6,6 @@
 # dotenv files
 .env
 
+nuget.config
+
 
