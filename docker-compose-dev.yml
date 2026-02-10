@@ -50,9 +50,16 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always
 
 volumes:
-  postgres_data:     
+  postgres_data:    
 
 
 

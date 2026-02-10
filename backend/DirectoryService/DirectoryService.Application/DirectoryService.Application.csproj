@@ -7,6 +7,8 @@
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="IstredDev.SharedKernel" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
       
   </ItemGroup>
 
