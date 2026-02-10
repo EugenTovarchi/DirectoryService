@@ -1,26 +1,23 @@
-using CSharpFunctionalExtensions;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 using DirectoryService.Contracts.Requests.Departments;
-using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Core.Abstractions;
 using DirectoryService.Domain.Entities;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SharedService.Core.Abstractions;
-using SharedService.SharedKernel;
-using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.UpdateDepartmentLocations;
 
 public class UpdateDepartmentLocationsTests : DirectoryBaseTests
 {
-    public UpdateDepartmentLocationsTests(DirectoryTestWebFactory factory)
-        : base(factory) { }
+    public UpdateDepartmentLocationsTests(DirectoryTestWebFactory factory) : base(factory) { }
 
     [Fact]
     public async Task Update_DepartmentLocation_should_succeed()
     {
-        // Arrange
+        //Arrange
         var locationId = await CreateLocation("location1");
         var locationId2 = await CreateLocation("location2");
         List<Guid> locations = [locationId, locationId2];
@@ -29,13 +26,13 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var request = new UpdateDepartmentLocationsRequest(locations);
         var command = new UpdateDepartmentLocationsCommand(departmentId, request );
 
-        // Act
-        var result = await ExecuteHandler(async (sut) =>
+        //Act
+        var result = await ExecuteHandler(async (_sut) =>
         {
-            return await sut.Handle(command, CancellationToken.None);
+            return await _sut.Handle(command, CancellationToken.None);
         });
 
-        // Assert
+        //Assert
         await ExecuteInDb(async dbContext =>
         {
             result.IsSuccess.Should().BeTrue();
@@ -56,20 +53,20 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
     [Fact]
     public async Task Update_DepartmentLocation_should_failed()
     {
-        // Arrange
+        //Arrange
         List<Guid> locations = [];
 
         var departmentId = await CreateTestDepartment();
         var request = new UpdateDepartmentLocationsRequest(locations);
         var command = new UpdateDepartmentLocationsCommand(departmentId, request );
 
-        // Act
-        var result = await ExecuteHandler(async (sut) =>
+        //Act
+        var result = await ExecuteHandler(async (_sut) =>
         {
-            return await sut.Handle(command, CancellationToken.None);
+            return await _sut.Handle(command, CancellationToken.None);
         });
 
-        // Assert
+        //Assert
         result.IsFailure.Should().BeTrue();
     }
 
@@ -86,9 +83,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (sut) =>
+        var result = await ExecuteHandler(async (_sut) =>
         {
-            return await sut.Handle(command, CancellationToken.None);
+            return await _sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -118,9 +115,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(nonExistentDepartmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (sut) =>
+        var result = await ExecuteHandler(async (_sut) =>
         {
-            return await sut.Handle(command, CancellationToken.None);
+            return await _sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -142,9 +139,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
         // Act
-        var result = await ExecuteHandler(async (sut) =>
+        var result = await ExecuteHandler(async (_sut) =>
         {
-            return await sut.Handle(command, CancellationToken.None);
+            return await _sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -152,7 +149,7 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         {
             result.IsSuccess.Should().BeTrue();
 
-            Department department = await dbContext.Departments
+            var department = await dbContext.Departments
                 .Include(d => d.DepartmentLocations)
                 .FirstAsync(d => d.Id == departmentId, CancellationToken.None);
 
@@ -168,10 +165,10 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
     {
         return await ExecuteInDb(async dbContext =>
         {
-            Address? address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
-            Result<Location, Error> location = Location.Create(
+            var address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
+            var location = Location.Create(
                 Name.Create(name).Value,
-                TimeZone.Create("Europe/Moscow").Value,
+                SharedKernel.ValueObjects.TimeZone.Create("Europe/Moscow").Value,
                 address);
 
             await dbContext.Locations.AddAsync(location.Value, CancellationToken.None);

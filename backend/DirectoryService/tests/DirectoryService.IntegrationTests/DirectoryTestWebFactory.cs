@@ -1,4 +1,3 @@
-using System.Data.Common;
 using DirectoryService.Application.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Respawn;
+using System.Data.Common;
 using Testcontainers.PostgreSql;
 
 namespace DirectoryService.IntegrationTests;
@@ -23,8 +23,26 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
         .WithPassword("postgresPassword")
         .Build();
 
-    private DbConnection _dbConnection = null!;
-    private Respawner _respawner = null!;
+    private DbConnection _dbConnection = default!;
+    private Respawner _respawner = default!;
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<DirectoryServiceDbContext>();
+            services.RemoveAll<IDepartmentRepository>();
+            services.RemoveAll<ILocationRepository>();
+
+                services.AddScoped(provider =>
+                DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
+
+            services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+            services.AddScoped<ILocationRepository, LocationRepository>();
+        });
+
+        base.ConfigureWebHost(builder);
+    }
 
     public async Task InitializeAsync()
     {
@@ -40,7 +58,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
 
     private async Task CreateDatabaseDirectlyAsync()
     {
-        await using var dbContext = DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString());
+        using var dbContext = DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString());
         await dbContext.Database.EnsureCreatedAsync();
         await dbContext.DisposeAsync();
     }
@@ -70,23 +88,5 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
 
         await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
-    }
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.ConfigureTestServices(services =>
-        {
-            services.RemoveAll<DirectoryServiceDbContext>();
-            services.RemoveAll<IDepartmentRepository>();
-            services.RemoveAll<ILocationRepository>();
-
-            services.AddScoped(provider =>
-                DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
-
-            services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-            services.AddScoped<ILocationRepository, LocationRepository>();
-        });
-
-        base.ConfigureWebHost(builder);
     }
 }

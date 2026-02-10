@@ -1,10 +1,10 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.Contracts.ValueObjects.Ids;
-using SharedService.SharedKernel;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 
 namespace DirectoryService.Domain.Entities;
 
-public class DepartmentPosition
+public class DepartmentPosition 
 {
     private DepartmentPosition() { }
     private DepartmentPosition(
@@ -14,7 +14,6 @@ public class DepartmentPosition
         PositionId = positionId;
         DepartmentId = departmentId;
     }
-
     public PositionId PositionId { get; private set; } = null!;
     public DepartmentId DepartmentId { get; private set; } = null!;
 

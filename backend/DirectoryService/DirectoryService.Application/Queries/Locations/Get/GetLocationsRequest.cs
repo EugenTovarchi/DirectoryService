@@ -11,3 +11,4 @@ public record GetLocationsRequest(
 {
     public GetLocationsQuery ToQuery() => new (DepartmentsIds, Search, IsActive, SortBy, SortDirection, Page, PageSize);
 }
+

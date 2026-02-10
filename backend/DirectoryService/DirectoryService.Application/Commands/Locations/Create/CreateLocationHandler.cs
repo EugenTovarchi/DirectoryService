@@ -1,13 +1,13 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
-using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using SharedService.Core.Abstractions;
-using SharedService.Core.Validation;
-using SharedService.SharedKernel;
-using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
+using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
 namespace DirectoryService.Application.Commands.Locations.Create;
 
@@ -26,13 +26,12 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         _validator = validator;
         _logger = logger;
     }
-
-    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken ct = default)
     {
         if (command == null)
             return Errors.General.ValueIsInvalid("command").ToFailure();
 
-        var validationResult = await _validator.ValidateAsync(command, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(command, ct);
         if (!validationResult.IsValid)
         {
             _logger.LogWarning("Location: {command} is invalid!", command.Request.LocationName);
@@ -43,6 +42,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         var locationName = Name.Create(command.Request.LocationName).Value;
 
         var locationTimeZone = TimeZone.Create(command.Request.TimeZone).Value;
+
 
         var locationAddress = command.Request.LocationAddress.Flat is null
         ? Address.Create(
@@ -61,7 +61,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         if (locationResult.IsFailure)
             return locationResult.Error.ToFailure();
 
-        var result = await _locationRepository.Add(locationResult.Value, cancellationToken);
+        var result = await _locationRepository.Add(locationResult.Value, ct);
         if(result.IsFailure)
             return result.Error.ToFailure();
 

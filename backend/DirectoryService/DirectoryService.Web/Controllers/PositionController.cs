@@ -1,8 +1,8 @@
 using DirectoryService.Application.Commands.Positions.Create;
 using DirectoryService.Contracts.Requests.Positions;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.Framework.ControllersResults;
 using Microsoft.AspNetCore.Mvc;
-using SharedService.Framework;
-using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 

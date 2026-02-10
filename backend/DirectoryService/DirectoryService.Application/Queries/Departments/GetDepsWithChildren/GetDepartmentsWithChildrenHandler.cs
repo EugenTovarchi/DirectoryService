@@ -1,7 +1,7 @@
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using SharedService.Core.Abstractions;
+using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 
@@ -20,8 +20,8 @@ public class GetDepartmentsWithChildrenHandler : IQueryHandler<List<DepartmentRe
 
         var parameters = new DynamicParameters();
 
-        int page = query.Page > 0 ? query.Page : 1;
-        int pageSize = query.PageSize > 0 ? query.PageSize : 20;
+        var page = query.Page > 0 ? query.Page : 1;
+        var pageSize = query.PageSize > 0 ? query.PageSize : 20;
 
         parameters.Add("page_size", query.PageSize);
         parameters.Add("offset", (query.Page - 1) * query.PageSize);

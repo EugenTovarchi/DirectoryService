@@ -2,31 +2,39 @@ using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
+using System.Globalization;
 
 namespace DirectoryService.Web;
 
 public class Program
 {
-    public static async Task Main(string[] args)
+    public async static Task Main(string[] args)
     {
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+            .CreateLogger();
+
         try
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            string environment = builder.Environment.EnvironmentName;
+            var environment = builder.Environment.EnvironmentName;
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
             builder.Configuration.AddUserSecrets<Program>();
 
             builder.Configuration.AddEnvironmentVariables();
-            builder.Services.AddControllers();
 
-            builder.Services.AddConfiguration(builder.Configuration);
+            builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
+            builder.Services.AddControllers();
 
-            builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
-                            .AddDirectoryServiceApplication();
+            builder.Services
+                .AddDirectoryServiceInfrastructure(builder.Configuration)
+                .AddDirectoryServiceApplication();
 
             var app = builder.Build();
 

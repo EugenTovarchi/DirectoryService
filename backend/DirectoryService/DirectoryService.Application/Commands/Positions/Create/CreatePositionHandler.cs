@@ -1,13 +1,13 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
-using DirectoryService.Contracts.ValueObjects;
-using DirectoryService.Contracts.ValueObjects.Ids;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using SharedService.Core.Abstractions;
-using SharedService.Core.Validation;
-using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Positions.Create;
 
@@ -28,7 +28,6 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         _validator = validator;
         _logger = logger;
     }
-
     public async Task<Result<Guid, Failure>> Handle(CreatePositionCommand command, CancellationToken cancellationToken)
     {
         if (command == null)
@@ -102,7 +101,6 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
             if (addLocationResult.IsFailure)
                 return addLocationResult.Error;
         }
-
         return Result.Success<Error>();
     }
 }
