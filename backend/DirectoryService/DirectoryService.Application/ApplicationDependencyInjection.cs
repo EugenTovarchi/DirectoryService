@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.Core.Abstractions;
 
@@ -34,5 +35,24 @@ public static class ApplicationDependencyInjection
                   .AssignableTo(typeof(IQueryHandler<,>)))
               .AsSelfWithInterfaces()
               .WithScopedLifetime());
+    }
+
+    public static IServiceCollection AddCash(this IServiceCollection services)
+    {
+         services.AddHybridCache(options =>
+        {
+            options.DefaultEntryOptions = new HybridCacheEntryOptions
+            {
+                LocalCacheExpiration = TimeSpan.FromMinutes(5),
+                Expiration = TimeSpan.FromMinutes(30)
+            };
+        });
+
+         services.AddStackExchangeRedisCache(setup =>
+        {
+            setup.Configuration = "localhost:6379";
+        });
+
+         return services;
     }
 }
