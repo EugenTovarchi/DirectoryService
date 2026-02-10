@@ -1,8 +1,8 @@
-using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Core.Validation;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
 using FluentValidation;
-using SharedService.Core.Validation;
-using SharedService.SharedKernel;
-using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
+using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
 namespace DirectoryService.Application.Commands.Locations.Create;
 
@@ -33,15 +33,15 @@ public class CreateLocationValidator : AbstractValidator<CreateLocationCommand>
                         address.Country,
                         address.City,
                         address.Street,
-                        address.House));
+                        address.House)
+            );
     }
-
     private bool BeValidTimeZoneFormat(string timeZone)
     {
         if (string.IsNullOrWhiteSpace(timeZone))
             return false;
 
-        string[] parts = timeZone.Split('/');
+        var parts = timeZone.Split('/');
         return parts.Length >= 2 &&
                !string.IsNullOrWhiteSpace(parts[0]) &&
                !string.IsNullOrWhiteSpace(parts[1]);

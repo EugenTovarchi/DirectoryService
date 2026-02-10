@@ -1,8 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
+using DirectoryService.Core.Abstractions;
+using DirectoryService.SharedKernel;
 using Microsoft.Extensions.Logging;
-using SharedService.Core.Abstractions;
-using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Departments.SoftDelete;
 
@@ -29,7 +29,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
 
     public async Task<Result<Guid, Failure>> Handle(SoftDeleteCommand command, CancellationToken cancellationToken)
     {
-        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 
@@ -43,7 +43,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         var department = lockDepartmentResult.Value;
-        string oldPath = department.Path.Value;
+        var oldPath = department.Path.Value;
 
         var lockDescendantsResult = await _departmentRepository.LockDescendantsByPath(oldPath, cancellationToken);
         if (lockDescendantsResult.IsFailure)
@@ -53,20 +53,20 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         department.Delete();
-
-        string deletionPrefix = Constants.DELETION_PREFIX;
-
+        
+        var deletionPrefix = Constants.DELETION_PREFIX;
+        
         var updateDepPathResult = await _departmentRepository
-            .MarkDepartmentAsDeleted(deletionPrefix, department.Id, cancellationToken);
+            .MarkDepartmentAsDeleted(deletionPrefix , department.Id, cancellationToken);
         if (updateDepPathResult.IsFailure)
         {
-            _logger.LogError("Error when update path of department:{department}.", department.Id);
+            _logger.LogError("Error when update path  of department:{department}", department.Id);
             transactionScope.Rollback();
             return updateDepPathResult.Error.ToFailure();
         }
-
-        string newPath = department.Path.Value;
-
+        
+        var newPath = department.Path.Value;
+        
         var updateDescendantsPathResult = await _departmentRepository.UpdateAllDescendantsPath(
             oldPath,
             newPath,

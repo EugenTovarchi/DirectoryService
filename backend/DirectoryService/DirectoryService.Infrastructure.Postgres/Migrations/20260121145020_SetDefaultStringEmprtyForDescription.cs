@@ -16,7 +16,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                 type: "character varying(1000)",
                 maxLength: 1000,
                 nullable: true,
-                defaultValue: string.Empty,
+                defaultValue: "",
                 oldClrType: typeof(string),
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
@@ -36,7 +36,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
                 oldNullable: true,
-                oldDefaultValue: string.Empty);
+                oldDefaultValue: "");
         }
     }
 }

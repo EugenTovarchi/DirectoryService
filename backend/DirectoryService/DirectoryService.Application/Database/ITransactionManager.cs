@@ -1,13 +1,13 @@
-using System.Data;
 using CSharpFunctionalExtensions;
-using SharedService.SharedKernel;
+using DirectoryService.SharedKernel;
+using System.Data;
 
 namespace DirectoryService.Application.Database;
 
 public interface ITransactionManager
 {
     Task<Result<ITransactionScope, Error>> BeginTransactionAsync(
-        IsolationLevel? level = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IsolationLevel? level = null);
     Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken);
 }

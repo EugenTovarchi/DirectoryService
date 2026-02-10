@@ -1,16 +1,15 @@
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Dapper;
-using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using SharedService.SharedKernel;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
-using Path = DirectoryService.Contracts.ValueObjects.Path;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -117,7 +116,7 @@ public class DepartmentRepository(
 
     public async Task<UnitResult<Error>> UpdateAsRoot(Department department)
     {
-        var pathResult = Path.Create(department.Identifier.Value);
+        var pathResult = SharedKernel.ValueObjects.Path.Create(department.Identifier.Value);
         if (pathResult.IsFailure)
             return pathResult.Error;
 
@@ -136,7 +135,7 @@ public class DepartmentRepository(
         Department department,
         Department parent)
     {
-        var pathResult = Path.CreateForChild(
+        var pathResult = SharedKernel.ValueObjects.Path.CreateForChild(
             parent.Path,
             department.Identifier);
 
@@ -204,8 +203,7 @@ public class DepartmentRepository(
         }
     }
 
-    public async Task<UnitResult<Error>> LockDescendantsByIds(
-        List<Guid> departmentIdsToLock,
+    public async Task<UnitResult<Error>> LockDescendantsByIds(List<Guid> departmentIdsToLock,
         CancellationToken cancellationToken = default)
     {
         if (departmentIdsToLock.Count == 0)
@@ -227,7 +225,7 @@ public class DepartmentRepository(
                                """;
 
             var lockedDepIds = await connection.QueryAsync(sql, parameters);
-            int lockedCount = lockedDepIds.Count();
+            var lockedCount = lockedDepIds.Count();
 
             if (departmentIdsToLock.Count != lockedCount)
             {
@@ -410,8 +408,7 @@ public class DepartmentRepository(
         }
     }
 
-    public async Task<Result<bool, Error>> IsDepartmentExistAsync(
-        Guid departmentId,
+    public async Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
         var isDepartmentExist = await dbContext.Departments
@@ -508,16 +505,18 @@ public class DepartmentRepository(
             return Errors.General.DatabaseError("creating_department_error");
         }
 
-        string constraintName = pgEx.ConstraintName.ToLower();
+        var constraintName = pgEx.ConstraintName.ToLower();
 
-        switch (constraintName)
+        if (constraintName == "ix_department_name")
         {
-            case "ix_department_name":
-                logger.LogWarning("Duplicate department name: {name}", departmentName);
-                return Errors.General.Duplicate("department_name");
-            case "ix_department_identifier":
-                logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
-                return Errors.General.Duplicate("department_name");
+            logger.LogWarning("Duplicate department name: {name}", departmentName);
+            return Errors.General.Duplicate("department_name");
+        }
+
+        if (constraintName == "ix_department_identifier")
+        {
+            logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
+            return Errors.General.Duplicate("department_name");
         }
 
         if (constraintName.Contains("name"))
@@ -525,6 +524,7 @@ public class DepartmentRepository(
             logger.LogWarning("Duplicate name constraint violation for department: {name}", departmentName);
             return Errors.General.Duplicate("name");
         }
+
 
         logger.LogError("Unknown unique constraint violation for department {name}: {Constraint}", departmentName,
             pgEx.ConstraintName);

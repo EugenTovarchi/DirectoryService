@@ -1,19 +1,25 @@
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using SharedService.Core.Abstractions;
+using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetTopByPositions;
 
-public class GetTopByPositionsDepartmentsHandler(INpgsqlConnectionFactory connectionFactory)
-    : IQueryHandler<List<GetTopDepartmentsResponse>, GetTopDepartmentsQuery>
+public class GetTopByPositionsDepartmentsHandler : IQueryHandler<List<GetTopDepartmentsResponse>, GetTopDepartmentsQuery>
 {
+    private readonly INpgsqlConnectionFactory _connectionFactory;
+
+    public GetTopByPositionsDepartmentsHandler(INpgsqlConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<List<GetTopDepartmentsResponse>> Handle(GetTopDepartmentsQuery query, CancellationToken ct)
     {
-        using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        using var connection = await _connectionFactory.CreateConnectionAsync(ct);
         var parameters = new DynamicParameters();
 
-        string direction = query.SortDirection?.ToLower() == "asc" ? "ASC" : "DESC";
+        var direction = query.SortDirection?.ToLower() == "asc" ? "ASC" : "DESC";
 
         var departments = await connection.QueryAsync<GetTopDepartmentsResponse>(
             $"""

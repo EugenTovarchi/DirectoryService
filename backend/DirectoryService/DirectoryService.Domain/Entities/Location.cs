@@ -1,25 +1,25 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.Contracts.ValueObjects;
-using DirectoryService.Contracts.ValueObjects.Ids;
-using SharedService.SharedKernel;
-using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
+using DirectoryService.SharedKernel;
+using DirectoryService.SharedKernel.ValueObjects;
+using DirectoryService.SharedKernel.ValueObjects.Ids;
+using TimeZone = DirectoryService.SharedKernel.ValueObjects.TimeZone;
 
 namespace DirectoryService.Domain.Entities;
 
 public sealed class Location : SoftDeletableEntity<LocationId>
 {
-    private Location(LocationId id)
-        : base(id) { }
+    private Location(LocationId id) : base(id) { }
     private Location(
         LocationId locationId,
         Name name,
         TimeZone timeZone,
-        Address address)
-        : base(locationId)
+        Address address
+
+        ) : base(locationId)
     {
         Name = name;
         TimeZone = timeZone;
-        Address = address;
+        Address = address; 
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -88,7 +88,7 @@ public sealed class Location : SoftDeletableEntity<LocationId>
 
     internal void RemoveDepartmentLocation(DepartmentLocation departmentLocation)
     {
-        if(departmentLocation != null && _departmentLocations.Contains(departmentLocation))
+        if (departmentLocation != null && _departmentLocations.Contains(departmentLocation))
         {
             _departmentLocations.Remove(departmentLocation);
             UpdatedAt = DateTime.UtcNow;

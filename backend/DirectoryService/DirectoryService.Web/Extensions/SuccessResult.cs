@@ -1,5 +1,5 @@
+using DirectoryService.SharedKernel;
 using System.Net;
-using SharedService.SharedKernel;
 
 namespace DirectoryService.Web.Extensions;
 
@@ -15,7 +15,6 @@ public class SuccessResult : IResult
         return httpContext.Response.WriteAsJsonAsync(envelope);
     }
 }
-
 public class ControllerResult<TValue> : IResult
 {
     private readonly TValue _value;
@@ -24,7 +23,6 @@ public class ControllerResult<TValue> : IResult
     {
         _value = value;
     }
-
     public Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);

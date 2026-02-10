@@ -1,7 +1,7 @@
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using SharedService.Core.Abstractions;
+using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 
@@ -15,13 +15,14 @@ public class GetDepartmentChildrenHandler(INpgsqlConnectionFactory connectionFac
 
         var parameters = new DynamicParameters();
 
-        int page = query.Request.Page > 0 ? query.Request.Page : 1;
-        int pageSize = query.Request.PageSize > 0 ? query.Request.PageSize : 20;
+        var page = query.Request.Page > 0 ? query.Request.Page : 1;
+        var pageSize = query.Request.PageSize > 0 ? query.Request.PageSize : 20;
 
         parameters.Add("page_size", pageSize);
         parameters.Add("offset", (page - 1) * query.Request.PageSize);
 
         parameters.Add("parent_id", query.ParentId);
+
 
         var children = await connection.QueryAsync<GetDepChildrenResponse>(
             $"""

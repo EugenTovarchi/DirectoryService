@@ -1,4 +1,4 @@
-using SharedService.Core.Abstractions;
+using DirectoryService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetTopByPositions;
 

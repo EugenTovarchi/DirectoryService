@@ -1,8 +1,8 @@
-﻿using DirectoryService.Infrastructure.Postgres.Services;
+﻿using DirectoryService.Core.Abstractions;
+using DirectoryService.Infrastructure.Postgres.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Infrastructure.Postgres.BackgroundServices;
 
@@ -11,7 +11,7 @@ public class DeleteExpireDepartmentsBackgroundService(
     ILogger<DeleteExpireDepartmentsBackgroundService> logger)
     : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting delete expired departments background service");
 
@@ -20,13 +20,13 @@ public class DeleteExpireDepartmentsBackgroundService(
 
         try
         {
-            await RunCleanUpAsync(stoppingToken);
-            while (await timer.WaitForNextTickAsync(stoppingToken))
+            await RunCleanUpAsync(cancellationToken);
+            while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                await RunCleanUpAsync(stoppingToken);
+                await RunCleanUpAsync(cancellationToken);
             }
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             logger.LogInformation("Background service stopping");
         }
@@ -34,7 +34,7 @@ public class DeleteExpireDepartmentsBackgroundService(
         {
             logger.LogError(ex, "Error in delete expired departments service");
         }
-
+        
         logger.LogInformation("Delete expired departments background service stopped");
     }
 
@@ -49,7 +49,8 @@ public class DeleteExpireDepartmentsBackgroundService(
             var result = await deleteService.Process(cancellationToken);
             if (result.IsFailure)
             {
-                logger.LogError("Delete expired departments background service failed:{Error}", result.Error);
+                logger.LogError("Delete expired departments background service failed:" +
+                                 "{Error}", result.Error);
             }
         }
         catch (Exception e)
@@ -58,3 +59,4 @@ public class DeleteExpireDepartmentsBackgroundService(
         }
     }
 }
+
