@@ -23,6 +23,7 @@ public class Program
             var environment = builder.Environment.EnvironmentName;
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
+
             builder.Configuration.AddUserSecrets<Program>();
 
             builder.Configuration.AddEnvironmentVariables();
