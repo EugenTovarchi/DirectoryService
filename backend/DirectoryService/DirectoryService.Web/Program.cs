@@ -27,7 +27,7 @@ public class Program
             builder.Services.AddAuthorization();
 
             builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
-                            .AddDirectoryServiceApplication();
+                            .AddDirectoryServiceApplication(builder.Configuration);
 
             var app = builder.Build();
 
