@@ -3,6 +3,7 @@ using DirectoryService.Application.Database;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.Core.Validation;
@@ -16,6 +17,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
     private readonly ILocationRepository _locationRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<UpdateDepartmentLocationsCommand> _validator;
+    private readonly HybridCache _cache;
     private readonly ILogger<UpdateDepartmentLocationsHandler> _logger;
 
     public UpdateDepartmentLocationsHandler(
@@ -23,12 +25,14 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         ILocationRepository locationRepository,
         IDepartmentRepository departmentRepository,
         IValidator<UpdateDepartmentLocationsCommand> validator,
+        HybridCache cache,
         ILogger<UpdateDepartmentLocationsHandler> logger)
     {
         _transactionManager = transactionManager;
         _locationRepository = locationRepository;
         _departmentRepository = departmentRepository;
         _validator = validator;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -95,6 +99,9 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         {
             return commitedResult.Error.ToFailure();
         }
+
+        await _cache.RemoveByTagAsync("departments", cancellationToken);
+        _logger.LogInformation("Cache with tag: 'departments' was cleaned");
 
         return department.Id.Value;
     }

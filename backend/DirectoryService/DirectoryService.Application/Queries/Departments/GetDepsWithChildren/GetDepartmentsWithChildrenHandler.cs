@@ -43,9 +43,11 @@ public class
                 _logger.LogInformation("Cache is empty. Getting data from database...");
                 return await GetFromDatabase(query, ct);
             },
+            tags: ["departments"],
             options: new HybridCacheEntryOptions
             {
-                Expiration = TimeSpan.FromMinutes(_cacheOptions.DepartmentsCacheDurationMinutes)
+                Expiration = TimeSpan.FromMinutes(_cacheOptions.DepartmentsCacheDurationMinutes),
+                LocalCacheExpiration = TimeSpan.FromMinutes(_cacheOptions.DefaultLocalCacheDurationMinutes)
             },
             cancellationToken: ct);
 
