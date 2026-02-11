@@ -4,6 +4,7 @@ using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.Core.Validation;
@@ -17,19 +18,24 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<CreateDepartmentCommand> _validator;
     private readonly ILogger<CreateDepartmentHandler> _logger;
+    private readonly HybridCache _cache;
+
     public CreateDepartmentHandler(
         ILocationRepository locationRepository,
         IValidator<CreateDepartmentCommand> validator,
-        ILogger<CreateDepartmentHandler> logger,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        HybridCache cache,
+        ILogger<CreateDepartmentHandler> logger)
     {
         _locationRepository = locationRepository;
         _departmentRepository = departmentRepository;
+        _cache = cache;
         _validator = validator;
         _logger = logger;
     }
 
-    public async Task<Result<Guid, Failure>> Handle(CreateDepartmentCommand command,
+    public async Task<Result<Guid, Failure>> Handle(
+        CreateDepartmentCommand command,
         CancellationToken cancellationToken = default)
     {
         if (command == null)
@@ -67,6 +73,10 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
             return saveResult.Error.ToFailure();
 
         _logger.LogInformation("Department {DepartmentId} created successfully", departmentResult.Value.Id.Value);
+
+        await _cache.RemoveByTagAsync("departments", cancellationToken);
+        _logger.LogInformation("Cache with tag: 'departments' was cleaned");
+
         return department.Id.Value;
     }
 

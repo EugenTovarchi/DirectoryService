@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.SharedKernel;
@@ -12,19 +13,22 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
     private readonly ILocationRepository _locationRepository;
     private readonly IPositionRepository _positionRepository;
     private readonly ITransactionManager _transactionManager;
+    private readonly HybridCache _cache;
     private readonly ILogger<SoftDeleteHandler> _logger;
 
     public SoftDeleteHandler(IDepartmentRepository repository,
         ITransactionManager transactionManager,
         IPositionRepository positionRepository,
         ILocationRepository locationRepository,
+        HybridCache cache,
         ILogger<SoftDeleteHandler> logger)
     {
         _departmentRepository = repository;
         _transactionManager = transactionManager;
-        _logger = logger;
+        _cache = cache;
         _positionRepository = positionRepository;
         _locationRepository = locationRepository;
+        _logger = logger;
     }
 
     public async Task<Result<Guid, Failure>> Handle(SoftDeleteCommand command, CancellationToken cancellationToken)
@@ -103,6 +107,9 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         _logger.LogInformation("Department: {DepartmentId} was soft deleted with descendants.", department.Id);
+
+        await _cache.RemoveByTagAsync("departments", cancellationToken);
+        _logger.LogInformation("Cache with tag: 'departments' was cleaned");
 
         return department.Id.Value;
     }
