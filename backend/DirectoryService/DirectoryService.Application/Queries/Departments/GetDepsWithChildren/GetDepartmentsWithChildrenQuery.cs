@@ -7,3 +7,4 @@ public record GetDepartmentsWithChildrenQuery(
     int? ChildLimit,
     int Page,
     int PageSize): IQuery;
+

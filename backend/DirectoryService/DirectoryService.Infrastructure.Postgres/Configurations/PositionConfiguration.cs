@@ -2,6 +2,7 @@ using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DirectoryService.Infrastructure.Postgres.Configurations;
@@ -38,7 +39,7 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
         });
 
         builder.HasMany(p => p.DepartmentPositions)
-            .WithOne()
+            .WithOne() 
             .HasForeignKey(dp => dp.PositionId)
             .OnDelete(DeleteBehavior.Restrict);
 

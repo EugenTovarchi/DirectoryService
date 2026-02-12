@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.Core.Abstractions;
 
+
 namespace DirectoryService.Application;
 
 public static class ApplicationDependencyInjection

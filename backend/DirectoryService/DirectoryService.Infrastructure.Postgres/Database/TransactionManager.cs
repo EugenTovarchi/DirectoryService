@@ -25,8 +25,9 @@ public class TransactionManager : ITransactionManager
         _loggerFactory = loggerFactory;
     }
 
-    public async Task<Result<ITransactionScope, Error>> BeginTransactionAsync(IsolationLevel? level = null,
-        CancellationToken cancellationToken = default)
+    public async Task<Result<ITransactionScope, Error>> BeginTransactionAsync(
+        CancellationToken cancellationToken = default,
+        IsolationLevel? level = null)
     {
         try
         {

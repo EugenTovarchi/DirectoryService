@@ -10,6 +10,7 @@ public sealed class Location : SoftDeletableEntity<LocationId>
 {
     private Location(LocationId id)
         : base(id) { }
+
     private Location(
         LocationId locationId,
         Name name,
@@ -88,7 +89,7 @@ public sealed class Location : SoftDeletableEntity<LocationId>
 
     internal void RemoveDepartmentLocation(DepartmentLocation departmentLocation)
     {
-        if(departmentLocation != null && _departmentLocations.Contains(departmentLocation))
+        if (departmentLocation != null && _departmentLocations.Contains(departmentLocation))
         {
             _departmentLocations.Remove(departmentLocation);
             UpdatedAt = DateTime.UtcNow;

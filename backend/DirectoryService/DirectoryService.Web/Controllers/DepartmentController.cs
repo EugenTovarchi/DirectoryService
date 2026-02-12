@@ -37,7 +37,7 @@ public class DepartmentController : ApplicationController
        [FromServices] UpdateDepartmentLocationsHandler handler,
        CancellationToken cancellationToken)
     {
-        var command = new UpdateDepartmentLocationsCommand(departmentId, request);
+        var command = new UpdateDepartmentLocationsCommand(departmentId,request);
 
         var result = await handler.Handle(command, cancellationToken);
 

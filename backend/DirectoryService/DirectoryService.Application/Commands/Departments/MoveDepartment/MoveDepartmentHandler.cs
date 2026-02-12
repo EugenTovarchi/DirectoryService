@@ -45,7 +45,7 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
             return validationResult.ToErrors();
         }
 
-        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 

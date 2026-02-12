@@ -33,7 +33,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
 
     public async Task<Result<Guid, Failure>> Handle(SoftDeleteCommand command, CancellationToken cancellationToken)
     {
-        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 
@@ -47,7 +47,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         var department = lockDepartmentResult.Value;
-        string oldPath = department.Path.Value;
+        var oldPath = department.Path.Value;
 
         var lockDescendantsResult = await _departmentRepository.LockDescendantsByPath(oldPath, cancellationToken);
         if (lockDescendantsResult.IsFailure)
@@ -64,7 +64,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
             .MarkDepartmentAsDeleted(deletionPrefix, department.Id, cancellationToken);
         if (updateDepPathResult.IsFailure)
         {
-            _logger.LogError("Error when update path of department:{department}.", department.Id);
+            _logger.LogError("Error when update path  of department:{department}", department.Id);
             transactionScope.Rollback();
             return updateDepPathResult.Error.ToFailure();
         }

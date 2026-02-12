@@ -10,8 +10,11 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.IntegrationTests.Departments.MoveDepartment;
 
-public class MoveDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBaseTests(factory)
+public class MoveDepartmentTests : DirectoryBaseTests
 {
+    public MoveDepartmentTests(DirectoryTestWebFactory factory)
+        : base(factory) { }
+
     [Fact]
     public async Task Move_department_to_itself_should_failed()
     {
@@ -20,12 +23,12 @@ public class MoveDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBas
         var childId = await CreateChildTestDepartment(parentId, "Child department", "child");
 
         // Act
-        var result = await ExecuteHandler((sut) =>
+        var result = await ExecuteHandler((_sut) =>
         {
             var request = new MoveDepartmentRequest(childId);
             var command = new MoveDepartmentCommand(childId, request);
 
-            return sut.Handle(command, CancellationToken.None);
+            return _sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -44,12 +47,12 @@ public class MoveDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBas
         var grandChildId = await CreateChildTestDepartment(childId, "GrandChild department", "grandchild");
 
         // Act
-        var result = await ExecuteHandler((sut) =>
+        var result = await ExecuteHandler((_sut) =>
         {
             var request = new MoveDepartmentRequest(rootId);
             var command = new MoveDepartmentCommand(parentId, request);
 
-            return sut.Handle(command, CancellationToken.None);
+            return _sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -76,7 +79,7 @@ public class MoveDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBas
     {
         // Arrange
         var rootId = await CreateRootTestDepartment("Root department", "root");
-        var parentId = await CreateChildTestDepartment(rootId, "Parent department", "parent");
+        var parentId = await CreateChildTestDepartment(rootId,"Parent department", "parent");
         var childId = await CreateChildTestDepartment(parentId, "Child department", "child");
         var grandChildId = await CreateChildTestDepartment(childId, "GrandChild department", "grandchild");
 

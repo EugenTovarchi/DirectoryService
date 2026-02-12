@@ -6,12 +6,18 @@ using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Locations.Get;
 
-public class GetLocationsHandler(INpgsqlConnectionFactory connectionFactory)
-    : IQueryHandler<PagedList<GetLocationResponse>, GetLocationsQuery>
+public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>, GetLocationsQuery>
 {
+    private readonly INpgsqlConnectionFactory _connectionFactory;
+
+    public GetLocationsHandler(INpgsqlConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<PagedList<GetLocationResponse>> Handle(GetLocationsQuery query, CancellationToken ct)
     {
-        using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        using var connection = await _connectionFactory.CreateConnectionAsync(ct);
         var parameters = new DynamicParameters();
         var conditions = new List<string>();
 
