@@ -1,8 +1,8 @@
+using System.Globalization;
 using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
-using System.Globalization;
 
 namespace DirectoryService.Web;
 
@@ -10,7 +10,6 @@ public class Program
 {
     public async static Task Main(string[] args)
     {
-
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
@@ -20,7 +19,7 @@ public class Program
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            var environment = builder.Environment.EnvironmentName;
+            string environment = builder.Environment.EnvironmentName;
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
 
@@ -31,6 +30,7 @@ public class Program
             builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
+
             builder.Services.AddControllers();
 
             builder.Services

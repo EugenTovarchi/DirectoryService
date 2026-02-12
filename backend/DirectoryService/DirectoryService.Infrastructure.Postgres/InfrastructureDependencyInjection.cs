@@ -1,5 +1,4 @@
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
 using DirectoryService.Infrastructure.Postgres.BackgroundServices;
 using DirectoryService.Infrastructure.Postgres.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
@@ -10,11 +9,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
- using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
+using SharedService.Core.Abstractions;
+using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
 
 namespace DirectoryService.Infrastructure.Postgres;
 
-public static class DependencyInjection
+public static class InfrastructureDependencyInjection
 {
     public static IServiceCollection AddDirectoryServiceInfrastructure(this IServiceCollection services,
         IConfiguration configuration)
@@ -26,11 +26,12 @@ public static class DependencyInjection
 
         return services;
     }
+
     private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContextPool<DirectoryServiceDbContext>((sp, options) =>
         {
-            var connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
+            string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
             var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
@@ -47,21 +48,19 @@ public static class DependencyInjection
                 {
                     Console.WriteLine($"[EF] {message}");
                 }
-            }, LogLevel.Error); 
+            }, LogLevel.Error);
 
             if (hostEnvironment.IsDevelopment())
             {
                 options.EnableDetailedErrors();
             }
-
-            //options.UseLoggerFactory(loggerFactory);
         });
 
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
         services.AddScoped<NpgsqlConnectionFactory>();
-        
+
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         return services;
@@ -76,6 +75,7 @@ public static class DependencyInjection
 
         return services;
     }
+
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<DeleteExpiredDepartmentsService>();

@@ -3,10 +3,10 @@ using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -35,7 +35,7 @@ public class PositionRepository : IPositionRepository
 
         return position;
     }
-    
+
     public async Task<UnitResult<Error>> SoftDeleteUniqDepRelatedPositions(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
@@ -67,10 +67,10 @@ public class PositionRepository : IPositionRepository
                  FROM unique_positions 
                  WHERE p.id = unique_positions.position_id AND p.is_deleted = false;
                  """;
-            
+
             var connection = _dbContext.Database.GetDbConnection();
             var updatedPositions = await connection.ExecuteAsync(sql, parameters);
-            
+
             _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
         }
         catch (Exception ex)
@@ -145,7 +145,7 @@ public class PositionRepository : IPositionRepository
             return Errors.General.DatabaseError("creating_position_error");
         }
 
-        var constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLower();
 
         if (constraintName == "ix_position_name")
         {

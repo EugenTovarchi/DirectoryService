@@ -1,18 +1,20 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Domain.Entities;
 
 public sealed class Position : SoftDeletableEntity<PositionId>
 {
-    private Position(PositionId id) : base(id) { }
+    private Position(PositionId id)
+        : base(id) { }
+
     private Position(
         PositionId positionId,
         Name name,
-        Description? description
-        ) : base(positionId)
+        Description? description)
+        : base(positionId)
     {
         Name = name;
         Description = description ?? null;

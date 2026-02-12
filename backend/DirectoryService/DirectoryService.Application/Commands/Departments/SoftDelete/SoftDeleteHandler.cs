@@ -1,8 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.SharedKernel;
 using Microsoft.Extensions.Logging;
+using SharedService.Core.Abstractions;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Departments.SoftDelete;
 
@@ -53,20 +53,20 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
         }
 
         department.Delete();
-        
-        var deletionPrefix = Constants.DELETION_PREFIX;
-        
+
+        string deletionPrefix = Constants.DELETION_PREFIX;
+
         var updateDepPathResult = await _departmentRepository
-            .MarkDepartmentAsDeleted(deletionPrefix , department.Id, cancellationToken);
+            .MarkDepartmentAsDeleted(deletionPrefix, department.Id, cancellationToken);
         if (updateDepPathResult.IsFailure)
         {
             _logger.LogError("Error when update path  of department:{department}", department.Id);
             transactionScope.Rollback();
             return updateDepPathResult.Error.ToFailure();
         }
-        
-        var newPath = department.Path.Value;
-        
+
+        string newPath = department.Path.Value;
+
         var updateDescendantsPathResult = await _departmentRepository.UpdateAllDescendantsPath(
             oldPath,
             newPath,

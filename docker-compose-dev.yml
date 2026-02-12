@@ -2,21 +2,22 @@ services:
   directory-service:
     container_name: directory-service
     build:
-        context: .
-        dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
+      context: .
+      dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
+      args:
+        - NUGET_USERNAME=${NUGET_USERNAME}
+        - NUGET_PASSWORD=${NUGET_PASSWORD}
     ports:
-      - "9002:8080" 
+      - "9002:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development  
-      - ASPNETCORE_URLS=http://+:8080"
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=directory_service;Username=postgresUser;Password=postgresPassword
-      - Serilog__WriteTo__1__Args__serverUrl=http://seq:5341- 
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
     depends_on:
       postgres:
         condition: service_healthy
       seq:
         condition: service_started
-    restart: always
+    restart: unless-stopped
 
   seq:
     container_name: directory-service-seq
@@ -25,14 +26,14 @@ services:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     ports:
-      - "15341:5341" 
+      - "15341:5341"
       - "8081:80"
-    restart: always  
-
-  postgres: 
+    restart: always
+  
+  postgres:
     container_name: directory-service-postgres
     image: postgres:15
-    environment: 
+    environment:
       POSTGRES_DB: directory_service
       POSTGRES_USER: postgresUser
       POSTGRES_PASSWORD: postgresPassword
@@ -49,8 +50,3 @@ services:
 
 volumes:
   postgres_data:     
-
-
-
-  
- 

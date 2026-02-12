@@ -1,8 +1,8 @@
+using System.Data;
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using DirectoryService.Core.Abstractions;
-using System.Data;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Locations.Get;
 
@@ -17,7 +17,7 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
 
     public async Task<PagedList<GetLocationResponse>> Handle(GetLocationsQuery query, CancellationToken ct)
     {
-        using var connection = await  _connectionFactory.CreateConnectionAsync(ct);
+        using var connection = await _connectionFactory.CreateConnectionAsync(ct);
         var parameters = new DynamicParameters();
         var conditions = new List<string>();
 
@@ -29,7 +29,7 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
 
         if (query.IsActive.HasValue)
         {
-            var showDeleted = !query.IsActive.Value;
+            bool showDeleted = !query.IsActive.Value;
             conditions.Add("l.is_deleted = @showDeleted");
             parameters.Add("showDeleted", showDeleted, DbType.Boolean);
         }
@@ -50,22 +50,22 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
         parameters.Add("page_size", query.PageSize);
         parameters.Add("offset", (query.Page - 1) * query.PageSize);
 
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(
-                    " AND  ", conditions) : "";
+        string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(
+                    " AND  ", conditions) : string.Empty;
 
-        var direction = query.SortDirection?.ToLower() == "asc" ? "ASC"
+        string direction = query.SortDirection?.ToLower() == "asc" ? "ASC"
             : "DESC";
 
-        var orderByField = query.SortBy?.ToLower() switch
+        string orderByField = query.SortBy?.ToLower() switch
         {
             "name" => "name",
             "created at" => "created_at",
             "updated at" => "updated_at",
             "country" => "country",
             _ => "name"
-			};
+            };
 
-        var orderByClause = $"ORDER BY {orderByField} {direction}";
+        string orderByClause = $"ORDER BY {orderByField} {direction}";
 
         var locations = await connection.QueryAsync<GetLocationResponse>(
             $"""
@@ -85,7 +85,7 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
             LIMIT @page_size OFFSET @offset
             """,
             param: parameters);
-            
+
         return locations.ToPagedList(query.Page, query.PageSize);
     }
 }

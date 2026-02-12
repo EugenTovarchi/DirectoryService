@@ -1,3 +1,4 @@
+using System.Data.Common;
 using DirectoryService.Application.Database;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
 using DirectoryService.Infrastructure.Postgres.Repositories;
@@ -9,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Respawn;
-using System.Data.Common;
 using Testcontainers.PostgreSql;
 
 namespace DirectoryService.IntegrationTests;
@@ -34,7 +34,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
             services.RemoveAll<IDepartmentRepository>();
             services.RemoveAll<ILocationRepository>();
 
-                services.AddScoped(provider =>
+            services.AddScoped(provider =>
                 DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
 
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();

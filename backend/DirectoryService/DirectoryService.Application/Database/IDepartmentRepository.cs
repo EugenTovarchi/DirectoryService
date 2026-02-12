@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Database;
 
@@ -31,11 +31,4 @@ public interface IDepartmentRepository
      string newPath,
      DepartmentId movedDepartmentId,
      CancellationToken cancellationToken);
-    
-
-    // Task<UnitResult<Error>> RemovePrefixFromDescendantsLastElement(
-    //     string oldPath,
-    //     string prefixToRemove,
-    //     DepartmentId parentDepartmentId,
-    //     CancellationToken cancellationToken);
 }

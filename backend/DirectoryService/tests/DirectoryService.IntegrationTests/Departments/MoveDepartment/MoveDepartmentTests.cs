@@ -1,18 +1,19 @@
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
 using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.IntegrationTests.Departments.MoveDepartment;
 
 public class MoveDepartmentTests : DirectoryBaseTests
 {
-    public MoveDepartmentTests(DirectoryTestWebFactory factory) : base(factory) { }
+    public MoveDepartmentTests(DirectoryTestWebFactory factory)
+        : base(factory) { }
 
     [Fact]
     public async Task Move_department_to_itself_should_failed()
@@ -83,12 +84,12 @@ public class MoveDepartmentTests : DirectoryBaseTests
         var grandChildId = await CreateChildTestDepartment(childId, "GrandChild department", "grandchild");
 
         // Act
-        var result = await ExecuteHandler((_sut) =>
+        var result = await ExecuteHandler((sut) =>
         {
             var request = new MoveDepartmentRequest(rootId);
             var command = new MoveDepartmentCommand(childId, request);
 
-            return _sut.Handle(command, CancellationToken.None);
+            return sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
@@ -151,8 +152,8 @@ public class MoveDepartmentTests : DirectoryBaseTests
     {
         await using var scope = Services.CreateAsyncScope();
 
-        var _sut = scope.ServiceProvider.GetRequiredService<MoveDepartmentHandler>();
+        var sut = scope.ServiceProvider.GetRequiredService<MoveDepartmentHandler>();
 
-        return await action(_sut);
+        return await action(sut);
     }
 }

@@ -1,22 +1,23 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
-using Path = DirectoryService.SharedKernel.ValueObjects.Path;
+using DirectoryService.Contracts.ValueObjects;
+using DirectoryService.Contracts.ValueObjects.Ids;
+using SharedService.SharedKernel;
+using Path = DirectoryService.Contracts.ValueObjects.Path;
 
 namespace DirectoryService.Domain.Entities;
 
 public sealed class Department : SoftDeletableEntity<DepartmentId>
 {
-    private Department(DepartmentId id) : base(id) { }
+    private Department(DepartmentId id)
+        : base(id) { }
     private Department(
         DepartmentId departmentId,
         Name name,
         Identifier identifier,
         Path path,
         short depth,
-        DepartmentId? parentId
-        ) : base(departmentId)
+        DepartmentId? parentId)
+        : base(departmentId)
     {
         Name = name;
         Identifier = identifier;
@@ -26,6 +27,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
+
     public Name Name { get; private set; } = null!;
     public Identifier Identifier { get; private set; } = null!;
     public DepartmentId? ParentId { get; private set; }
@@ -78,6 +80,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
         return Result.Success<Error>();
     }
+
     public UnitResult<Error> AddChildren(Department children)
     {
         if (children is null)
@@ -216,6 +219,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
         return Result.Success<Error>();
     }
+
     public UnitResult<Error> AddPosition(PositionId positionId, DepartmentId departmentId)
     {
         if (positionId == null || positionId == PositionId.EmptyPositionId())

@@ -1,13 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj" />
+    <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>
-
 </Project>

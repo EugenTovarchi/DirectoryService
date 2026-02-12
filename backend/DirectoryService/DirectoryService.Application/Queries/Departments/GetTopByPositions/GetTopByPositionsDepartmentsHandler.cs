@@ -1,7 +1,7 @@
 using Dapper;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
-using DirectoryService.Core.Abstractions;
+using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Application.Queries.Departments.GetTopByPositions;
 
@@ -19,7 +19,7 @@ public class GetTopByPositionsDepartmentsHandler : IQueryHandler<List<GetTopDepa
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
         var parameters = new DynamicParameters();
 
-        var direction = query.SortDirection?.ToLower() == "asc" ? "ASC" : "DESC";
+        string direction = query.SortDirection?.ToLower() == "asc" ? "ASC" : "DESC";
 
         var departments = await connection.QueryAsync<GetTopDepartmentsResponse>(
             $"""

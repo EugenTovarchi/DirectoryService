@@ -1,27 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Dapper"/>
+    <PackageReference Include="FluentValidation"/>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="istreddev.core" />
+    <PackageReference Include="istreddev.framework" />
+    <PackageReference Include="IstredDev.SharedKernel" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />
+
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DirectoryService.Contracts\DirectoryService.Contracts.csproj" />
     <ProjectReference Include="..\DirectoryService.Domain\DirectoryService.Domain.csproj" />
-    <ProjectReference Include="..\Shared\DirectoryService.Core\DirectoryService.Core.csproj" />
-    <ProjectReference Include="..\Shared\DirectoryService.Framework\DirectoryService.Framework.csproj" />
-    <ProjectReference Include="..\Shared\DirectoryService.SharedKernel\DirectoryService.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,12 +1,12 @@
 using CSharpFunctionalExtensions;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
+using DirectoryService.Contracts.ValueObjects.Ids;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Domain.Entities;
 
 public class DepartmentLocation
 {
-    private DepartmentLocation() {}
+    private DepartmentLocation() { }
 
     private DepartmentLocation(LocationId locationId, DepartmentId departmentId)
     {

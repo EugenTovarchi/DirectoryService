@@ -1,15 +1,16 @@
 using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Dapper;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 using IDepartmentRepository = DirectoryService.Application.Database.IDepartmentRepository;
+using Path = DirectoryService.Contracts.ValueObjects.Path;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -105,7 +106,7 @@ public class DepartmentRepository(
 
         var connection = dbContext.Database.GetDbConnection();
 
-        var countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
+        int countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
             sql,
             parameters,
             transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
@@ -116,7 +117,7 @@ public class DepartmentRepository(
 
     public async Task<UnitResult<Error>> UpdateAsRoot(Department department)
     {
-        var pathResult = SharedKernel.ValueObjects.Path.Create(department.Identifier.Value);
+        var pathResult = Path.Create(department.Identifier.Value);
         if (pathResult.IsFailure)
             return pathResult.Error;
 
@@ -135,7 +136,7 @@ public class DepartmentRepository(
         Department department,
         Department parent)
     {
-        var pathResult = SharedKernel.ValueObjects.Path.CreateForChild(
+        var pathResult = Path.CreateForChild(
             parent.Path,
             department.Identifier);
 
@@ -143,7 +144,7 @@ public class DepartmentRepository(
             return pathResult.Error;
 
         var newPath = pathResult.Value;
-        var newDepth = (short)(parent.Depth + 1);
+        short newDepth = (short)(parent.Depth + 1);
         var newParentId = parent.Id;
         var updatedAt = DateTime.UtcNow;
 
@@ -225,7 +226,7 @@ public class DepartmentRepository(
                                """;
 
             var lockedDepIds = await connection.QueryAsync(sql, parameters);
-            var lockedCount = lockedDepIds.Count();
+            int lockedCount = lockedDepIds.Count();
 
             if (departmentIdsToLock.Count != lockedCount)
             {
@@ -324,9 +325,9 @@ public class DepartmentRepository(
     /// после удаления родительских департаментов. Удаляет из путей элементов с префиксом 'deleted_'
     /// и пересчитывает родительские связи.
     /// </summary>
-    /// <param name="descendantIds">Список id департаментов-потомков для обновления</param>
-    /// <param name="cancellationToken">Токен отмены операции</param>
-    /// <returns>Результат операции: успех или ошибка</returns>
+    /// <param name="descendantIds">Список id департаментов-потомков для обновления.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат операции: успех или ошибка.</returns>
     public async Task<UnitResult<Error>> UpdateDescendantsInfoAfterCleanUp(
         List<Guid> descendantIds,
         CancellationToken cancellationToken)
@@ -437,9 +438,9 @@ public class DepartmentRepository(
     {
         try
         {
-            var requestedCount = departmentsIds.ToList().Count;
+            int requestedCount = departmentsIds.ToList().Count;
 
-            var existingCount = await dbContext.Departments
+            int existingCount = await dbContext.Departments
                 .Where(l => departmentsIds.Contains(l.Id) && !l.IsDeleted)
                 .Select(l => l.Id)
                 .Distinct()
@@ -505,7 +506,7 @@ public class DepartmentRepository(
             return Errors.General.DatabaseError("creating_department_error");
         }
 
-        var constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLower();
 
         if (constraintName == "ix_department_name")
         {
@@ -524,7 +525,6 @@ public class DepartmentRepository(
             logger.LogWarning("Duplicate name constraint violation for department: {name}", departmentName);
             return Errors.General.Duplicate("name");
         }
-
 
         logger.LogError("Unknown unique constraint violation for department {name}: {Constraint}", departmentName,
             pgEx.ConstraintName);

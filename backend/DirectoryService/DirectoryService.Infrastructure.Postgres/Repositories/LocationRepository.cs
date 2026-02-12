@@ -1,13 +1,13 @@
 using CSharpFunctionalExtensions;
 using Dapper;
 using DirectoryService.Application.Database;
+using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using DirectoryService.Infrastructure.Postgres.DbContexts;
-using DirectoryService.SharedKernel;
-using DirectoryService.SharedKernel.ValueObjects.Ids;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Infrastructure.Postgres.Repositories;
 
@@ -33,7 +33,7 @@ public class LocationRepository : ILocationRepository
 
         return true;
     }
-    
+
     public async Task<UnitResult<Error>> SoftDeleteUniqDepRelatedLocations(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
@@ -88,7 +88,7 @@ public class LocationRepository : ILocationRepository
         if (idList.Count == 0)
             return Errors.General.ValueIsEmpty("locationIds");
 
-        var count = await _dbContext.Locations
+        int count = await _dbContext.Locations
             .CountAsync(l => idList.Contains(l.Id) && !l.IsDeleted, cancellationToken);
 
         return count == idList.Count
@@ -130,7 +130,7 @@ public class LocationRepository : ILocationRepository
             return Errors.General.DatabaseError("creating_location_error");
         }
 
-        var constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLower();
 
         if (constraintName == "ix_location_name")
         {

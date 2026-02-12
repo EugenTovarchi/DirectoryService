@@ -1,11 +1,11 @@
 using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
-using DirectoryService.Core.Abstractions;
-using DirectoryService.Core.Validation;
 using DirectoryService.Domain.Entities;
-using DirectoryService.SharedKernel;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using SharedService.Core.Abstractions;
+using SharedService.Core.Validation;
+using SharedService.SharedKernel;
 
 namespace DirectoryService.Application.Commands.Departments.MoveDepartment;
 
@@ -26,6 +26,7 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         _validator = validator;
         _logger = logger;
     }
+
     public async Task<Result<Guid, Failure>> Handle(MoveDepartmentCommand command, CancellationToken cancellationToken)
     {
         if (command == null)
@@ -51,7 +52,7 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
             return Errors.General.NotFoundEntity("department").ToFailure();
 
         var department = isDepartmentExistResult.Value;
-        var oldPath = department.Path.Value;
+        string oldPath = department.Path.Value;
 
         Department? newParent = null;
 
@@ -76,11 +77,11 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         if (lockResult.IsFailure)
             return lockResult.Error.ToFailure();
 
-        var updeteDepartmentResult = department.MoveTo(newParent);
-        if(updeteDepartmentResult.IsFailure)
-            return updeteDepartmentResult.Error.ToFailure();
+        var updateDepartmentResult = department.MoveTo(newParent);
+        if(updateDepartmentResult.IsFailure)
+            return updateDepartmentResult.Error.ToFailure();
 
-        var newPath = department.Path.Value;
+        string newPath = department.Path.Value;
 
         var updateDescendantsResult = await _departmentRepository.UpdateAllDescendantsPath(oldPath, newPath, department.Id,
             cancellationToken);
