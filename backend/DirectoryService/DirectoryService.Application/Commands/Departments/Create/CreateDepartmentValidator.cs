@@ -20,6 +20,6 @@ public class CreateDepartmentValidator : AbstractValidator<CreateDepartmentComma
          .MinimumLength(Identifier.MIN_LENGTH).WithError(Errors.Validation.RecordIsInvalid("Identifier"));
 
         RuleFor(d => d.Request.LocationIds).NotEmpty().WithError(Errors.General.NotFoundValue("LocationId"))
-            .Must(ids => ids.Any()).WithError(Errors.General.ValueIsEmpty("LocationIds"));
+            .Must(ids => ids.Any()).WithError(Errors.General.ValueIsEmpty("LocationIds")); 
     }
 }

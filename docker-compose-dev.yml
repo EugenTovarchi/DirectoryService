@@ -2,15 +2,15 @@ services:
   directory-service:
     container_name: directory-service
     build:
-        context: .
-        dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
-        args:
-         - NUGET_USERNAME=${NUGET_USERNAME}
-         - NUGET_PASSWORD=${NUGET_PASSWORD}
+      context: .
+      dockerfile: ./backend/DirectoryService/DirectoryService.Web/Dockerfile
+      args:
+        - NUGET_USERNAME=${NUGET_USERNAME}
+        - NUGET_PASSWORD=${NUGET_PASSWORD}
     ports:
-      - "9002:8080" 
+      - "9002:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker   
+      - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${DEFAULT_CONNECTION}
     depends_on:
@@ -27,11 +27,11 @@ services:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     ports:
-      - "15341:5341" 
+      - "15341:5341"
       - "8081:80"
-    restart: always  
-
-  postgres: 
+    restart: always
+  
+  postgres:
     container_name: directory-service-postgres
     image: postgres:15
     env_file:

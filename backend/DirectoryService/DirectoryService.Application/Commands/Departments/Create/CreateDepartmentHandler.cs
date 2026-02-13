@@ -121,7 +121,10 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         var checkResult = await _locationRepository.AllLocationsExistAsync(
             distinctIds,
             cancellationToken);
-        return checkResult.IsFailure ? checkResult.Error : checkResult;
+        if (checkResult.IsFailure)
+            return checkResult.Error;
+
+        return checkResult;
     }
 
     private UnitResult<Error> AddLocations(

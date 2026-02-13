@@ -1,4 +1,4 @@
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;

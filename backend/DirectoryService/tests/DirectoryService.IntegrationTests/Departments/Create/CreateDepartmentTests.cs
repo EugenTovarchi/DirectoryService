@@ -10,8 +10,11 @@ using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.Create;
 
-public class CreateDepartmentTests(DirectoryTestWebFactory factory) : DirectoryBaseTests(factory)
+public class CreateDepartmentTests : DirectoryBaseTests
 {
+    public CreateDepartmentTests(DirectoryTestWebFactory factory)
+        : base(factory) { }
+
     [Fact]
     public async Task CreateDepartment_with_valid_data_should_succeed()
     {
@@ -80,11 +83,11 @@ public class CreateDepartmentTests(DirectoryTestWebFactory factory) : DirectoryB
     {
         // Arrange
         var locationId = await CreateLocation("location1");
-        var request = new CreateDepartmentRequest(string.Empty, "testIdentifier", [locationId.Value], null);
+        var request = new CreateDepartmentRequest("", "testIdentifier", [locationId.Value], null);
         var command = new CreateDepartmentCommand(request);
 
         // Act
-        var result = await ExecuteHandler(sut =>
+        var result = await ExecuteHandler((sut) =>
         {
             return sut.Handle(command, CancellationToken.None);
         });
@@ -105,10 +108,10 @@ public class CreateDepartmentTests(DirectoryTestWebFactory factory) : DirectoryB
     {
         return await ExecuteInDb(async dbContext =>
         {
-            var address = Address.CreateWithFlat("RF", "moscov", "testStreet", "12", 3).Value;
+            var address = Address.CreateWithFlat("RF", "Moscow", "testStreet", "12", 3).Value;
             var location = Location.Create(
                Name.Create(name).Value,
-               TimeZone.Create("test/Moscov").Value,
+               TimeZone.Create("test/Moscow").Value,
                address);
 
             dbContext.Locations.Add(location.Value);

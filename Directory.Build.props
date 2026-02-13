@@ -5,7 +5,7 @@
       <Includeassets>runtime; build; native; contentfiles; analyzers; buildtransitive</Includeassets>
     </PackageReference>
   </ItemGroup>
-  
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

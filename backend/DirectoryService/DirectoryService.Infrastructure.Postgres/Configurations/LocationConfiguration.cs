@@ -2,6 +2,7 @@ using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
@@ -95,3 +96,4 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
         builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }
+

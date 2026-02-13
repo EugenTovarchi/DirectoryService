@@ -68,10 +68,10 @@ public class PositionRepository : IPositionRepository
                  WHERE p.id = unique_positions.position_id AND p.is_deleted = false;
                  """;
 
-             var connection = _dbContext.Database.GetDbConnection();
-             int updatedPositions = await connection.ExecuteAsync(sql, parameters);
+            var connection = _dbContext.Database.GetDbConnection();
+            var updatedPositions = await connection.ExecuteAsync(sql, parameters);
 
-             _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
+            _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
         }
         catch (Exception ex)
         {
@@ -93,6 +93,7 @@ public class PositionRepository : IPositionRepository
 
         return true;
     }
+
 
     public async Task<Result<Guid, Error>> AddAsync(Position position, CancellationToken cancellationToken = default)
     {
@@ -157,6 +158,7 @@ public class PositionRepository : IPositionRepository
             _logger.LogWarning("Duplicate name constraint violation for position: {name}", positionName);
             return Errors.General.Duplicate("name");
         }
+
 
         _logger.LogError("Unknown unique constraint violation for position {name}: {Constraint}", positionName,
             pgEx.ConstraintName);

@@ -10,7 +10,7 @@ namespace DirectoryService.Infrastructure.Postgres.Database;
 /// <summary>
 /// Фабрика открывает соединение с БД.
 /// </summary>
-public class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
+public  class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -21,13 +21,13 @@ public class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConn
 
         _dataSource = dataSourceBuilder.Build();
     }
-
     public NpgsqlConnectionFactory(string connectionString)
     {
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
         dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
         _dataSource = dataSourceBuilder.Build();
     }
+
 
     public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {

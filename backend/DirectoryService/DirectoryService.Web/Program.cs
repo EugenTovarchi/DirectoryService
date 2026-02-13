@@ -1,3 +1,4 @@
+using System.Globalization;
 using DirectoryService.Application;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
@@ -7,8 +8,13 @@ namespace DirectoryService.Web;
 
 public class Program
 {
-    public static async Task Main(string[] args)
+    public async static Task Main(string[] args)
     {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+            .CreateLogger();
+
         try
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -20,9 +26,8 @@ public class Program
             builder.Configuration.AddUserSecrets<Program>();
 
             builder.Configuration.AddEnvironmentVariables();
-            builder.Services.AddControllers();
 
-            builder.Services.AddConfiguration(builder.Configuration);
+            builder.Services.AddConfiguration(builder.Configuration); 
 
             builder.Services.AddAuthorization();
 

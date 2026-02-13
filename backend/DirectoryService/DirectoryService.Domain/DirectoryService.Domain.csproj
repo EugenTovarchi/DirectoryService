@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
+
   <ItemGroup>
     <ProjectReference Include="..\DirectoryService.Contracts\DirectoryService.Contracts.csproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>

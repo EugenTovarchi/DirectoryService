@@ -106,7 +106,7 @@ public class DepartmentRepository(
 
         var connection = dbContext.Database.GetDbConnection();
 
-        var countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
+        int countCleanedDepartments = await connection.ExecuteScalarAsync<int>(
             sql,
             parameters,
             transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
@@ -144,7 +144,7 @@ public class DepartmentRepository(
             return pathResult.Error;
 
         var newPath = pathResult.Value;
-        var newDepth = (short)(parent.Depth + 1);
+        short newDepth = (short)(parent.Depth + 1);
         var newParentId = parent.Id;
         var updatedAt = DateTime.UtcNow;
 
@@ -204,8 +204,7 @@ public class DepartmentRepository(
         }
     }
 
-    public async Task<UnitResult<Error>> LockDescendantsByIds(
-        List<Guid> departmentIdsToLock,
+    public async Task<UnitResult<Error>> LockDescendantsByIds(List<Guid> departmentIdsToLock,
         CancellationToken cancellationToken = default)
     {
         if (departmentIdsToLock.Count == 0)
@@ -326,9 +325,9 @@ public class DepartmentRepository(
     /// после удаления родительских департаментов. Удаляет из путей элементов с префиксом 'deleted_'
     /// и пересчитывает родительские связи.
     /// </summary>
-    /// <param name="descendantIds">Список id департаментов-потомков для обновления</param>
-    /// <param name="cancellationToken">Токен отмены операции</param>
-    /// <returns>Результат операции: успех или ошибка</returns>
+    /// <param name="descendantIds">Список id департаментов-потомков для обновления.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат операции: успех или ошибка.</returns>
     public async Task<UnitResult<Error>> UpdateDescendantsInfoAfterCleanUp(
         List<Guid> descendantIds,
         CancellationToken cancellationToken)
@@ -410,8 +409,7 @@ public class DepartmentRepository(
         }
     }
 
-    public async Task<Result<bool, Error>> IsDepartmentExistAsync(
-        Guid departmentId,
+    public async Task<Result<bool, Error>> IsDepartmentExistAsync(Guid departmentId,
         CancellationToken cancellationToken = default)
     {
         var isDepartmentExist = await dbContext.Departments
@@ -510,14 +508,16 @@ public class DepartmentRepository(
 
         string constraintName = pgEx.ConstraintName.ToLower();
 
-        switch (constraintName)
+        if (constraintName == "ix_department_name")
         {
-            case "ix_department_name":
-                logger.LogWarning("Duplicate department name: {name}", departmentName);
-                return Errors.General.Duplicate("department_name");
-            case "ix_department_identifier":
-                logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
-                return Errors.General.Duplicate("department_name");
+            logger.LogWarning("Duplicate department name: {name}", departmentName);
+            return Errors.General.Duplicate("department_name");
+        }
+
+        if (constraintName == "ix_department_identifier")
+        {
+            logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
+            return Errors.General.Duplicate("department_name");
         }
 
         if (constraintName.Contains("name"))

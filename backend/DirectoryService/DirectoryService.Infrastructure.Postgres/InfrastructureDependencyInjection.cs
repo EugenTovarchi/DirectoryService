@@ -31,7 +31,7 @@ public static class InfrastructureDependencyInjection
     {
         services.AddDbContextPool<DirectoryServiceDbContext>((sp, options) =>
         {
-            var connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
+            string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
             var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
@@ -44,15 +44,16 @@ public static class InfrastructureDependencyInjection
             options.LogTo(message =>
             {
                 if (message.Contains("Error", StringComparison.OrdinalIgnoreCase) ||
-                    message.Contains("Exception", StringComparison.OrdinalIgnoreCase)) Console.WriteLine($"[EF] {message}");
+                    message.Contains("Exception", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[EF] {message}");
+                }
             }, LogLevel.Error);
 
             if (hostEnvironment.IsDevelopment())
             {
                 options.EnableDetailedErrors();
             }
-
-            // options.UseLoggerFactory(loggerFactory);
         });
 
         services.AddScoped<ITransactionManager, TransactionManager>();

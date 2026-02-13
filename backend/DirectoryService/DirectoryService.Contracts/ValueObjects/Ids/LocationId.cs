@@ -1,4 +1,4 @@
-namespace DirectoryService.Contracts.ValueObjects.Ids;
+﻿namespace DirectoryService.Contracts.ValueObjects.Ids;
 
 public class LocationId : ValueObject, IComparable<LocationId>
 {

@@ -21,11 +21,12 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
     private readonly ILogger<UpdateDepartmentLocationsHandler> _logger;
 
     public UpdateDepartmentLocationsHandler(
+
         ITransactionManager transactionManager,
-        ILocationRepository locationRepository,
         IDepartmentRepository departmentRepository,
         IValidator<UpdateDepartmentLocationsCommand> validator,
         HybridCache cache,
+        ILocationRepository locationRepository,
         ILogger<UpdateDepartmentLocationsHandler> logger)
     {
         _transactionManager = transactionManager;
@@ -50,7 +51,7 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
             return validationResult.ToErrors();
         }
 
-        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
+        var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
 

@@ -1,4 +1,3 @@
-using CSharpFunctionalExtensions;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Contracts.ValueObjects;
@@ -152,7 +151,7 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         {
             result.IsSuccess.Should().BeTrue();
 
-            Department department = await dbContext.Departments
+            var department = await dbContext.Departments
                 .Include(d => d.DepartmentLocations)
                 .FirstAsync(d => d.Id == departmentId, CancellationToken.None);
 
@@ -168,8 +167,8 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
     {
         return await ExecuteInDb(async dbContext =>
         {
-            Address? address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
-            Result<Location, Error> location = Location.Create(
+            var address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
+            var location = Location.Create(
                 Name.Create(name).Value,
                 TimeZone.Create("Europe/Moscow").Value,
                 address);

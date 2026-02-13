@@ -68,6 +68,7 @@ public class GetDepartmentChildrenHandler : IQueryHandler<List<GetDepChildrenRes
 
         parameters.Add("parent_id", query.ParentId);
 
+
         var children = await connection.QueryAsync<GetDepChildrenResponse>(
             $"""
              SELECT d.id,

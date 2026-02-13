@@ -13,11 +13,10 @@ public class DepartmentLocation
         LocationId = locationId;
         DepartmentId = departmentId;
     }
-
     public LocationId LocationId { get; private set; } = null!;
     public DepartmentId DepartmentId { get; private set; } = null!;
 
-    public static Result<DepartmentLocation, Error>Create(LocationId locationId, DepartmentId departmentId)
+    public static Result<DepartmentLocation, Error>Create (LocationId locationId, DepartmentId departmentId)
     {
         if (locationId is null)
             return Errors.General.ValueIsEmpty("locationId");

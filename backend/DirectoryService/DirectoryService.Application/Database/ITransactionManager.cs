@@ -7,7 +7,7 @@ namespace DirectoryService.Application.Database;
 public interface ITransactionManager
 {
     Task<Result<ITransactionScope, Error>> BeginTransactionAsync(
-        IsolationLevel? level = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IsolationLevel? level = null);
     Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken);
 }

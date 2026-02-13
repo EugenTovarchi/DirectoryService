@@ -34,6 +34,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     public Path Path { get; private set; } = null!;
     public short Depth { get; private set; }
 
+
     private readonly List<Department> _childrenDepartment = [];
     private readonly List<DepartmentLocation> _departmentLocations = [];
     private readonly List<DepartmentPosition> _departmentPositions = [];
@@ -55,6 +56,29 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     {
         base.Restore();
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    internal UnitResult<Error> UpdateBasicInfo(
+        Name name,
+        Identifier identifier,
+        Path path,
+        short depth)
+    {
+        Name = name;
+        Identifier = identifier;
+        Path = path;
+        Depth = depth;
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    internal UnitResult<Error> SetParentDepartment(DepartmentId parentId)
+    {
+        ParentId = parentId;
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
     }
 
     public UnitResult<Error> AddChildren(Department children)
@@ -224,29 +248,6 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             return Errors.General.NotFound(positionId.Value);
 
         _departmentPositions.Remove(departmentPosition);
-        UpdatedAt = DateTime.UtcNow;
-
-        return Result.Success<Error>();
-    }
-
-    internal UnitResult<Error> UpdateBasicInfo(
-        Name name,
-        Identifier identifier,
-        Path path,
-        short depth)
-    {
-        Name = name;
-        Identifier = identifier;
-        Path = path;
-        Depth = depth;
-        UpdatedAt = DateTime.UtcNow;
-
-        return Result.Success<Error>();
-    }
-
-    internal UnitResult<Error> SetParentDepartment(DepartmentId parentId)
-    {
-        ParentId = parentId;
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();
