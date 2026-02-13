@@ -9,26 +9,26 @@
     <PackageReference Include="istreddev.core" />
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="istreddev.sharedkernel" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore"/>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions"/>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers"/>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="Serilog"/>
-    <PackageReference Include="Serilog.AspNetCore"  />
-    <PackageReference Include="Serilog.Enrichers.Environment"/>
-    <PackageReference Include="Serilog.Enrichers.Thread"  />
-    <PackageReference Include="Serilog.Exceptions"  />
-    <PackageReference Include="Serilog.Exceptions.EntityFrameworkCore"  />
-    <PackageReference Include="Serilog.Extensions.Hosting"/>
-    <PackageReference Include="Serilog.Extensions.Logging"  />
-    <PackageReference Include="Serilog.Settings.Configuration" />
-    <PackageReference Include="Serilog.Sinks.Console" />
-    <PackageReference Include="Serilog.Sinks.Debug" />
-    <PackageReference Include="Serilog.Sinks.Seq"  />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen"/>
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore"/>-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions"/>-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers"/>-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />-->
+<!--    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />-->
+<!--    <PackageReference Include="Serilog"/>-->
+<!--    <PackageReference Include="Serilog.AspNetCore"  />-->
+<!--    <PackageReference Include="Serilog.Enrichers.Environment"/>-->
+<!--    <PackageReference Include="Serilog.Enrichers.Thread"  />-->
+<!--    <PackageReference Include="Serilog.Exceptions"  />-->
+<!--    <PackageReference Include="Serilog.Exceptions.EntityFrameworkCore"  />-->
+<!--    <PackageReference Include="Serilog.Extensions.Hosting"/>-->
+<!--    <PackageReference Include="Serilog.Extensions.Logging"  />-->
+<!--    <PackageReference Include="Serilog.Settings.Configuration" />-->
+<!--    <PackageReference Include="Serilog.Sinks.Console" />-->
+<!--    <PackageReference Include="Serilog.Sinks.Debug" />-->
+<!--    <PackageReference Include="Serilog.Sinks.Seq"  />-->
+<!--    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />-->
+<!--    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen"/>-->
+<!--    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />-->
   </ItemGroup>
 
   <ItemGroup>
