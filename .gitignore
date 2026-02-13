@@ -13,6 +13,9 @@ nuget.config
 *.userosscache
 *.sln.docstates
 
+backend/SharedService/
+backend/FileService/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -482,3 +485,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+b a c k e n d / F i l e S e r v i c e /  
+ b a c k e n d / S a r e d S e r v i c e /  
+ 
