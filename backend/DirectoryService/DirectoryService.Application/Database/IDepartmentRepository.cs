@@ -29,6 +29,6 @@ public interface IDepartmentRepository
     Task<UnitResult<Error>> UpdateAllDescendantsPath(
      string oldPath,
      string newPath,
-     DepartmentId movedDepartmentId,
+     DepartmentId parentDepartmentId,
      CancellationToken cancellationToken);
 }

@@ -96,4 +96,3 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
         builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }
-

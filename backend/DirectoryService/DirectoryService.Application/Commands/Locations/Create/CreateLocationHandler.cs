@@ -26,12 +26,13 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         _validator = validator;
         _logger = logger;
     }
-    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken ct = default)
+
+    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken cancellationToken = default)
     {
         if (command == null)
             return Errors.General.ValueIsInvalid("command").ToFailure();
 
-        var validationResult = await _validator.ValidateAsync(command, ct);
+        var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
             _logger.LogWarning("Location: {command} is invalid!", command.Request.LocationName);
@@ -42,7 +43,6 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         var locationName = Name.Create(command.Request.LocationName).Value;
 
         var locationTimeZone = TimeZone.Create(command.Request.TimeZone).Value;
-
 
         var locationAddress = command.Request.LocationAddress.Flat is null
         ? Address.Create(
@@ -61,7 +61,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         if (locationResult.IsFailure)
             return locationResult.Error.ToFailure();
 
-        var result = await _locationRepository.Add(locationResult.Value, ct);
+        var result = await _locationRepository.Add(locationResult.Value, cancellationToken);
         if(result.IsFailure)
             return result.Error.ToFailure();
 
