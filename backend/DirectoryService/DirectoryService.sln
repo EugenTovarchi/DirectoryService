@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\..\Directory.Build.props = ..\..\Directory.Build.props
 		..\..\Directory.Packages.props = ..\..\Directory.Packages.props
 		..\..\nuget.config = ..\..\nuget.config
+		DirectoryService.Web\stylecop.json = DirectoryService.Web\stylecop.json
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectoryService.Domain", "DirectoryService.Domain\DirectoryService.Domain.csproj", "{6B274094-6243-4DB0-8236-34209BE065C4}"

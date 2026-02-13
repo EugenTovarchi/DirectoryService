@@ -79,7 +79,7 @@ public class MoveDepartmentTests : DirectoryBaseTests
     {
         // Arrange
         var rootId = await CreateRootTestDepartment("Root department", "root");
-        var parentId = await CreateChildTestDepartment(rootId,"Parent department", "parent");
+        var parentId = await CreateChildTestDepartment(rootId, "Parent department", "parent");
         var childId = await CreateChildTestDepartment(parentId, "Child department", "child");
         var grandChildId = await CreateChildTestDepartment(childId, "GrandChild department", "grandchild");
 

@@ -1,0 +1,147 @@
+*   [33mac2c0f7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mDS-B-20-afterPackagesProps[m[33m)[m Merge remote-tracking branch 'origin/master' into DS-B-20-afterPackagesProps
+[31m|[m[32m\[m  
+[31m|[m *   [33m3412baf[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #24 from EugenTovarchi/DS-B-20
+[31m|[m [33m|[m[34m\[m  
+[31m|[m [33m|[m * [33m3ed903a[m[33m ([m[1;31morigin/DS-B-20[m[33m, [m[1;32mDS-B-20[m[33m)[m Directory.Packages.props cleaned
+[31m|[m [33m|[m * [33mea42758[m Сломал все
+[31m|[m * [34m|[m [33maf93286[m[33m ([m[1;32mmaster[m[33m, [m[1;32mFS-B-1[m[33m)[m Merge pull request #23 from EugenTovarchi/DS-B-20
+[31m|[m [35m|[m[34m\[m[34m|[m 
+[31m|[m [35m|[m *   [33ma4ae09e[m Merge branch 'master' into DS-B-20
+[31m|[m [35m|[m [1;31m|[m[35m\[m  
+[31m|[m [35m|[m [1;31m|[m[35m/[m  
+[31m|[m [35m|[m[35m/[m[1;31m|[m   
+[31m|[m * [1;31m|[m [33m9c42938[m add unversioned files and change Dockerfile
+[31m|[m * [1;31m|[m [33mbf8ea61[m fix to DS-B-19 condition
+[31m|[m * [1;31m|[m   [33m0ebbe10[m Merge pull request #20 from EugenTovarchi/DS-B-19
+[31m|[m [1;33m|[m[1;34m\[m [1;31m\[m  
+[31m|[m [1;33m|[m * [1;31m|[m [33m9af2ec2[m[33m ([m[1;31morigin/DS-B-19[m[33m, [m[1;32mDS-B-19[m[33m)[m fix
+[31m|[m * [1;34m|[m [1;31m|[m   [33mff00686[m Merge pull request #16 from EugenTovarchi/revert-15-DS-B-19
+[31m|[m [1;35m|[m[1;36m\[m [1;34m\[m [1;31m\[m  
+[31m|[m [1;35m|[m * [1;34m|[m [1;31m|[m [33m176d23f[m Revert "DS-B-19"
+[31m|[m [1;35m|[m[1;35m/[m [1;34m/[m [1;31m/[m  
+[31m|[m * [1;34m|[m [1;31m|[m   [33md447fe4[m Merge pull request #15 from EugenTovarchi/DS-B-19
+[31m|[m [31m|[m[32m\[m [1;34m\[m [1;31m\[m  
+[31m|[m * [32m\[m [1;34m\[m [1;31m\[m   [33ma8965fb[m Merge pull request #14 from EugenTovarchi/DS-B-18
+[31m|[m [33m|[m[34m\[m [32m\[m [1;34m\[m [1;31m\[m  
+[31m|[m * [34m\[m [32m\[m [1;34m\[m [1;31m\[m   [33mba42318[m Merge pull request #13 from EugenTovarchi/DS-B-17
+[31m|[m [35m|[m[36m\[m [34m\[m [32m\[m [1;34m\[m [1;31m\[m  
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [1;31m|[m [33md018b2c[m[33m ([m[1;31morigin/DS-B-20-afterPackagesProps[m[33m)[m fix smth
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [1;31m|[m [33me6d570c[m Directory.Packages.props cleaned
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [1;31m|[m [33mb955082[m Сломал все
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [1;31m|[m [33m1e7ecb2[m before clean Directory.Packages.props
+[1;31m|[m [35m|[m[1;31m_[m[36m|[m[1;31m_[m[34m|[m[1;31m_[m[32m|[m[1;31m_[m[1;34m|[m[1;31m/[m  
+[1;31m|[m[1;31m/[m[35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m   
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [33m467b4d4[m[33m ([m[1;32mDS-B-20-new[m[33m)[m add cache invalidation use tags for departments commands
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [33m3de840c[m add cash aside to get departments queries
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [33m3bc04f0[m add developer envir configuration for Redis ready to add cache
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [33m5d5803c[m replace all sensetive data to .env file
+* [35m|[m [36m|[m [34m|[m [32m|[m [1;34m|[m [33m1a0562d[m[33m ([m[1;32mDS-B-19-beforeRevert[m[33m)[m fix2
+[1;34m|[m [35m|[m[1;34m_[m[36m|[m[1;34m_[m[34m|[m[1;34m_[m[32m|[m[1;34m/[m  
+[1;34m|[m[1;34m/[m[35m|[m [36m|[m [34m|[m [32m|[m   
+* [35m|[m [36m|[m [34m|[m [32m|[m [33m03a86bf[m доп коммит для обновления ветки после Revert PR
+[32m|[m [35m|[m[32m_[m[36m|[m[32m_[m[34m|[m[32m/[m  
+[32m|[m[32m/[m[35m|[m [36m|[m [34m|[m   
+* [35m|[m [36m|[m [34m|[m [33m436acac[m take off nuget.config from git cache
+* [35m|[m [36m|[m [34m|[m [33m121c34b[m add nuget.config to .gitignore
+* [35m|[m [36m|[m [34m|[m [33md081726[m configure Dockerfile & docker-compose-dev.yml
+* [35m|[m [36m|[m [34m|[m [33m5c4a312[m replace exceptionMiddleware & Logging to ShareService from DS fix Dockerfile put off Directory.Packages.props and Directory.Build.props to root folder
+* [35m|[m [36m|[m [34m|[m [33mada111a[m delete singletone from SerilogLogging
+* [35m|[m [36m|[m [34m|[m [33mbc743ae[m add diagnosticContext for LoggingExtensions.cs
+* [35m|[m [36m|[m [34m|[m [33m0cef5e1[m Fix: Make Serilog and Swagger configs generic (add serviceName parameter)
+* [35m|[m [36m|[m [34m|[m [33mbcc4639[m install my own nugets SharedService fix all warnings & errors
+* [35m|[m [36m|[m [34m|[m [33md782156[m add nuget.config publish my SharedService packages commit before deleting shared into DirectoryServices
+* [35m|[m [36m|[m [34m|[m [33mfc89fd0[m before Shared nuget
+* [35m|[m [36m|[m [34m|[m [33m51ff1e6[m fix all files after adding editorconfig & Directory.Build.props & Directory.Packages.props
+* [35m|[m [36m|[m [34m|[m [33mc1fbc34[m before add common configuration files & packages
+* [35m|[m [36m|[m [34m|[m [33m8e0e4f2[m Add editorconfig delete duplicate foldres from project
+[34m|[m [35m|[m[34m_[m[36m|[m[34m/[m  
+[34m|[m[34m/[m[35m|[m [36m|[m   
+* [35m|[m [36m|[m   [33mba1d0cc[m[33m ([m[1;31morigin/DS-B-18[m[33m, [m[1;32mDS-B-18[m[33m)[m Merge remote-tracking branch 'origin/DS-B-18' into DS-B-18
+[1;31m|[m[1;32m\[m [35m\[m [36m\[m  
+[1;31m|[m * [35m|[m [36m|[m [33me4fd0ed[m fix repo methods
+* [1;32m|[m [35m|[m [36m|[m [33m6c23172[m fix repo methods
+[1;32m|[m[1;32m/[m [35m/[m [36m/[m  
+* [35m|[m [36m|[m [33mab2eebf[m add repo methods : GetExpiredDepartmentsIds, GetDescendantDepartmentIds, LockDescendantsByIds, UpdateDescendantsInfoAfterCleanUp, CleanExpiredDepartmentsWithRelatesAsync.
+* [35m|[m [36m|[m   [33mf74c522[m Merge branch 'DS-B-17' into DS-B-18
+[1;33m|[m[36m\[m [35m\[m [36m\[m  
+[1;33m|[m [36m|[m [35m|[m[36m/[m  
+[1;33m|[m [36m|[m[36m/[m[35m|[m   
+[1;33m|[m * [35m|[m [33m69294f0[m[33m ([m[1;32mDS-B-17[m[33m)[m delete unnecessary repo methods
+* [1;34m|[m [35m|[m [33m25bb7d5[m Merge branch 'DS-B-17' into DS-B-18
+[1;35m|[m[1;34m\[m[1;34m|[m [35m|[m 
+[1;35m|[m * [35m|[m   [33m8d0fef9[m Merge remote-tracking branch 'origin/DS-B-17' into DS-B-17
+[1;35m|[m [31m|[m[32m\[m [35m\[m  
+[1;35m|[m [31m|[m * [35m|[m [33m442f050[m Merge branch 'master' into DS-B-17
+[1;35m|[m [31m|[m [33m|[m[35m\[m[35m|[m 
+[1;35m|[m [31m|[m [33m|[m *   [33m92c3f4e[m Merge pull request #12 from EugenTovarchi/DS-B-16
+[1;35m|[m [31m|[m [33m|[m [35m|[m[36m\[m  
+[1;35m|[m [31m|[m [33m|[m * [36m\[m   [33m0bab1ed[m Merge pull request #11 from EugenTovarchi/DS-B-15
+[1;35m|[m [31m|[m [33m|[m [1;31m|[m[1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m * [1;32m\[m [36m\[m   [33mbbef347[m Merge pull request #10 from EugenTovarchi/DS-B-14
+[1;35m|[m [31m|[m [33m|[m [1;33m|[m[1;34m\[m [1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m * [1;34m\[m [1;32m\[m [36m\[m   [33m0a40240[m Merge pull request #9 from EugenTovarchi/DS-B-13
+[1;35m|[m [31m|[m [33m|[m [1;35m|[m[1;36m\[m [1;34m\[m [1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m [1;35m|[m * [1;34m\[m [1;32m\[m [36m\[m   [33mffd1006[m Merge branch 'master' into DS-B-13
+[1;35m|[m [31m|[m [33m|[m [1;35m|[m [31m|[m[1;35m\[m [1;34m\[m [1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m [1;35m|[m [31m|[m[1;35m/[m [1;34m/[m [1;32m/[m [36m/[m  
+[1;35m|[m [31m|[m [33m|[m [1;35m|[m[1;35m/[m[31m|[m [1;34m|[m [1;32m|[m [36m|[m   
+[1;35m|[m [31m|[m [33m|[m * [31m|[m [1;34m|[m [1;32m|[m [36m|[m   [33m98fe565[m Merge pull request #7 from EugenTovarchi/DS-B-12
+[1;35m|[m [31m|[m [33m|[m [33m|[m[34m\[m [31m\[m [1;34m\[m [1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m [33m|[m * [31m|[m [1;34m|[m [1;32m|[m [36m|[m [33m980889f[m[33m ([m[1;32mDS-B-12[m[33m)[m перенес логику в метод репозитория
+[1;35m|[m [31m|[m [33m|[m * [34m|[m [31m|[m [1;34m|[m [1;32m|[m [36m|[m   [33me159646[m Merge pull request #6 from EugenTovarchi/DS-B-11
+[1;35m|[m [31m|[m [33m|[m [35m|[m[36m\[m [34m\[m [31m\[m [1;34m\[m [1;32m\[m [36m\[m  
+[1;35m|[m [31m|[m [33m|[m [35m|[m * [34m|[m [31m|[m [1;34m|[m [1;32m|[m [36m|[m [33m6312144[m change repo method AllLocationsExistAsync
+[1;35m|[m * [33m|[m [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [36m|[m [33mc1f8923[m сделал методы в репозиториях для позиций, локаций(сразу выборка и обновление одним запросом), изменил логику в хендлеле.
+[1;35m|[m [33m|[m[33m/[m [35m/[m [36m/[m [34m/[m [31m/[m [1;34m/[m [1;32m/[m [36m/[m  
+* [33m/[m [35m/[m [36m/[m [34m/[m [31m/[m [1;34m/[m [1;32m/[m [36m/[m [33maf33d1c[m fix DepoRepo DynamicParameters
+[33m|[m[33m/[m [35m/[m [36m/[m [34m/[m [31m/[m [1;34m/[m [1;32m/[m [36m/[m  
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [36m|[m [33mfe32e55[m rename DelationDate -> DeletedAt
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [36m|[m [33m521d7f8[m add feature SoftDelete for Department and his descendants
+[36m|[m [35m|[m[36m_[m[36m|[m[36m_[m[34m|[m[36m_[m[31m|[m[36m_[m[1;34m|[m[36m_[m[1;32m|[m[36m/[m  
+[36m|[m[36m/[m[35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m   
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [33ma659904[m[33m ([m[1;32mDS-B-16[m[33m)[m add feature GetDepartmentChildren
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [33me1897a2[m add feature GetDepartmentsWithChildren
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [33m2a59926[m without mapping children
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [1;32m|[m [33m8aa3b81[m fix repo method AddAsync into DepartmentRepo
+[1;32m|[m [35m|[m[1;32m_[m[36m|[m[1;32m_[m[34m|[m[1;32m_[m[31m|[m[1;32m_[m[1;34m|[m[1;32m/[m  
+[1;32m|[m[1;32m/[m[35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m   
+* [35m|[m [36m|[m [34m|[m [31m|[m [1;34m|[m [33m143d59c[m[33m ([m[1;32mDS-B-15[m[33m)[m fix position repo method Add add feature GetTopDepartments
+[1;34m|[m [35m|[m[1;34m_[m[36m|[m[1;34m_[m[34m|[m[1;34m_[m[31m|[m[1;34m/[m  
+[1;34m|[m[1;34m/[m[35m|[m [36m|[m [34m|[m [31m|[m   
+* [35m|[m [36m|[m [34m|[m [31m|[m [33m6c8d1ee[m[33m ([m[1;32mDS-B-14[m[33m)[m add feature GetLocations(Dapper)
+[31m|[m [35m|[m[31m_[m[36m|[m[31m_[m[34m|[m[31m/[m  
+[31m|[m[31m/[m[35m|[m [36m|[m [34m|[m   
+* [35m|[m [36m|[m [34m|[m [33mf7a1933[m[33m ([m[1;32mDS-B-13[m[33m)[m fix
+* [35m|[m [36m|[m [34m|[m [33mbec02ba[m add Update , Move feature tests
+* [35m|[m [36m|[m [34m|[m [33m68e365b[m add CreateDepartmentTests
+* [35m|[m [36m|[m [34m|[m [33m2fba50d[m add TestWebFactory
+[34m|[m [35m|[m[34m_[m[36m|[m[34m/[m  
+[34m|[m[34m/[m[35m|[m [36m|[m   
+* [35m|[m [36m|[m [33m206470f[m add MoveDepartment feature
+* [35m|[m [36m|[m [33m9b7b611[m[33m ([m[1;32mDS-B-11[m[33m)[m change repo method AllLocationsExistAsync
+[36m|[m [35m|[m[36m/[m  
+[36m|[m[36m/[m[35m|[m   
+* [35m|[m [33m6d0d557[m add UpdateDepartmentLocations feature
+* [35m|[m [33m427ef9d[m add transactionManager
+[35m|[m[35m/[m  
+*   [33mda5b914[m Merge pull request #5 from EugenTovarchi/DS-B-10
+[1;31m|[m[1;32m\[m  
+[1;31m|[m * [33m2e831c1[m[33m ([m[1;32mDS-B-10[m[33m)[m fix inner entity methods
+* [1;32m|[m [33mecaae54[m Merge pull request #4 from EugenTovarchi/DS-B-10
+[1;33m|[m[1;32m\[m[1;32m|[m 
+[1;33m|[m * [33m3201c63[m fix logs
+[1;33m|[m * [33m47322f9[m add CreateDepartment, CreatePosition features
+[1;33m|[m[1;33m/[m  
+*   [33m3d09eb7[m Merge pull request #3 from EugenTovarchi/ID-B-9
+[1;35m|[m[1;36m\[m  
+[1;35m|[m * [33me80378d[m add sql indexes & catch (DbUpdateException ex)
+[1;35m|[m * [33m33907b4[m[33m ([m[1;32mID-B-5[m[33m)[m add CreateLocation feature
+* [1;36m|[m [33m70f28f3[m Merge pull request #2 from EugenTovarchi/DS-B-4
+[31m|[m[1;36m\[m[1;36m|[m 
+[31m|[m * [33m9811451[m[33m ([m[1;32mDS-B-4[m[33m)[m add migration. DB is working
+[31m|[m * [33m9472a83[m осталось разобраться с ошибками конфигурации
+* [32m|[m [33md9cca75[m Merge pull request #1 from EugenTovarchi/DS-B-3
+[33m|[m[32m\[m[32m|[m 
+[33m|[m * [33m36f87ee[m[33m ([m[1;32mDS-B-3[m[33m)[m add domain entities(core) & share + compose.yml
+[33m|[m[33m/[m  
+* [33m4a39f36[m[33m ([m[1;32mdev[m[33m)[m Initial commit

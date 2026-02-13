@@ -83,7 +83,7 @@ public class CreateDepartmentTests : DirectoryBaseTests
     {
         // Arrange
         var locationId = await CreateLocation("location1");
-        var request = new CreateDepartmentRequest("", "testIdentifier", [locationId.Value], null);
+        var request = new CreateDepartmentRequest(string.Empty, "testIdentifier", [locationId.Value], null);
         var command = new CreateDepartmentCommand(request);
 
         // Act
