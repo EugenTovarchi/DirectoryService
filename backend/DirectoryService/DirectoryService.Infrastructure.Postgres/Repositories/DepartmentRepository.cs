@@ -440,9 +440,9 @@ public class DepartmentRepository(
     {
         try
         {
-            var requestedCount = departmentsIds.ToList().Count;
+            int requestedCount = departmentsIds.ToList().Count;
 
-            var existingCount = await dbContext.Departments
+            int existingCount = await dbContext.Departments
                 .Where(l => departmentsIds.Contains(l.Id) && !l.IsDeleted)
                 .Select(l => l.Id)
                 .Distinct()

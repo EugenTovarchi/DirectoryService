@@ -5,7 +5,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="istreddev.sharedkernel" />
+    <PackageReference Include="IstredDev.SharedKernel" />
   </ItemGroup>
 
 </Project>

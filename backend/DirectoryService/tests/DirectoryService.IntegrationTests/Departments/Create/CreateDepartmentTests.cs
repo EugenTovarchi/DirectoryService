@@ -21,9 +21,9 @@ public class CreateDepartmentTests(DirectoryTestWebFactory factory) : DirectoryB
         var command = new CreateDepartmentCommand(request);
 
         // Act
-        var result = await ExecuteHandler((_sut) =>
+        var result = await ExecuteHandler((sut) =>
         {
-            return _sut.Handle(command, CancellationToken.None);
+            return sut.Handle(command, CancellationToken.None);
         });
 
         // Assert
