@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <PackageReference Include="IstredDev.SharedKernel" />
+    <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>
 </Project>

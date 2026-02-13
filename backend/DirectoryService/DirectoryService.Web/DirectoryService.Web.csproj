@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="IstredDev.Core" />
-    <PackageReference Include="IstredDev.Framework" />
-    <PackageReference Include="IstredDev.SharedKernel" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore"/>
+    <PackageReference Include="istreddev.core" />
+    <PackageReference Include="istreddev.framework" />
+    <PackageReference Include="istreddev.sharedkernel" />
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore"/>-->
 <!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions"/>-->
 <!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers"/>-->
 <!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />-->
