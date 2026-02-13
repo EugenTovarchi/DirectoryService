@@ -1,6 +1,6 @@
 ﻿<Project>
   <ItemGroup>
-    <PackageReference Include="StyleCop.Analyzers">
+    <PackageReference Include="StyleCop.Analyzers" >
       <PrivateAssets>all</PrivateAssets>
       <Includeassets>runtime; build; native; contentfiles; analyzers; buildtransitive</Includeassets>
     </PackageReference>
