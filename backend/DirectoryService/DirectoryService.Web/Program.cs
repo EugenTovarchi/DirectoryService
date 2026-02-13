@@ -25,9 +25,11 @@ public class Program
 
             builder.Configuration.AddUserSecrets<Program>();
 
+            builder.Services.AddControllers();
+
             builder.Configuration.AddEnvironmentVariables();
 
-            builder.Services.AddConfiguration(builder.Configuration); 
+            builder.Services.AddConfiguration(builder.Configuration);
 
             builder.Services.AddAuthorization();
 

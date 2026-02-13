@@ -53,6 +53,7 @@ public sealed class Position : SoftDeletableEntity<PositionId>
         Name = Name.Create(newName).Value;
         return this;
     }
+
     public Result<Position, Error> UpdateDescription(string newDescription)
     {
         if (string.IsNullOrWhiteSpace(newDescription))
@@ -76,17 +77,18 @@ public sealed class Position : SoftDeletableEntity<PositionId>
             return Errors.General.ValueIsInvalid("description");
 
         var positionId = PositionId.NewPositionId();
-        var position = new Position( positionId, name, description);
+        var position = new Position(positionId, name, description);
 
         return position;
     }
+
     public static Result<Position, Error> CreateWithoutDescription(Name name)
     {
         if (name is null)
             return Errors.General.ValueIsInvalid("name");
 
         var positionId = PositionId.NewPositionId();
-        var position = new Position( positionId, name, null);
+        var position = new Position(positionId, name, null);
 
         return position;
     }
