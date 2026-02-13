@@ -12,6 +12,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=${DEFAULT_CONNECTION}
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,10 +34,12 @@ services:
   postgres:
     container_name: directory-service-postgres
     image: postgres:15
-    environment:
-      POSTGRES_DB: directory_service
-      POSTGRES_USER: postgresUser
-      POSTGRES_PASSWORD: postgresPassword
+    env_file:
+      - .env
+    environment: 
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5434:5432"
     volumes:
@@ -47,6 +50,18 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always
 
 volumes:
-  postgres_data:     
+  postgres_data:    
+  redis_data:
+
+
+  
+ 
