@@ -8,7 +8,7 @@ namespace DirectoryService.Web;
 
 public class Program
 {
-    public async static Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -27,7 +27,7 @@ public class Program
 
             builder.Configuration.AddEnvironmentVariables();
 
-            builder.Services.AddConfiguration(builder.Configuration); 
+            builder.Services.AddConfiguration(builder.Configuration);
 
             builder.Services.AddAuthorization();
 

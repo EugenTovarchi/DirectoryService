@@ -15,4 +15,3 @@ public static class MigrationExtensions
         app.Logger.LogInformation("All migrations applied successfully");
     }
 }
-

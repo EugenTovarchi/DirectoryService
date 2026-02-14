@@ -8,7 +8,7 @@ public record GetLocationResponse
     public string Street { get; set; } = string.Empty;
     public string House { get; set; } = string.Empty;
     public int? Flat { get; set; }
-    public string TimeZone {  get; set; } = string.Empty;
+    public string TimeZone { get; set; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
     public bool IsDeleted { get; init; }

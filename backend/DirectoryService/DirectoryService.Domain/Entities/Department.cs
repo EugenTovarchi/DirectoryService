@@ -34,7 +34,6 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     public Path Path { get; private set; } = null!;
     public short Depth { get; private set; }
 
-
     private readonly List<Department> _childrenDepartment = [];
     private readonly List<DepartmentLocation> _departmentLocations = [];
     private readonly List<DepartmentPosition> _departmentPositions = [];
