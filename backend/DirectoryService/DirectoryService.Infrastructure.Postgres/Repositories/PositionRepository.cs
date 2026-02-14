@@ -71,7 +71,7 @@ public class PositionRepository : IPositionRepository
              var connection = _dbContext.Database.GetDbConnection();
              int updatedPositions = await connection.ExecuteAsync(sql, parameters);
 
-             _logger.LogInformation("Count of updated positions: {updatedPositions}", updatedPositions);
+             _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
         }
         catch (Exception ex)
         {
