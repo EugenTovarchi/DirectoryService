@@ -19,6 +19,8 @@ public class Program
 
             builder.Configuration.AddUserSecrets<Program>();
 
+            builder.Services.AddControllers();
+
             builder.Configuration.AddEnvironmentVariables();
 
             builder.Services.AddControllers();
@@ -32,7 +34,7 @@ public class Program
                             .AddDirectoryServiceApplication(builder.Configuration);
 
             var app = builder.Build();
-
+    
             await app.ApplyMigrations();
 
             app.WebConfigure();

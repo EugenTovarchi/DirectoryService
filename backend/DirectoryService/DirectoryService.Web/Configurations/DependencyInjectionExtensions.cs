@@ -1,6 +1,3 @@
-using Microsoft.OpenApi;
-using Serilog;
-using Serilog.Exceptions;
 using SharedService.Framework.Logging;
 using SharedService.Framework.Swagger;
 
