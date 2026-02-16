@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+      <ProjectReference Include="..\FileService.Domain\FileService.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="istreddev.core" />
+      <PackageReference Include="istreddev.framework" />
+      <PackageReference Include="istreddev.sharedkernel" />
+    </ItemGroup>
+
+</Project>

@@ -5,7 +5,7 @@ namespace DirectoryService.Web.Configurations;
 
 public static class AppExtensions
 {
-    public static IApplicationBuilder WebConfigure (this WebApplication app)
+    public static IApplicationBuilder WebConfigure(this WebApplication app)
     {
         app.UseRouting();
         app.UseExceptionMiddleware();
@@ -14,7 +14,7 @@ public static class AppExtensions
         app.UseAuthorization();
         app.MapControllers();
 
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>

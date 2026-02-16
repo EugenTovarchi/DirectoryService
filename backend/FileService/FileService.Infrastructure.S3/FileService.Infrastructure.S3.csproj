@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+    <ItemGroup>
+      <PackageReference Include="istreddev.framework" />
+      <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
+      <PackageReference Include="AWSSDK.S3" />
+    </ItemGroup>
+
+</Project>
