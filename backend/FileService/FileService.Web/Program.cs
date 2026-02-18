@@ -1,9 +1,10 @@
-using DirectoryService.Application;
-using DirectoryService.Infrastructure.Postgres;
-using DirectoryService.Web.Configurations;
+using FileService.Core;
+using FileService.Core.EndpointSettings;
+using FileService.Infrastructure.S3;
+using FileService.Web.Configurations;
 using Serilog;
 
-namespace DirectoryService.Web;
+namespace FileService.Web;
 
 public class Program
 {
@@ -19,24 +20,22 @@ public class Program
 
             builder.Configuration.AddUserSecrets<Program>();
 
-            builder.Services.AddControllers();
-
             builder.Configuration.AddEnvironmentVariables();
 
             builder.Services.AddControllers();
+
             builder.Services.AddEndpointsApiExplorer();
 
             builder.Services.AddConfiguration(builder.Configuration);
 
             builder.Services.AddAuthorization();
 
-            builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
-                            .AddDirectoryServiceApplication(builder.Configuration);
+            builder.Services.AddCore()
+                            .AddS3(builder.Configuration);
 
             var app = builder.Build();
-    
-            await app.ApplyMigrations();
 
+            // await app.ApplyMigrations();
             app.WebConfigure();
 
             await app.RunAsync();

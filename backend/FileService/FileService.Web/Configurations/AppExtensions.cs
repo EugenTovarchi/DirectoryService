@@ -1,7 +1,7 @@
 using Serilog;
 using SharedService.Framework.Middlewares;
 
-namespace DirectoryService.Web.Configurations;
+namespace FileService.Web.Configurations;
 
 public static class AppExtensions
 {
@@ -19,7 +19,7 @@ public static class AppExtensions
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Directory Service v1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "File Service v1");
                 c.RoutePrefix = "swagger";
             });
         }
