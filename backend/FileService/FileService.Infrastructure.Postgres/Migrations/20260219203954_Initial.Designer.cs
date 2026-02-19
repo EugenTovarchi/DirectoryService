@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FileService.Infrastructure.Postgres.Migrations
 {
     [DbContext(typeof(FileServiceDbContext))]
-    [Migration("20260219190743_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260219203954_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,21 +57,23 @@ namespace FileService.Infrastructure.Postgres.Migrations
 
                     b.ToTable("media_assets", (string)null);
 
-                    b.UseTptMappingStrategy();
+                    b.HasDiscriminator<string>("AssetType");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("FileService.Domain.Assets.PreviewAsset", b =>
                 {
                     b.HasBaseType("FileService.Domain.Assets.MediaAsset");
 
-                    b.ToTable("PreviewAssets");
+                    b.HasDiscriminator().HasValue("PREVIEW");
                 });
 
             modelBuilder.Entity("FileService.Domain.Assets.VideoAsset", b =>
                 {
                     b.HasBaseType("FileService.Domain.Assets.MediaAsset");
 
-                    b.ToTable("VideoAssets");
+                    b.HasDiscriminator().HasValue("VIDEO");
                 });
 
             modelBuilder.Entity("FileService.Domain.Assets.MediaAsset", b =>
@@ -192,24 +194,6 @@ namespace FileService.Infrastructure.Postgres.Migrations
                         .IsRequired();
 
                     b.Navigation("MediaData")
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("FileService.Domain.Assets.PreviewAsset", b =>
-                {
-                    b.HasOne("FileService.Domain.Assets.MediaAsset", null)
-                        .WithOne()
-                        .HasForeignKey("FileService.Domain.Assets.PreviewAsset", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("FileService.Domain.Assets.VideoAsset", b =>
-                {
-                    b.HasOne("FileService.Domain.Assets.MediaAsset", null)
-                        .WithOne()
-                        .HasForeignKey("FileService.Domain.Assets.VideoAsset", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

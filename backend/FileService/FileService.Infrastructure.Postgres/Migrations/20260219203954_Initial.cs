@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FileService.Infrastructure.Postgres.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -35,51 +35,11 @@ namespace FileService.Infrastructure.Postgres.Migrations
                 {
                     table.PrimaryKey("PK_media_assets", x => x.Id);
                 });
-
-            migrationBuilder.CreateTable(
-                name: "PreviewAssets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PreviewAssets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PreviewAssets_media_assets_Id",
-                        column: x => x.Id,
-                        principalTable: "media_assets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "VideoAssets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VideoAssets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VideoAssets_media_assets_Id",
-                        column: x => x.Id,
-                        principalTable: "media_assets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "PreviewAssets");
-
-            migrationBuilder.DropTable(
-                name: "VideoAssets");
-
             migrationBuilder.DropTable(
                 name: "media_assets");
         }

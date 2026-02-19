@@ -1,4 +1,5 @@
-﻿using FileService.Domain.Assets;
+﻿using FileService.Domain;
+using FileService.Domain.Assets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -88,7 +89,9 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
                 .IsRequired();
         });
 
-        builder.UseTptMappingStrategy();
+        builder.HasDiscriminator(m => m.AssetType)
+            .HasValue<VideoAsset>(AssetType.VIDEO)
+            .HasValue<PreviewAsset>(AssetType.PREVIEW);
 
         builder.Property(m => m.Status).HasColumnName("status").HasConversion<string>().IsRequired();
     }
