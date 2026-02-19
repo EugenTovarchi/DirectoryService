@@ -1,7 +1,7 @@
-using DirectoryService.Infrastructure.Postgres.DbContexts;
+﻿using FileService.Infrastructure.Postgres;
 using Microsoft.EntityFrameworkCore;
 
-namespace DirectoryService.Web;
+namespace FileService.Web;
 
 public static class MigrationExtensions
 {
@@ -9,7 +9,7 @@ public static class MigrationExtensions
     {
         await using var scope = app.Services.CreateAsyncScope();
 
-        var dsDbContext = scope.ServiceProvider.GetRequiredService<DirectoryServiceDbContext>();
+        var dsDbContext = scope.ServiceProvider.GetRequiredService<FileServiceDbContext>();
         await dsDbContext.Database.MigrateAsync();
 
         app.Logger.LogInformation("All migrations applied successfully");
