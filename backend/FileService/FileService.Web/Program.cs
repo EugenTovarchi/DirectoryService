@@ -1,5 +1,6 @@
 using FileService.Core;
 using FileService.Core.EndpointSettings;
+using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.S3;
 using FileService.Web.Configurations;
 using Serilog;
@@ -31,11 +32,12 @@ public class Program
             builder.Services.AddAuthorization();
 
             builder.Services.AddCore()
-                            .AddS3(builder.Configuration);
+                            .AddS3(builder.Configuration)
+                            .AddPostgresInfrastructure(builder.Configuration);
 
             var app = builder.Build();
 
-            // await app.ApplyMigrations();
+            await app.ApplyMigrations();
             app.WebConfigure();
 
             await app.RunAsync();

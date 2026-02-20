@@ -24,6 +24,7 @@ public static class S3DependencyInjection
             return new AmazonS3Client(s3Options.AccessKey,  s3Options.SecretKey, config);
         });
 
+        // services.AddHostedService<S3BucketInitalizationService>();
         return services;
     }
 }

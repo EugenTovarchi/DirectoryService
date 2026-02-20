@@ -34,7 +34,7 @@ public class Program
                             .AddDirectoryServiceApplication(builder.Configuration);
 
             var app = builder.Build();
-    
+
             await app.ApplyMigrations();
 
             app.WebConfigure();

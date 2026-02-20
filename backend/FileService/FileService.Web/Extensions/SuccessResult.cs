@@ -1,7 +1,7 @@
 using System.Net;
 using SharedService.SharedKernel;
 
-namespace DirectoryService.Web.Extensions;
+namespace FileService.Web.Extensions;
 
 public class SuccessResult : IResult
 {
