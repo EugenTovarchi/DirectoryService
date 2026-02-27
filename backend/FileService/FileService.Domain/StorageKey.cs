@@ -37,15 +37,15 @@ public sealed record StorageKey
         if(string.IsNullOrWhiteSpace(location))
             return Errors.General.ValueIsInvalid("location");
 
-        Result<string, Error> normilizedKeyResult = NormalizeSegment(key);
-        if(normilizedKeyResult.IsFailure)
-            return normilizedKeyResult.Error;
+        Result<string, Error> normalizedKeyResult = NormalizeSegment(key);
+        if(normalizedKeyResult.IsFailure)
+            return normalizedKeyResult.Error;
 
-        Result<string, Error> normilizedPrefixResult = NormalizePrefix(prefix);
-        if(normilizedPrefixResult.IsFailure)
-            return normilizedKeyResult.Error;
+        Result<string, Error> normalizedPrefixResult = NormalizePrefix(prefix);
+        if(normalizedPrefixResult.IsFailure)
+            return normalizedPrefixResult.Error;
 
-        return new StorageKey(location.Trim(), normilizedPrefixResult.Value, normilizedKeyResult.Value);
+        return new StorageKey(location.Trim(), normalizedPrefixResult.Value, normalizedPrefixResult.Value);
     }
 
     private static Result<string, Error> NormalizePrefix(string? prefix)
@@ -55,18 +55,18 @@ public sealed record StorageKey
 
         string [] parts = prefix.Trim().Replace('\\', '/').Split('/',  StringSplitOptions.RemoveEmptyEntries
                                                                        | StringSplitOptions.TrimEntries);
-        List<string> normilizedParts = [];
+        List<string> normalizedParts = [];
         foreach (string part in parts)
         {
-            Result<string, Error> normilizedPart = NormalizeSegment(part);
-            if(normilizedPart.IsFailure)
-                return normilizedPart;
+            Result<string, Error> normalizedPart = NormalizeSegment(part);
+            if(normalizedPart.IsFailure)
+                return normalizedPart;
 
-            if(!string.IsNullOrEmpty(normilizedPart.Value))
-                normilizedParts.Add(normilizedPart.Value);
+            if(!string.IsNullOrEmpty(normalizedPart.Value))
+                normalizedParts.Add(normalizedPart.Value);
         }
 
-        return string.Join('/', normilizedParts);
+        return string.Join('/', normalizedParts);
     }
 
     private static Result<string, Error> NormalizeSegment(string? value)

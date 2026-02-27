@@ -1,13 +1,15 @@
-using System.Net;
+﻿using System.Net;
+using Microsoft.AspNetCore.Http;
 using SharedService.SharedKernel;
 
-namespace FileService.Web.Extensions;
+namespace FileService.Core.EndpointSettings;
 
 public class SuccessResult : IResult
 {
     public Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
+
         var envelope = Envelope.Ok();
 
         httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -16,11 +18,11 @@ public class SuccessResult : IResult
     }
 }
 
-public class ControllerResult<TValue> : IResult
+public class SuccessResult<TValue> : IResult
 {
     private readonly TValue _value;
 
-    public ControllerResult(TValue value)
+    public SuccessResult(TValue value)
     {
         _value = value;
     }
@@ -28,9 +30,10 @@ public class ControllerResult<TValue> : IResult
     public Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        var envelope = Envelope.Ok();
 
-        httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+        var envelope = Envelope.Ok(_value);
+
+        httpContext.Response.StatusCode = StatusCodes.Status200OK;
 
         return httpContext.Response.WriteAsJsonAsync(envelope);
     }

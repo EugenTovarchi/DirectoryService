@@ -37,11 +37,76 @@ public abstract class MediaAsset
         Key = key;
     }
 
-    public UnitResult<Error> MarkUpload(MediaAsset media)
+    public static Result<MediaAsset, Error> CreateForUpload(MediaData mediaData, AssetType assetType)
     {
-        var switchResult = MediaStatusExtensions.SwitchStatus(media.Status, MediaStatus.UPLOADED);
+        var assetId = Guid.NewGuid();
+
+        switch (assetType)
+        {
+            case AssetType.VIDEO:
+                var videoResult = VideoAsset.CreateForUpload(assetId, mediaData);
+                return videoResult.IsFailure ? videoResult.Error : videoResult.Value;
+
+            case AssetType.PREVIEW:
+                var previewResult = VideoAsset.CreateForUpload(assetId, mediaData);
+                return previewResult.IsFailure ? previewResult.Error : previewResult.Value;
+
+            case AssetType.AVATAR:
+                var avatarResult = VideoAsset.CreateForUpload(assetId, mediaData);
+                return avatarResult.IsFailure ? avatarResult.Error : avatarResult.Value;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(assetType), assetType, null);
+        }
+    }
+
+    public UnitResult<Error> MarkUploaded()
+    {
+        var switchResult = MediaStatusExtensions.SwitchStatus(Status, MediaStatus.UPLOADED);
         if (switchResult.IsFailure)
             return switchResult.Error;
+
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    public UnitResult<Error> MarkFailed()
+    {
+        var switchResult = MediaStatusExtensions.SwitchStatus(Status, MediaStatus.FAILED);
+        if (switchResult.IsFailure)
+            return switchResult.Error;
+
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    public UnitResult<Error> MarkReady()
+    {
+        var switchResult = MediaStatusExtensions.SwitchStatus(Status, MediaStatus.READY);
+        if (switchResult.IsFailure)
+            return switchResult.Error;
+
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    public UnitResult<Error> MarkDeleted()
+    {
+        var switchResult = MediaStatusExtensions.SwitchStatus(Status, MediaStatus.DELETED);
+        if (switchResult.IsFailure)
+            return switchResult.Error;
+
+        UpdatedAt = DateTime.UtcNow;
+
+        return Result.Success<Error>();
+    }
+
+    public UnitResult<Error> MarkUploading()
+    {
+        Status = MediaStatus.UPLOADING;
 
         UpdatedAt = DateTime.UtcNow;
 

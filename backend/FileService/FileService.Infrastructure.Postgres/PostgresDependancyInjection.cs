@@ -11,12 +11,10 @@ namespace FileService.Infrastructure.Postgres;
 
 public static class PostgresDependancyInjection
 {
-    public static IServiceCollection AddPostgresInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddPostgresInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddDatabase(configuration);
-
-        return services;
     }
 
     private static void AddDatabase(this IServiceCollection services, IConfiguration configuration)

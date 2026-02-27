@@ -2,11 +2,19 @@
 
 public record S3Options
 {
-    public string Endpoint { get; init; } = string.Empty;
-    public string AccessKey { get; init; } = string.Empty;
-    public string SecretKey { get; init; } = string.Empty;
+    public string Endpoint { get; init; }
+    public string MinioEndpoint { get; init; }
+    public string AccessKey { get; init; }
+    public string SecretKey { get; init; }
     public IReadOnlyList<string> RequiredBuckets { get; init; } = [];
 
-    // Использовать ли https или нет.
+    public int UploadUrlExpirationMinutes { get; init; } = 10;
+    public int UploadUrlExpirationHours { get; init; } = 1;
+    public int DownloadUrlExpirationHours { get; init; } = 24;
+    public int MaxConcurrentRequests { get; init; } = 50;
     public bool WithSsl { get; init; }
+
+    public long RecommendedChunkSizeBytes { get; init; } = 100 * 1024 * 1024; // 100 Mb.
+
+    public int MaxChunks { get; init; } = 100;
 }
