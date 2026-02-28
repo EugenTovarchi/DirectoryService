@@ -14,6 +14,19 @@ public class MediaAssetsRepository(
     ILogger<MediaAssetsRepository> logger)
     : IMediaAssetsRepository
 {
+    public async Task<UnitResult<Error>> DeleteMediaAssetById(
+        Guid mediaAssetId,
+        CancellationToken cancellationToken = default)
+    {
+        await dbContext.MediaAssets
+            .Where(m => m.Id == mediaAssetId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        logger.LogInformation("Media asset with id: {id} was deleted", mediaAssetId);
+
+        return UnitResult.Success<Error>();
+    }
+
     public async Task<Result<Guid, Error>> AddAsync(MediaAsset mediaAsset,
         CancellationToken cancellationToken = default)
     {

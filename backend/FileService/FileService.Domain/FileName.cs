@@ -8,13 +8,16 @@ namespace FileService.Domain;
 /// </summary>
 public sealed record FileName
 {
-    public string Value { get; }
-    public string Extension { get; }
 
-    private FileName(string value, string extension)
+    public string Name { get; }
+    public string Extension { get; }
+    public string Value { get; }
+
+    private FileName(string name, string extension)
     {
-        Value = value;
+        Name = name;
         Extension = extension;
+        Value = name + "." + extension;
     }
 
     public static Result<FileName, Error> Create(string fileName)

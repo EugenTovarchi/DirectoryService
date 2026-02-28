@@ -73,7 +73,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
                             Key = storageKey.Value,
                             Verb = HttpVerb.PUT,
                             UploadId = uploadId,
-                            PartNumber = 1,
+                            PartNumber = partNumber,
                             Expires = DateTime.UtcNow.AddHours(_s3Options.UploadUrlExpirationHours),
                             Protocol = _s3Options.WithSsl ? Protocol.HTTPS : Protocol.HTTP
                         };

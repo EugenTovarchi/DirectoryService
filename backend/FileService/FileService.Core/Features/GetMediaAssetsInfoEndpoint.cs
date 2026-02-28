@@ -2,7 +2,6 @@
 using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
-using FileService.Core.EndpointSettings;
 using FileService.Core.FilesStorage;
 using FileService.Core.Models;
 using FileService.Domain;
@@ -12,39 +11,37 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SharedService.Framework.EndpointSettings;
 using SharedService.SharedKernel;
 
 namespace FileService.Core.Features;
 
-public sealed class GetMediaAssetsUploadEndpoint : IEndpoint
+public sealed class GetMediaAssetsInfoEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/get",
-            async Task<EndpointResult> (
+        app.MapPost("/files/batch",
+            async Task<EndpointResult<GetMediaAssetsResponse>> (
                 [FromBody] GetMediaAssetsRequest request,
-                [FromServices] GetMediaAssetsUploadHandler handler,
+                [FromServices] GetMediaAssetsInfoHandler handler,
                 CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
     }
 }
 
-public sealed class GetMediaAssetsUploadHandler
+public sealed class GetMediaAssetsInfoHandler
 {
-    private readonly ILogger<GetMediaAssetsUploadHandler> _logger;
+    private readonly ILogger<GetMediaAssetsInfoHandler> _logger;
     private readonly IFileReadDbContext _fileReadDbContext;
     private readonly IFileStorageProvider _fileStorageProvider;
-    private readonly IMediaAssetsRepository _mediaAssetsRepository;
 
-    public GetMediaAssetsUploadHandler(
+    public GetMediaAssetsInfoHandler(
         IFileStorageProvider fileStorageProvider,
-        ILogger<GetMediaAssetsUploadHandler> logger,
-        IFileReadDbContext fileReadDbContext,
-        IMediaAssetsRepository mediaAssetsRepository)
+        ILogger<GetMediaAssetsInfoHandler> logger,
+        IFileReadDbContext fileReadDbContext)
     {
         _fileStorageProvider = fileStorageProvider;
         _logger = logger;
         _fileReadDbContext = fileReadDbContext;
-        _mediaAssetsRepository = mediaAssetsRepository;
     }
 
     public async Task<Result<GetMediaAssetsResponse, Failure>> Handle(GetMediaAssetsRequest request,
@@ -53,18 +50,25 @@ public sealed class GetMediaAssetsUploadHandler
         if (!request.MediaAssetIds.Any())
             return new GetMediaAssetsResponse([]);
 
-        List<MediaAsset> mediaAsset = await _fileReadDbContext.ReadMediaAssets
+        List<MediaAsset> readyMediaAssets = await _fileReadDbContext.ReadMediaAssets
             .Where(m => request.MediaAssetIds.Contains(m.Id)
-                        && m.Status != MediaStatus.DELETED)
+                        && m.Status == MediaStatus.READY)
             .ToListAsync(cancellationToken);
+        if (readyMediaAssets.Count == 0)
+        {
+            _logger.LogInformation("No ready media assets found");
+            return new GetMediaAssetsResponse([]);
+        }
 
-        List<MediaAsset> readyMediaAssets = mediaAsset.Where(m => m.Status == MediaStatus.READY).ToList();
         List<StorageKey> keys = readyMediaAssets.Select(m => m.Key).ToList();
 
         Result<IReadOnlyList<MediaUrl>, Error> urlsResult = await _fileStorageProvider
             .GenerateDownloadUrlsAsync(keys, cancellationToken);
         if (urlsResult.IsFailure)
+        {
+            _logger.LogError("Error when try to generate download urls!");
             return urlsResult.Error.ToFailure();
+        }
 
         var urls = urlsResult.Value;
 
@@ -73,13 +77,18 @@ public sealed class GetMediaAssetsUploadHandler
 
         foreach (MediaAsset readyMediaAsset in readyMediaAssets)
         {
-            urlsDict.TryGetValue(readyMediaAsset.Key, out string? url);
+            string? downloadUrl = null;
+
+            if (urlsDict.TryGetValue(readyMediaAsset.Key, out string? url))
+            {
+                downloadUrl = url;
+            }
 
             var mediaAssetDto = new GetMediaAssetDto(
                 readyMediaAsset.Id,
                 readyMediaAsset.Status.ToString().ToLowerInvariant(),
                 readyMediaAsset.AssetType.ToString().ToLowerInvariant(),
-                url);
+                downloadUrl);
 
             results.Add(mediaAssetDto);
         }
