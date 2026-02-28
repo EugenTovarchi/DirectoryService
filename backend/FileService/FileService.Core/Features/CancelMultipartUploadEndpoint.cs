@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
-using FileService.Core.EndpointSettings;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -8,31 +7,32 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using SharedService.Framework.EndpointSettings;
 using SharedService.SharedKernel;
 
 namespace FileService.Core.Features;
 
-public sealed class AbortMultipartUploadEndpoint : IEndpoint
+public sealed class CancelMultipartUploadEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost("/files/multipart/abort",
             async Task<EndpointResult> (
                 [FromBody] AbortMultipartUploadRequest request,
-                [FromServices] AbortMultipartUploadHandler handler,
+                [FromServices] CancelMultipartUploadHandler handler,
                 CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
     }
 }
 
-public sealed class AbortMultipartUploadHandler
+public sealed class CancelMultipartUploadHandler
 {
-    private readonly ILogger<AbortMultipartUploadHandler> _logger;
+    private readonly ILogger<CancelMultipartUploadHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
     private readonly IMediaAssetsRepository _mediaAssetsRepository;
 
-    public AbortMultipartUploadHandler(
+    public CancelMultipartUploadHandler(
         IFileStorageProvider fileStorageProvider,
-        ILogger<AbortMultipartUploadHandler> logger,
+        ILogger<CancelMultipartUploadHandler> logger,
         IMediaAssetsRepository mediaAssetsRepository)
     {
         _fileStorageProvider = fileStorageProvider;
@@ -69,10 +69,7 @@ public sealed class AbortMultipartUploadHandler
             return abortResult.Error;
         }
 
-        // удалить из БД mediaAsset
-        mediaAsset.MarkFailed();
-
-        await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
+        await _mediaAssetsRepository.DeleteMediaAssetById(mediaAsset.Id, cancellationToken);
 
         _logger.LogInformation("Uploading media: {id} was aborted", mediaAsset.Id);
 
