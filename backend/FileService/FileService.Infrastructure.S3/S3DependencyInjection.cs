@@ -1,10 +1,8 @@
 using Amazon.S3;
-using FileService.Core;
 using FileService.Core.FilesStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Minio;
 
 namespace FileService.Infrastructure.S3;
 
