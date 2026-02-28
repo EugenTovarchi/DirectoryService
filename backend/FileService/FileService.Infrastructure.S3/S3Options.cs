@@ -10,7 +10,7 @@ public record S3Options
 
     public int UploadUrlExpirationMinutes { get; init; } = 10;
     public int UploadUrlExpirationHours { get; init; } = 1;
-    public int DownloadUrlExpirationHours { get; init; } = 24;
+    public int DownloadUrlExpirationDays { get; init; } = 5;
     public int MaxConcurrentRequests { get; init; } = 50;
     public bool WithSsl { get; init; }
 
