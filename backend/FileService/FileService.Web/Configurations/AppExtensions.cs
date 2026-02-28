@@ -1,4 +1,5 @@
 using Serilog;
+using SharedService.Framework.EndpointSettings;
 using SharedService.Framework.Middlewares;
 
 namespace FileService.Web.Configurations;
@@ -25,6 +26,8 @@ public static class AppExtensions
         }
 
         app.UseSerilogRequestLogging();
+
+        app.MapEndpoints();
 
         return app;
     }

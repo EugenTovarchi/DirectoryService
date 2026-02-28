@@ -20,6 +20,8 @@ public sealed record FileName
         Value = name + "." + extension;
     }
 
+    private FileName() { }
+
     public static Result<FileName, Error> Create(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))

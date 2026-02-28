@@ -10,6 +10,7 @@ public static class CoreDependencyInjection
     {
         services
             .AddEndpoints()
+            .AddHandlers()
             .AddValidatorsFromAssembly(typeof(CoreDependencyInjection).Assembly);
 
         return services;
@@ -23,5 +24,15 @@ public static class CoreDependencyInjection
                  .AssignableToAny(typeof(IEndpoint)))
              .AsSelfWithInterfaces()
              .WithScopedLifetime());
+    }
+
+    private static IServiceCollection AddHandlers(this IServiceCollection services)
+    {
+        return services.Scan(scan => scan
+            .FromAssemblies(typeof(CoreDependencyInjection).Assembly)
+            .AddClasses(classes => classes
+                .Where(type => type.Name.EndsWith("Handler")))
+            .AsSelf()
+            .WithScopedLifetime());
     }
 }
