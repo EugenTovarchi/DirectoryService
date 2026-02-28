@@ -1,10 +1,11 @@
-﻿using FileService.Domain.Assets;
+﻿using FileService.Core.FilesStorage;
+using FileService.Domain.Assets;
 using FileService.Infrastructure.Postgres.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace FileService.Infrastructure.Postgres;
 
-public class FileServiceDbContext : DbContext
+public class FileServiceDbContext : DbContext, IFileReadDbContext
 {
     public FileServiceDbContext(DbContextOptions<FileServiceDbContext> options)
         : base(options)
@@ -21,8 +22,8 @@ public class FileServiceDbContext : DbContext
     }
 
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
-    public DbSet<VideoAsset> VideoAssets => Set<VideoAsset>();
-    public DbSet<PreviewAsset> PreviewAssets => Set<PreviewAsset>();
+
+    public IQueryable<MediaAsset> ReadMediaAssets => MediaAssets.AsQueryable().AsNoTracking();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

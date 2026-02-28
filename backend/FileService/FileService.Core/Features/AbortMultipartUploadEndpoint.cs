@@ -69,6 +69,7 @@ public sealed class AbortMultipartUploadHandler
             return abortResult.Error;
         }
 
+        // удалить из БД mediaAsset
         mediaAsset.MarkFailed();
 
         await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
