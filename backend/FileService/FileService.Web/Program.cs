@@ -1,5 +1,4 @@
 using FileService.Core;
-using FileService.Core.EndpointSettings;
 using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.S3;
 using FileService.Web.Configurations;

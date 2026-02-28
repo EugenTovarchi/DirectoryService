@@ -56,6 +56,7 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
     public async Task Update_DepartmentLocation_should_failed()
     {
         // Arrange
+        // ReSharper disable once CollectionNeverUpdated.Local
         List<Guid> locations = [];
 
         var departmentId = await CreateTestDepartment();

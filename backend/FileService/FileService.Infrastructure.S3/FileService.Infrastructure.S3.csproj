@@ -1,9 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   
     <ItemGroup>
+      <PackageReference Include="AWSSDK.Core" />
       <PackageReference Include="istreddev.framework" />
       <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
       <PackageReference Include="AWSSDK.S3" />
+      <PackageReference Include="Minio" />
+    </ItemGroup>
+  
+    <ItemGroup>
+      <ProjectReference Include="..\FileService.Contracts\FileService.Contracts.csproj" />
+      <ProjectReference Include="..\FileService.Core\FileService.Core.csproj" />
+      <ProjectReference Include="..\FileService.Domain\FileService.Domain.csproj" />
     </ItemGroup>
 
 </Project>

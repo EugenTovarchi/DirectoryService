@@ -1,8 +1,6 @@
-using FileService.Core.EndpointSettings;
 using FluentValidation;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SharedService.Core.Abstractions;
+using SharedService.Framework.EndpointSettings;
 
 namespace FileService.Core;
 
