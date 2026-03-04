@@ -36,9 +36,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         {
             var request = new InitiateMultipartUploadRequest
             {
-                BucketName = storageKey.Location,
-                StorageClass = storageKey.Value,
-                ContentType = mediaData.ContentType.Value,
+                BucketName = storageKey.Location, Key = storageKey.Value, ContentType = mediaData.ContentType.Value,
             };
 
             var result = await _s3Client.InitiateMultipartUploadAsync(request, cancellationToken);
@@ -98,35 +96,64 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         }
     }
 
+    public async Task<Result<string, Error>> GenerateChunkUploadUrlAsync(
+        StorageKey storageKey,
+        string uploadId,
+        int partNumber,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = storageKey.Location,
+                Key = storageKey.Value,
+                Verb = HttpVerb.PUT,
+                UploadId = uploadId,
+                PartNumber = partNumber,
+                Expires = DateTime.UtcNow.AddHours(_s3Options.UploadUrlExpirationHours),
+                Protocol = _s3Options.WithSsl ? Protocol.HTTPS : Protocol.HTTP
+            };
+
+            string? url = await _s3Client.GetPreSignedURLAsync(request);
+
+            return url;
+        }
+        catch (Exception ex)
+        {
+            return S3ErrorMapper.ToError(ex);
+        }
+    }
+
     public async Task<Result<IReadOnlyList<MediaUrl>, Error>> GenerateDownloadUrlsAsync(
         IEnumerable<StorageKey> storageKeys, CancellationToken cancellationToken = default)
     {
         try
         {
             IEnumerable<Task<MediaUrl>> tasks = storageKeys.Select(async storageKey =>
+            {
+                await _requestsSemaphore.WaitAsync(cancellationToken);
+
+                try
                 {
-                    await _requestsSemaphore.WaitAsync(cancellationToken);
-
-                    try
+                    var request = new GetPreSignedUrlRequest
                     {
-                        var request = new GetPreSignedUrlRequest
-                        {
-                            BucketName = storageKey.Location,
-                            Key = storageKey.Value,
-                            Verb = HttpVerb.PUT,
-                            Expires = DateTime.UtcNow.AddDays(_s3Options.DownloadUrlExpirationDays),
-                            Protocol = _s3Options.WithSsl ? Protocol.HTTPS : Protocol.HTTP
-                        };
+                        BucketName = storageKey.Location,
+                        Key = storageKey.Value,
+                        Verb = HttpVerb.GET,
+                        Expires = DateTime.UtcNow.AddDays(_s3Options.DownloadUrlExpirationDays),
+                        Protocol = _s3Options.WithSsl ? Protocol.HTTPS : Protocol.HTTP
+                    };
 
-                        string? preSignedUrl = await _s3Client.GetPreSignedURLAsync(request);
+                    string? preSignedUrl = await _s3Client.GetPreSignedURLAsync(request);
 
-                        return new MediaUrl(storageKey, preSignedUrl);
-                    }
-                    finally
-                    {
-                        _requestsSemaphore.Release();
-                    }
-                });
+                    return new MediaUrl(storageKey, preSignedUrl);
+                }
+                finally
+                {
+                    _requestsSemaphore.Release();
+                }
+            });
 
             MediaUrl[] results = await Task.WhenAll(tasks);
 
@@ -254,7 +281,8 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
                 request.Prefix = storageKey.Prefix;
             }
 
-            ListMultipartUploadsResponse? result = await _s3Client.ListMultipartUploadsAsync(request, cancellationToken);
+            ListMultipartUploadsResponse?
+                result = await _s3Client.ListMultipartUploadsAsync(request, cancellationToken);
 
             return result;
         }

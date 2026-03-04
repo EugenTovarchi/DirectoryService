@@ -37,14 +37,14 @@ public sealed record MediaOwner
         if (context.Length > 50)
             return Errors.General.ValueIsTooLarge("context", 50);
 
-        string normilizedContext = context.Trim().ToLowerInvariant();
-        if (!AllowedContext.Contains(normilizedContext))
+        string normalizedContext = context.Trim().ToLowerInvariant();
+        if (!AllowedContext.Contains(normalizedContext))
             return Errors.Validation.RecordIsInvalid("context");
 
         if (entityId == Guid.Empty)
             return Errors.General.ValueIsInvalid("entityId");
 
-        return new MediaOwner(normilizedContext, entityId);
+        return new MediaOwner(normalizedContext, entityId);
     }
 
     public static Result<MediaOwner, Error> ForDepartment(Guid departmentId) => Create("department", departmentId);

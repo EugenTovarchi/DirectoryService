@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+FileService.env
 nuget.config
 # User-specific files
 *.rsuser

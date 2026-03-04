@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFolder", "SolutionF
 		..\..\.editorconfig = ..\..\.editorconfig
 		..\..\nuget.config = ..\..\nuget.config
 		..\..\docker-compose-dev.yml = ..\..\docker-compose-dev.yml
+		..\..\FileService.env = ..\..\FileService.env
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileService.Core", "FileService.Core\FileService.Core.csproj", "{991EAADF-F313-44B3-A7DD-8579913350F9}"

@@ -16,9 +16,9 @@ public sealed class CancelMultipartUploadEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/multipart/abort",
+        app.MapPost("/files/multipart/cancel",
             async Task<EndpointResult> (
-                [FromBody] AbortMultipartUploadRequest request,
+                [FromBody] CancelMultipartUploadRequest request,
                 [FromServices] CancelMultipartUploadHandler handler,
                 CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
     }
@@ -40,7 +40,7 @@ public sealed class CancelMultipartUploadHandler
         _mediaAssetsRepository = mediaAssetsRepository;
     }
 
-    public async Task<UnitResult<Error>> Handle(AbortMultipartUploadRequest request,
+    public async Task<UnitResult<Error>> Handle(CancelMultipartUploadRequest request,
         CancellationToken cancellationToken)
     {
         var mediaAssetResult = await _mediaAssetsRepository.GetBy(

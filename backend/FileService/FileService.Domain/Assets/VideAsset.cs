@@ -7,7 +7,7 @@ public class VideoAsset : MediaAsset
 {
     public const long MAX_SIZE = 5_368_709_120;
 
-    public const string LOCATION = "videos";
+    public const string LOCATION = "file-service-videos";
     public const string RAW_PREFIX = "raw";
     public const string ALLOWED_CONTENT_TYPE = "video";
 

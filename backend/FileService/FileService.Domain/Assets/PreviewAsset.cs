@@ -7,7 +7,7 @@ public class PreviewAsset : MediaAsset
 {
     public const long MAX_SIZE = 10_485_760;
 
-    public const string ASSET_TYPE = "preview";
+    public const string ASSET_TYPE = "file-service-preview";
     public const string LOCATION = "preview";
     public const string RAW_PREFIX = "raw";
     public const string ALLOWED_CONTENT_TYPE = "image";

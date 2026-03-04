@@ -17,7 +17,7 @@ public sealed class GetMediaAssetInfoEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/{mediaAssetId::guid}",
+        app.MapPost("/files/{mediaAssetId:guid}",
             async Task<EndpointResult<GetMediaAssetResponse>> (
                 Guid mediaAssetId,
                 [FromServices] GetMediaAssetInfoHandler handler,
@@ -49,7 +49,7 @@ public sealed class GetMediaAssetInfoHandler
 
         MediaAsset? mediaAsset = await _fileReadDbContext.ReadMediaAssets
             .FirstOrDefaultAsync(m => m.Id == mediaAssetId
-                                      && m.Status == MediaStatus.READY, cancellationToken);
+                                      && m.Status == MediaStatus.UPLOADED, cancellationToken);
         if (mediaAsset == null)
         {
             _logger.LogInformation("Media assets not found");

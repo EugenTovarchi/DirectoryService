@@ -42,8 +42,7 @@ public sealed class CompleteMultipartUploadHandler
     public async Task<UnitResult<Error>> Handle(CompleteMultipartUploadRequest request,
         CancellationToken cancellationToken)
     {
-        var mediaAssetResult = await _mediaAssetsRepository.GetBy(
-            m => m.Id == request.MediaAssetId, cancellationToken);
+        var mediaAssetResult = await _mediaAssetsRepository.GetBy(m => m.Id == request.MediaAssetId, cancellationToken);
         if (mediaAssetResult.IsFailure)
             return mediaAssetResult.Error;
 
@@ -63,7 +62,12 @@ public sealed class CompleteMultipartUploadHandler
             return completeResult.Error;
         }
 
-        mediaAsset.MarkUploaded();
+        var markUploadedResult = mediaAsset.MarkUploaded();
+        if (markUploadedResult.IsFailure)
+        {
+            _logger.LogError("Failed to mark media asset as UPLOADED: {Error}", markUploadedResult.Error.Message);
+            return markUploadedResult.Error;
+        }
 
         await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
 
