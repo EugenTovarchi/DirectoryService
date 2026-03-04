@@ -1,6 +1,4 @@
-﻿using FileService.Core.Features;
-
-namespace FileService.Contracts.Responses;
+﻿namespace FileService.Contracts.Responses;
 
 public record StartMultipartUploadResponse(
     Guid MediaAssetId,

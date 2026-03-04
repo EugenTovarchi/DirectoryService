@@ -16,7 +16,8 @@ public class Program
 
             string environment = builder.Environment.EnvironmentName;
 
-            builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
+            builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true)
+                .AddEnvironmentVariables();
 
             builder.Configuration.AddUserSecrets<Program>();
 

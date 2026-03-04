@@ -33,8 +33,10 @@ public sealed record FileName
         if (lastDot == -1 || lastDot == fileName.Length - 1)
             return Errors.General.ValueIsInvalid("extension");
 
+        string name = fileName[..lastDot];
+
         // Вырезаем все, что после последней точки.
         string extension = fileName[(lastDot + 1)..].ToLowerInvariant();
-        return new FileName(fileName, extension);
+        return new FileName(name, extension);
     }
 }

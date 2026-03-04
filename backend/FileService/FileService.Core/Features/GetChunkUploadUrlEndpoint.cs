@@ -17,12 +17,12 @@ using SharedService.SharedKernel;
 
 namespace FileService.Core.Features;
 
-// Получить presigned URL для докачки конкретного чанка.
-public class GetChunkUploadUrlEndpoint
+// Получить presigned URL для догрузки конкретного чанка.
+public class GetChunkUploadUrlEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/multipart/url",
+        app.MapPost("/files/chunk-upload/url",
             async Task<EndpointResult<GetChunkUploadUrlResponse>> (
                 [FromBody] GetChunkUploadUrlRequest request,
                 [FromServices] GetChunkUploadUrlHandler handler,
@@ -82,13 +82,41 @@ public sealed class GetChunkUploadUrlHandler
             return Errors.General.NotFoundEntity("media_asset").ToFailure();
         }
 
+        if (mediaAsset.Status != MediaStatus.UPLOADING)
+        {
+            _logger.LogError("Media asset has invalid status");
+            return Errors.Validation.RecordIsInvalid("media_asset_status").ToFailure();
+        }
+
         StorageKey storageKey = mediaAsset.Key;
 
-        Result<string, Error> downloadIrlResult =
-            await _fileStorageProvider.GenerateDownloadUrlAsync(storageKey, cancellationToken);
-        if (downloadIrlResult.IsFailure)
-            return downloadIrlResult.Error.ToFailure();
+        var checkUploadId = await _fileStorageProvider
+            .FileListMultipartUploadAsync(storageKey, cancellationToken);
 
-        return new GetChunkUploadUrlResponse(downloadIrlResult.Value, request.PartNumber);
+        if (checkUploadId.IsFailure)
+            return checkUploadId.Error.ToFailure();
+
+        var uploads = checkUploadId.Value.MultipartUploads ?? [];
+
+        var existingUpload = uploads.FirstOrDefault(u =>
+            u.UploadId == request.UploadId &&
+            u.Key == storageKey.Value);
+
+        if (existingUpload == null)
+        {
+            _logger.LogError("UploadId not found or does not match file");
+            return Errors.Validation.RecordIsInvalid("upload_id").ToFailure();
+        }
+
+        Result<string, Error> uploadUrlsAsync =
+            await _fileStorageProvider.GenerateChunkUploadUrlAsync(
+                storageKey,
+                request.UploadId,
+                request.PartNumber,
+                cancellationToken);
+        if (uploadUrlsAsync.IsFailure)
+            return uploadUrlsAsync.Error.ToFailure();
+
+        return new GetChunkUploadUrlResponse(uploadUrlsAsync.Value, request.PartNumber);
     }
 }

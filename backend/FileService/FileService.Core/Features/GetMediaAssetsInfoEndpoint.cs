@@ -52,7 +52,7 @@ public sealed class GetMediaAssetsInfoHandler
 
         List<MediaAsset> readyMediaAssets = await _fileReadDbContext.ReadMediaAssets
             .Where(m => request.MediaAssetIds.Contains(m.Id)
-                        && m.Status == MediaStatus.READY)
+                        && m.Status == MediaStatus.UPLOADED)
             .ToListAsync(cancellationToken);
         if (readyMediaAssets.Count == 0)
         {

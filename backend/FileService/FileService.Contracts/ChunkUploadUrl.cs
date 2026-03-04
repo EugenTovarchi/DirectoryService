@@ -1,3 +1,3 @@
-﻿namespace FileService.Core.Features;
+﻿namespace FileService.Contracts;
 
 public record ChunkUploadUrl(int PartNumber, string UploadUrl);

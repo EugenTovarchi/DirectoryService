@@ -14,5 +14,9 @@ public interface IMediaAssetsRepository
 
     Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken);
 
+    Task<UnitResult<Error>> Update(MediaAsset mediaAsset, CancellationToken cancellationToken);
+
     Task<UnitResult<Error>> DeleteMediaAssetById(Guid mediaAssetId, CancellationToken cancellationToken = default);
+
+    Task<Result<MediaAsset, Error>> GetById(Guid mediaAssetId, CancellationToken cancellationToken);
 }

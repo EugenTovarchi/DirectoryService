@@ -8,6 +8,8 @@ public record S3Options
 
     public string SecretKey { get; init; }
 
+    public string Region { get; init; }
+
     public IReadOnlyList<string> RequiredBuckets { get; init; } = [];
 
     public int UploadUrlExpirationMinutes { get; init; } = 10;

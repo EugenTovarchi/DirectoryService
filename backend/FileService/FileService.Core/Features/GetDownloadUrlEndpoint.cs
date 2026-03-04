@@ -17,7 +17,7 @@ public sealed class GetDownloadUrlEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/url",
+        app.MapPost("/files/download/url",
             async Task<EndpointResult<string>> (
                 [FromBody] GetDownloadUrlRequest request,
                 [FromServices] GetDownloadUrlHandler handler,
@@ -49,7 +49,7 @@ public sealed class GetDownloadUrlHandler
 
         MediaAsset? mediaAsset = await _fileReadDbContext.ReadMediaAssets
             .FirstOrDefaultAsync(m => m.Id == request.MediaAssetId
-                                      && m.Status == MediaStatus.READY, cancellationToken);
+                                      && m.Status == MediaStatus.UPLOADED, cancellationToken);
         if (mediaAsset == null)
         {
             _logger.LogInformation("Media assets not found");
