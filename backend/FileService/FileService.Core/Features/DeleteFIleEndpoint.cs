@@ -58,10 +58,6 @@ public sealed class DeleteFIleHandler
             return Errors.General.ValueIsInvalid("media_asset_status").ToFailure();
         }
 
-        mediaAsset.MarkDeleted();
-
-        await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
-
         Result<string, Error> deleteFilesFromS3Result = await _fileStorageProvider
             .DeleteFileAsync(mediaAsset.Key, cancellationToken);
         if (deleteFilesFromS3Result.IsFailure)
@@ -70,6 +66,16 @@ public sealed class DeleteFIleHandler
             return deleteFilesFromS3Result.Error.ToFailure();
         }
 
-        return mediaAsset.Id;
+        mediaAsset.MarkDeleted();
+
+        var result = await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
+        if (!result.IsFailure)
+        {
+            return mediaAsset.Id;
+        }
+
+        _logger.LogError("Error when try to save changes!");
+        return result.Error.ToFailure();
+
     }
 }
