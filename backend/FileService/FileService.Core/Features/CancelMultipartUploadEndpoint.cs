@@ -12,27 +12,27 @@ using SharedService.SharedKernel;
 
 namespace FileService.Core.Features;
 
-public sealed class AbortMultipartUploadEndpoint : IEndpoint
+public sealed class CancelMultipartUploadEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/files/multipart/abort",
+        app.MapPost("/files/multipart/cancel",
             async Task<EndpointResult> (
-                [FromBody] AbortMultipartUploadRequest request,
-                [FromServices] AbortMultipartUploadHandler handler,
+                [FromBody] CancelMultipartUploadRequest request,
+                [FromServices] CancelMultipartUploadHandler handler,
                 CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
     }
 }
 
-public sealed class AbortMultipartUploadHandler
+public sealed class CancelMultipartUploadHandler
 {
-    private readonly ILogger<AbortMultipartUploadHandler> _logger;
+    private readonly ILogger<CancelMultipartUploadHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
     private readonly IMediaAssetsRepository _mediaAssetsRepository;
 
-    public AbortMultipartUploadHandler(
+    public CancelMultipartUploadHandler(
         IFileStorageProvider fileStorageProvider,
-        ILogger<AbortMultipartUploadHandler> logger,
+        ILogger<CancelMultipartUploadHandler> logger,
         IMediaAssetsRepository mediaAssetsRepository)
     {
         _fileStorageProvider = fileStorageProvider;
@@ -40,7 +40,7 @@ public sealed class AbortMultipartUploadHandler
         _mediaAssetsRepository = mediaAssetsRepository;
     }
 
-    public async Task<UnitResult<Error>> Handle(AbortMultipartUploadRequest request,
+    public async Task<UnitResult<Error>> Handle(CancelMultipartUploadRequest request,
         CancellationToken cancellationToken)
     {
         var mediaAssetResult = await _mediaAssetsRepository.GetBy(
@@ -69,9 +69,7 @@ public sealed class AbortMultipartUploadHandler
             return abortResult.Error;
         }
 
-        mediaAsset.MarkFailed();
-
-        await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
+        await _mediaAssetsRepository.DeleteMediaAssetById(mediaAsset.Id, cancellationToken);
 
         _logger.LogInformation("Uploading media: {id} was aborted", mediaAsset.Id);
 

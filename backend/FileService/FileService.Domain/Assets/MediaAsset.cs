@@ -66,6 +66,7 @@ public abstract class MediaAsset
         if (switchResult.IsFailure)
             return switchResult.Error;
 
+        Status = MediaStatus.UPLOADED;
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();
@@ -77,6 +78,7 @@ public abstract class MediaAsset
         if (switchResult.IsFailure)
             return switchResult.Error;
 
+        Status = MediaStatus.FAILED;
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();
@@ -88,6 +90,7 @@ public abstract class MediaAsset
         if (switchResult.IsFailure)
             return switchResult.Error;
 
+        Status = MediaStatus.READY;
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();
@@ -99,6 +102,7 @@ public abstract class MediaAsset
         if (switchResult.IsFailure)
             return switchResult.Error;
 
+        Status = MediaStatus.DELETED;
         UpdatedAt = DateTime.UtcNow;
 
         return Result.Success<Error>();

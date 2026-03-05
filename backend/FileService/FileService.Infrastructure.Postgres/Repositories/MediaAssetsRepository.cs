@@ -14,6 +14,19 @@ public class MediaAssetsRepository(
     ILogger<MediaAssetsRepository> logger)
     : IMediaAssetsRepository
 {
+    public async Task<UnitResult<Error>> DeleteMediaAssetById(
+        Guid mediaAssetId,
+        CancellationToken cancellationToken = default)
+    {
+        await dbContext.MediaAssets
+            .Where(m => m.Id == mediaAssetId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        logger.LogInformation("Media asset with id: {id} was deleted", mediaAssetId);
+
+        return UnitResult.Success<Error>();
+    }
+
     public async Task<Result<Guid, Error>> AddAsync(MediaAsset mediaAsset,
         CancellationToken cancellationToken = default)
     {
@@ -44,7 +57,18 @@ public class MediaAssetsRepository(
     public async Task<Result<MediaAsset, Error>> GetBy(Expression<Func<MediaAsset, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        MediaAsset? mediaAsset = await dbContext.MediaAssets.FirstOrDefaultAsync(predicate, cancellationToken);
+        MediaAsset? mediaAsset = await dbContext.MediaAssets.AsTracking().FirstOrDefaultAsync(predicate, cancellationToken);
+        if (mediaAsset is null)
+            return Errors.General.NotFoundEntity("mediaAsset");
+
+        return mediaAsset;
+    }
+
+    public async Task<Result<MediaAsset, Error>> GetById(Guid mediaAssetId, CancellationToken cancellationToken)
+    {
+        var mediaAsset = await dbContext.MediaAssets
+            .FirstOrDefaultAsync(v => v.Id == mediaAssetId, cancellationToken);
+
         if (mediaAsset is null)
             return Errors.General.NotFoundEntity("mediaAsset");
 
@@ -62,6 +86,20 @@ public class MediaAssetsRepository(
         {
             logger.LogError(ex, "Failed to save changes");
             return Error.Failure("database", "Failed to save changes");
+        }
+    }
+
+    public async Task<UnitResult<Error>> Update(MediaAsset mediaAsset, CancellationToken cancellationToken)
+    {
+        try
+        {
+            dbContext.MediaAssets.Update(mediaAsset);
+            return await SaveChangeAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update media asset");
+            return Error.Failure("database.update", "Failed to update media asset");
         }
     }
 

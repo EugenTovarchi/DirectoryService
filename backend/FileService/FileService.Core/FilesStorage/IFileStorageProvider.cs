@@ -1,6 +1,8 @@
-﻿using CSharpFunctionalExtensions;
+﻿using Amazon.S3.Model;
+using CSharpFunctionalExtensions;
 using FileService.Contracts;
 using FileService.Core.Features;
+using FileService.Core.Models;
 using FileService.Domain;
 using SharedService.SharedKernel;
 
@@ -14,6 +16,9 @@ public interface IFileStorageProvider
         CancellationToken cancellationToken = default);
 
     Task<Result<string, Error>> GenerateDownloadUrlAsync(StorageKey storageKey, CancellationToken cancellationToken);
+
+    Task<Result<IReadOnlyList<MediaUrl>, Error>> GenerateDownloadUrlsAsync(
+        IEnumerable<StorageKey> storageKeys, CancellationToken cancellationToken = default);
 
     Task<Result<IReadOnlyList<ChunkUploadUrl>, Error>> GenerateAllChunksUploadUrlsAsync(
         StorageKey storageKey,
@@ -34,4 +39,13 @@ public interface IFileStorageProvider
         StorageKey storageKey,
         string uploadId,
         CancellationToken cancellationToken = default);
+
+    Task<Result<string, Error>> GenerateChunkUploadUrlAsync(
+        StorageKey storageKey,
+        string uploadId,
+        int partNumber,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<ListMultipartUploadsResponse, Error>> FileListMultipartUploadAsync(
+        StorageKey storageKey, CancellationToken cancellationToken = default);
 }

@@ -45,7 +45,7 @@ public sealed record StorageKey
         if(normalizedPrefixResult.IsFailure)
             return normalizedPrefixResult.Error;
 
-        return new StorageKey(location.Trim(), normalizedPrefixResult.Value, normalizedPrefixResult.Value);
+        return new StorageKey(normalizedKeyResult.Value,  normalizedPrefixResult.Value, location.Trim());
     }
 
     private static Result<string, Error> NormalizePrefix(string? prefix)
