@@ -39,17 +39,17 @@ public sealed class CompleteMultipartUploadHandler
         _mediaAssetsRepository = mediaAssetsRepository;
     }
 
-    public async Task<UnitResult<Error>> Handle(CompleteMultipartUploadRequest request,
+    public async Task<UnitResult<Failure>> Handle(CompleteMultipartUploadRequest request,
         CancellationToken cancellationToken)
     {
         var mediaAssetResult = await _mediaAssetsRepository.GetBy(m => m.Id == request.MediaAssetId, cancellationToken);
         if (mediaAssetResult.IsFailure)
-            return mediaAssetResult.Error;
+            return mediaAssetResult.Error.ToFailure();
 
         MediaAsset mediaAsset = mediaAssetResult.Value;
 
         if (mediaAsset.MediaData.ExpectedChunkCount != request.PartETags.Count)
-            return Errors.General.ValueIsInvalid("Count of expected chunks are not equal to part etags count!");
+            return Errors.General.ValueIsInvalid("Count of expected chunks are not equal to part etags count!").ToFailure();
 
         Result<string, Error> completeResult =
             await _fileStorageProvider.CompleteMultipartUploadAsync(mediaAsset.Key, request.UploadId, request.PartETags,
@@ -59,20 +59,20 @@ public sealed class CompleteMultipartUploadHandler
             mediaAsset.MarkFailed();
             await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
 
-            return completeResult.Error;
+            return completeResult.Error.ToFailure();
         }
 
         var markUploadedResult = mediaAsset.MarkUploaded();
         if (markUploadedResult.IsFailure)
         {
             _logger.LogError("Failed to mark media asset as UPLOADED: {Error}", markUploadedResult.Error.Message);
-            return markUploadedResult.Error;
+            return markUploadedResult.Error.ToFailure();
         }
 
         await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
 
         _logger.LogInformation("Success complete to upload of {id}", mediaAsset.Id);
 
-        return UnitResult.Success<Error>();
+        return UnitResult.Success<Failure>();
     }
 }

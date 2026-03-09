@@ -23,8 +23,8 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
         .WithPassword("postgresPassword")
         .Build();
 
-    private DbConnection _dbConnection = default!;
-    private Respawner _respawner = default!;
+    private DbConnection _dbConnection = null!;
+    private Respawner _respawner = null!;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -34,7 +34,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
             services.RemoveAll<IDepartmentRepository>();
             services.RemoveAll<ILocationRepository>();
 
-            services.AddScoped(provider =>
+            services.AddScoped(_ =>
                 DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
 
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
@@ -58,7 +58,8 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
 
     private async Task CreateDatabaseDirectlyAsync()
     {
-        using var dbContext = DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString());
+        await using var dbContext = DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString());
+        await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
         await dbContext.DisposeAsync();
     }

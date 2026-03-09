@@ -14,7 +14,7 @@ public class ChunkSizeCalculator : IChunkSizeCalculator
         _s3Options = s3Options.Value;
     }
 
-    public Result<(long ChunkSize, int TotalChunks), Error> CalculateChunkSize(long fileSize)
+    public Result<(int ChunkSize, int TotalChunks), Error> CalculateChunkSize(long fileSize)
     {
         if (_s3Options.RecommendedChunkSizeBytes <= 0)
             return Errors.General.ValueMustBePositive("recommendedChunkSizeBytes");
@@ -24,7 +24,7 @@ public class ChunkSizeCalculator : IChunkSizeCalculator
 
         // Всегда должно быть первой проверкой.
         if (fileSize <= _s3Options.RecommendedChunkSizeBytes)
-            return (fileSize, 1);
+            return ((int)fileSize, 1);
 
         int calculateChunks = (int)Math.Ceiling((double)fileSize / _s3Options.RecommendedChunkSizeBytes);
 
@@ -32,6 +32,6 @@ public class ChunkSizeCalculator : IChunkSizeCalculator
 
         long chunkSize = (fileSize + actualChunks - 1) / actualChunks;
 
-        return (chunkSize, actualChunks);
+        return ((int)chunkSize, actualChunks);
     }
 }
