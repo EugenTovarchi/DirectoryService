@@ -1,5 +1,7 @@
 using Amazon.S3;
-using Amazon.S3.Model;
+using FileService.Core.FilesStorage;
+using FileService.Domain;
+using FileService.Domain.Assets;
 using FileService.Infrastructure.Postgres;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +10,6 @@ namespace FileService.IntegrationTests.Infrastructure;
 public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFactory>, IAsyncLifetime
 {
     private readonly Func<Task> _resetDatabase;
-    private readonly List<string> _bucketsToCleanup = new();
     private readonly IAmazonS3 _s3Client;
 
     public const string TEST_FILE_NAME = "test-file.mp4";
@@ -30,7 +31,6 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
     public async Task DisposeAsync()
     {
-        // await CleanupBucketsAsync();
         await _resetDatabase();
     }
 
@@ -52,125 +52,84 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         await action(dbContext);
     }
 
-    /// <summary>
-    /// Создает тестовый бакет с уникальным именем и автоматически добавляет его в список для очистки
-    /// </summary>
-    protected async Task<string> CreateTestBucketAsync(string bucketNamePrefix = "file-test-bucket")
+    protected async Task ExecuteInFileProvider(Func<IFileStorageProvider, Task> action)
     {
-        string bucketName = $"{bucketNamePrefix}".ToLowerInvariant();
+        await using var scope = Services.CreateAsyncScope();
 
-        await _s3Client.PutBucketAsync(bucketName);
-        _bucketsToCleanup.Add(bucketName);
+        var fileStorageProvider = scope.ServiceProvider.GetRequiredService<IFileStorageProvider>();
+
+        await action(fileStorageProvider);
+    }
+
+    protected async Task<string> CreateTestBucketAsync(string bucketName)
+    {
+        try
+        {
+            await _s3Client.PutBucketAsync(bucketName);
+        }
+        catch (AmazonS3Exception ex) when (ex.ErrorCode is "BucketAlreadyOwnedByYou" or "BucketAlreadyExists")
+        {
+        }
 
         return bucketName;
     }
 
-    /// <summary>
-    /// Ручное добавление бакета в список очистки (если создали бакет не через CreateTestBucketAsync)
-    /// </summary>
-    protected void TrackBucketForCleanup(string bucketName)
+    protected async Task<VideoAsset> CreateVideoAssetAsync(MediaStatus status,
+        CancellationToken cancellationToken = default)
     {
-        if (!_bucketsToCleanup.Contains(bucketName))
+        VideoAsset videoAsset = await ExecuteInDb(async dbContext =>
         {
-            _bucketsToCleanup.Add(bucketName);
-        }
-    }
+            Guid mediaAssetId = Guid.NewGuid();
 
-    /// <summary>
-    /// Очищает все отслеживаемые бакеты
-    /// </summary>
-    private async Task CleanupBucketsAsync()
-    {
-        foreach (string bucketName in _bucketsToCleanup)
-        {
-            await DeleteBucketAsync(bucketName);
-        }
+            FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
 
-        _bucketsToCleanup.Clear();
-    }
+            var fileName = FileName.Create(TEST_FILE_NAME).Value;
+            var contentType = ContentType.Create("video/mp4").Value;
+            var mediaData = MediaData.Create(fileName, contentType, fileInfo.Length, 1).Value;
 
-    /// <summary>
-    /// Удаляет бакет со всеми файлами
-    /// </summary>
-    private async Task DeleteBucketAsync(string bucketName)
-    {
-        try
-        {
-            // Проверяем существование бакета
-            bool bucketExists = await BucketExistsAsync(bucketName);
-            if (!bucketExists) return;
+            VideoAsset videoAsset = VideoAsset.CreateForUpload(mediaAssetId, mediaData).Value;
 
-            // Удаляем все объекты (включая версии, если есть)
-            await DeleteAllObjectsAsync(bucketName);
+            dbContext.MediaAssets.Add(videoAsset);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
-            // Удаляем сам бакет
-            await _s3Client.DeleteBucketAsync(bucketName);
-
-            Console.WriteLine($"Bucket deleted: {bucketName}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to delete bucket {bucketName}: {ex.Message}");
-        }
-    }
-
-    private async Task<bool> BucketExistsAsync(string bucketName)
-    {
-        try
-        {
-            var response = await _s3Client.ListBucketsAsync();
-            return response.Buckets.Any(b => b.BucketName == bucketName);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private async Task DeleteAllObjectsAsync(string bucketName)
-    {
-        // Удаляем обычные объекты
-        var listRequest = new ListObjectsV2Request { BucketName = bucketName };
-        var objects = await _s3Client.ListObjectsV2Async(listRequest);
-
-        if (objects.S3Objects.Any())
-        {
-            var deleteRequest = new DeleteObjectsRequest
+            await ExecuteInFileProvider(async fileProvider =>
             {
-                BucketName = bucketName,
-                Objects = objects.S3Objects.Select(obj => new KeyVersion { Key = obj.Key }).ToList()
-            };
+                await fileProvider.UploadFileAsync(videoAsset.Key, fileInfo.OpenRead(), mediaData, cancellationToken);
+            });
 
-            await _s3Client.DeleteObjectsAsync(deleteRequest);
-        }
-
-        // Удаляем версии объектов (для версионированных бакетов)
-        var versionsRequest = new ListVersionsRequest { BucketName = bucketName };
-        var versions = await _s3Client.ListVersionsAsync(versionsRequest);
-
-        if (versions.Versions.Any())
-        {
-            var deleteVersionsRequest = new DeleteObjectsRequest
+            if (status != MediaStatus.UPLOADING)
             {
-                BucketName = bucketName,
-                Objects = versions.Versions.Select(v =>
-                    new KeyVersion { Key = v.Key, VersionId = v.VersionId }).ToList()
-            };
+                switch (status)
+                {
+                    case MediaStatus.FAILED:
+                        videoAsset.MarkFailed();
+                        break;
 
-            await _s3Client.DeleteObjectsAsync(deleteVersionsRequest);
-        }
-    }
+                    case MediaStatus.UPLOADED:
+                        videoAsset.MarkUploaded();
+                        break;
 
-    /// <summary>
-    /// Очищает только файлы в бакете, но оставляет сам бакет
-    /// </summary>
-    protected async Task ClearBucketAsync(string bucketName)
-    {
-        if (!_bucketsToCleanup.Contains(bucketName))
-        {
-            _bucketsToCleanup.Add(bucketName);
-        }
+                    case MediaStatus.DELETED:
+                        {
+                            videoAsset.MarkUploaded();
+                            videoAsset.MarkDeleted();
+                            break;
+                        }
 
-        await DeleteAllObjectsAsync(bucketName);
+                    case MediaStatus.READY:
+                        {
+                            videoAsset.MarkUploaded();
+                            videoAsset.MarkReady();
+                            break;
+                        }
+                }
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            return videoAsset;
+        });
+
+        return videoAsset;
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Amazon.S3.Model;
 using CSharpFunctionalExtensions;
 using FileService.Contracts;
-using FileService.Core.Features;
 using FileService.Core.Models;
 using FileService.Domain;
 using SharedService.SharedKernel;
@@ -48,4 +47,9 @@ public interface IFileStorageProvider
 
     Task<Result<ListMultipartUploadsResponse, Error>> FileListMultipartUploadAsync(
         StorageKey storageKey, CancellationToken cancellationToken = default);
+
+    Task<Result<bool, Error>> FileExistsAsync(StorageKey storageKey, CancellationToken cancellationToken = default);
+
+    Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, MediaData mediaData,
+        CancellationToken cancellationToken = default);
 }

@@ -56,7 +56,7 @@ public sealed class StartMultipartUploadHandler
             return contentTypeResult.Error.ToFailure();
 
         var chunkCalculatorResult = _chunkSizeCalculator.CalculateChunkSize(request.Size);
-        if(chunkCalculatorResult.IsFailure)
+        if (chunkCalculatorResult.IsFailure)
             return chunkCalculatorResult.Error.ToFailure();
 
         var mediaDataResult = MediaData.Create(
@@ -64,7 +64,7 @@ public sealed class StartMultipartUploadHandler
             contentTypeResult.Value,
             request.Size,
             chunkCalculatorResult.Value.TotalChunks);
-        if(mediaDataResult.IsFailure)
+        if (mediaDataResult.IsFailure)
             return mediaDataResult.Error.ToFailure();
 
         var mediaAssetResult = MediaAsset.CreateForUpload(mediaDataResult.Value, request.AssetType.ToAssetType());
@@ -79,7 +79,7 @@ public sealed class StartMultipartUploadHandler
             mediaAssetResult.Value.Key,
             mediaAssetResult.Value.MediaData,
             cancellationToken);
-        if(startUploadResult.IsFailure)
+        if (startUploadResult.IsFailure)
             return startUploadResult.Error.ToFailure();
 
         var chunkUploadUrlResult = await _fileStorageProvider.GenerateAllChunksUploadUrlsAsync(
@@ -91,12 +91,14 @@ public sealed class StartMultipartUploadHandler
             return chunkUploadUrlResult.Error.ToFailure();
 
         mediaAssetResult.Value.MarkUploading();
-        _logger.LogInformation("Media asset started uploading: {mediaAssetResult.Value.Key}", mediaAssetResult.Value.Key);
+        _logger.LogInformation("Media asset started uploading: {mediaAssetResult.Value.Key}",
+            mediaAssetResult.Value.Key);
 
         return new StartMultipartUploadResponse(
             mediaAssetResult.Value.Id,
             startUploadResult.Value,
             chunkUploadUrlResult.Value,
-            chunkCalculatorResult.Value.TotalChunks);
+            chunkCalculatorResult.Value.TotalChunks,
+            chunkCalculatorResult.Value.ChunkSize);
     }
 }

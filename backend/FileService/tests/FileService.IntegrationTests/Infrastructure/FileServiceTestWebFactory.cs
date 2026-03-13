@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Npgsql;
 using Respawn;
 using Testcontainers.Minio;
@@ -89,7 +88,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddScoped<IFileReadDbContext>(sp =>
                 sp.GetRequiredService<FileServiceDbContext>());
 
-            services.AddSingleton<IAmazonS3>(sp =>
+            services.AddSingleton<IAmazonS3>(_ =>
             {
                 ushort minioPort = _minioContainer.GetMappedPublicPort(9000);
 
@@ -109,7 +108,6 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
         });
         base.ConfigureWebHost(builder);
     }
-
 
     private async Task CreateDatabaseDirectlyAsync()
     {
@@ -138,6 +136,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
 
     public new async Task DisposeAsync()
     {
+        await Task.Delay(3000);
         if (_dbConnection != null)
         {
             await _dbConnection.CloseAsync();

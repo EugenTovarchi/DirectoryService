@@ -105,7 +105,7 @@ public sealed class GetChunkUploadUrlHandler
         if (existingUpload == null)
         {
             _logger.LogError("UploadId not found or does not match file");
-            return Errors.Validation.RecordIsInvalid("upload_id").ToFailure();
+            return Errors.Validation.RecordIsInvalid("existing_upload").ToFailure();
         }
 
         Result<string, Error> uploadUrlsAsync =

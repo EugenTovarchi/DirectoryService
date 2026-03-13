@@ -42,16 +42,30 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         var result = await CompleteMultipartUpload(startMultipartUploadResponse, partEtags, cancellationToken);
 
         // Assert
+        Assert.True(result.IsSuccess);
+        await ExecuteInDb(async dbContext =>
+        {
+            var mediaAsset = await dbContext.MediaAssets
+                .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResponse.MediaAssetId, cancellationToken);
+
+            Assert.Equal(MediaStatus.UPLOADED, mediaAsset?.Status);
+            Assert.NotNull(mediaAsset);
+
+            IAmazonS3 s3Client = _factory.Services.GetRequiredService<IAmazonS3>();
+
+            var s3Object = await s3Client.GetObjectAsync(
+                mediaAsset.Key.Location,
+                mediaAsset.Key.Value,
+                cancellationToken);
+
+            Assert.Equal(s3Object.ContentLength, fileInfo.Length);
+        });
     }
 
     public async Task<StartMultipartUploadResponse> StartMultipartUpload(FileInfo fileInfo,
         CancellationToken cancellationToken)
     {
-        string bucketName = await CreateTestBucketAsync(VideoAsset.LOCATION);
-
-        TrackBucketForCleanup(bucketName);
-
-        await CreateTestBucketAsync();
+        await CreateTestBucketAsync(VideoAsset.LOCATION);
 
         var request = new StartMultipartUploadRequest(
             fileInfo.Name,
@@ -64,34 +78,20 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         HttpResponseMessage startMultipartUploadResponse =
             await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
 
+        startMultipartUploadResponse.EnsureSuccessStatusCode();
+
         Result<StartMultipartUploadResponse, Failure> startMultipartUploadResult =
             await startMultipartUploadResponse.HandleResponseAsync<StartMultipartUploadResponse>(cancellationToken);
 
-        // assert
-        Assert.True(startMultipartUploadResult.IsSuccess);
+        Assert.NotNull(startMultipartUploadResult.Value);
         Assert.NotNull(startMultipartUploadResult.Value.UploadId);
-
         await ExecuteInDb(async dbContext =>
         {
-            if (!Guid.TryParse(startMultipartUploadResult.Value.UploadId, out Guid uploadGuid))
-            {
-                Assert.Fail($"UploadId '{startMultipartUploadResult.Value.UploadId}' is not a valid GUID");
-            }
-
             var mediaAsset = await dbContext.MediaAssets
-                .FirstOrDefaultAsync(m => m.Id == uploadGuid, cancellationToken);
+                .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResult.Value.MediaAssetId, cancellationToken);
 
             Assert.Equal(MediaStatus.UPLOADING, mediaAsset?.Status);
             Assert.NotNull(mediaAsset);
-
-            IAmazonS3 s3Client = _factory.Services.GetRequiredService<IAmazonS3>();
-
-            var s3Object = await s3Client.GetObjectAsync(
-                mediaAsset.Key.Location,
-                mediaAsset.Key.Value,
-                cancellationToken);
-
-            Assert.Equal(s3Object.ContentLength, fileInfo.Length);
         });
 
         return startMultipartUploadResult.Value;
@@ -114,9 +114,11 @@ public class MultipartUploadFileTests : FileServiceBaseTests
             if (bytesRead == 0)
                 break;
 
-            var context = new ByteArrayContent(chunk);
+            var content = new ByteArrayContent(chunk, 0, bytesRead);
 
-            var response = await HttpClient.PutAsync(chunkUploadUrl.UploadUrl, context, cancellationToken);
+            var response = await HttpClient.PutAsync(chunkUploadUrl.UploadUrl, content, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
 
             string? etag = response.Headers.ETag?.ToString().Trim('"');
 
@@ -139,7 +141,7 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         var completeResponse = await AppHttpClient
             .PostAsJsonAsync("/files/multipart/end", completeRequest, cancellationToken);
 
-        UnitResult<Failure> completeResult = await completeResponse.HandleResponse(cancellationToken);
+        UnitResult<Failure> completeResult = await completeResponse.HandleResponseAsync(cancellationToken);
 
         return completeResult;
     }
