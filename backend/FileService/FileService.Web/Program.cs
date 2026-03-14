@@ -6,7 +6,7 @@ using Serilog;
 
 namespace FileService.Web;
 
-public class Program
+public partial class Program
 {
     public static async Task Main(string[] args)
     {
@@ -20,8 +20,6 @@ public class Program
                 .AddEnvironmentVariables();
 
             builder.Configuration.AddUserSecrets<Program>();
-
-            builder.Configuration.AddEnvironmentVariables();
 
             builder.Services.AddControllers();
 
@@ -37,7 +35,11 @@ public class Program
 
             var app = builder.Build();
 
-            await app.ApplyMigrations();
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                await app.ApplyMigrations();
+            }
+
             app.WebConfigure();
 
             await app.RunAsync();

@@ -19,7 +19,7 @@ public sealed class GetMediaAssetInfoEndpoint : IEndpoint
     {
         app.MapPost("/files/{mediaAssetId:guid}",
             async Task<EndpointResult<GetMediaAssetResponse>> (
-                Guid mediaAssetId,
+                [FromRoute] Guid mediaAssetId,
                 [FromServices] GetMediaAssetInfoHandler handler,
                 CancellationToken cancellationToken) => await handler.Handle(mediaAssetId, cancellationToken));
     }

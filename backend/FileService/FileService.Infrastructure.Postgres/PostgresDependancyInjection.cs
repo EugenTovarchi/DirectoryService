@@ -21,17 +21,18 @@ public static class PostgresDependancyInjection
 
     private static void AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContextPool<FileServiceDbContext>((sp, options) =>
+        services.AddDbContext<FileServiceDbContext>((sp, options) =>
         {
             string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
             var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
             sp.GetRequiredService<ILoggerFactory>();
 
-            options.UseNpgsql(connectionString);
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
             }
+
+            options.UseNpgsql(connectionString);
 
             options.LogTo(message =>
             {
@@ -54,8 +55,7 @@ public static class PostgresDependancyInjection
 
     private static IServiceCollection AddReadDbContext(this IServiceCollection services)
     {
-        services.AddScoped<IFileReadDbContext>(sp =>
-            sp.GetRequiredService<FileServiceDbContext>());
+        services.AddScoped<IFileReadDbContext, FileServiceDbContext>();
 
         return services;
     }

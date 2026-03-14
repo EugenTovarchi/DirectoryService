@@ -3,5 +3,6 @@
 public record StartMultipartUploadResponse(
     Guid MediaAssetId,
     string UploadId,
-    IReadOnlyList<ChunkUploadUrl>ChunkUploadUrls,
-    long ChunkSize);
+    IReadOnlyList<ChunkUploadUrl> ChunkUploadUrls,
+    int TotalChunks,
+    int ChunkSize);

@@ -40,7 +40,7 @@ public sealed class CancelMultipartUploadHandler
         _mediaAssetsRepository = mediaAssetsRepository;
     }
 
-    public async Task<UnitResult<Error>> Handle(CancelMultipartUploadRequest request,
+    public async Task<UnitResult<Failure>> Handle(CancelMultipartUploadRequest request,
         CancellationToken cancellationToken)
     {
         var mediaAssetResult = await _mediaAssetsRepository.GetBy(
@@ -48,7 +48,7 @@ public sealed class CancelMultipartUploadHandler
         if (mediaAssetResult.IsFailure)
         {
             _logger.LogError("Media asset with id {id} was not found", request.MediaAssetId);
-            return mediaAssetResult.Error;
+            return mediaAssetResult.Error.ToFailure();
         }
 
         MediaAsset mediaAsset = mediaAssetResult.Value;
@@ -56,7 +56,7 @@ public sealed class CancelMultipartUploadHandler
         if (mediaAsset.Status != MediaStatus.UPLOADING)
         {
             return Error.Failure("media.upload.not_in_progress",
-                $"Cannot abort upload for media in status: {mediaAsset.Status}");
+                $"Cannot abort upload for media in status: {mediaAsset.Status}").ToFailure();
         }
 
         UnitResult<Error> abortResult =
@@ -66,13 +66,13 @@ public sealed class CancelMultipartUploadHandler
             mediaAsset.MarkUploading();
             await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
 
-            return abortResult.Error;
+            return abortResult.Error.ToFailure();
         }
 
         await _mediaAssetsRepository.DeleteMediaAssetById(mediaAsset.Id, cancellationToken);
 
-        _logger.LogInformation("Uploading media: {id} was aborted", mediaAsset.Id);
+        _logger.LogInformation("Uploading media: {id} was aborted", request.MediaAssetId);
 
-        return UnitResult.Success<Error>();
+        return UnitResult.Success<Failure>();
     }
 }

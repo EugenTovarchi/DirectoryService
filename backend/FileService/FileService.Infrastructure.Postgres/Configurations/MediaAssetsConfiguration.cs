@@ -18,6 +18,11 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
             mediaData.OwnsOne(md => md.FileName, fileName =>
             {
                 fileName.Property(f => f.Value)
+                    .HasColumnName("file_full_name")
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                fileName.Property(f => f.Name)
                     .HasColumnName("file_name")
                     .HasMaxLength(500)
                     .IsRequired();

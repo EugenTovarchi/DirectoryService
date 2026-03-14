@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="AutoFixture" />
+        <PackageReference Include="coverlet.collector"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="Respawn" />
+        <PackageReference Include="Testcontainers.LocalStack" />
+        <PackageReference Include="Testcontainers.Minio" />
+        <PackageReference Include="Testcontainers.PostgreSql" />
+        <PackageReference Include="xunit"/>
+        <PackageReference Include="xunit.runner.visualstudio"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\FileService.Web\FileService.Web.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Resources\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Resources\test-file.mp4">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>

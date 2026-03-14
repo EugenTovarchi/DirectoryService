@@ -2,7 +2,6 @@
 using Amazon.S3.Model;
 using CSharpFunctionalExtensions;
 using FileService.Contracts;
-using FileService.Core.Features;
 using FileService.Core.FilesStorage;
 using FileService.Core.Models;
 using FileService.Domain;
@@ -278,7 +277,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 
             if (!string.IsNullOrWhiteSpace(storageKey.Prefix))
             {
-                request.Prefix = storageKey.Prefix;
+                request.Prefix = storageKey.Value;
             }
 
             ListMultipartUploadsResponse?
@@ -290,6 +289,53 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         {
             return S3ErrorMapper.ToError(ex);
         }
+    }
+
+    public async Task<Result<bool, Error>> FileExistsAsync(StorageKey storageKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new GetObjectMetadataRequest
+            {
+                BucketName = storageKey.Location,
+                Key = storageKey.Value
+            };
+
+            await _s3Client.GetObjectMetadataAsync(request, cancellationToken);
+            return true;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            return S3ErrorMapper.ToError(ex);
+        }
+    }
+
+    public async Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, MediaData mediaData,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new PutObjectRequest
+        {
+            BucketName = key.Location,
+            ContentType = mediaData.ContentType.Value,
+            Key = key.Value,
+            InputStream = stream,
+        };
+
+        try
+        {
+            await _s3Client.PutObjectAsync(request, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Error uploading file");
+            return S3ErrorMapper.ToError(ex);
+        }
+
+        return UnitResult.Success<Error>();
     }
 
     public void Dispose()

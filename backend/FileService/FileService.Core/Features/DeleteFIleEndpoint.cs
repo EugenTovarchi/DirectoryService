@@ -14,7 +14,7 @@ public sealed class DeleteFIleEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapDelete("/files/{mediaAssetId::guid}",
+        app.MapDelete("/files/{mediaAssetId:guid}",
             async Task<EndpointResult<Guid>> (
                 [FromRoute] Guid mediaAssetId,
                 [FromServices] DeleteFIleHandler handler,
@@ -76,6 +76,5 @@ public sealed class DeleteFIleHandler
 
         _logger.LogError("Error when try to save changes!");
         return result.Error.ToFailure();
-
     }
 }
