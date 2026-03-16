@@ -1,4 +1,5 @@
 using DirectoryService.Application.Cache;
+using FileService.Contracts.HttpCommunication;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,7 @@ public static class ApplicationDependencyInjection
             .AddValidatorsFromAssembly(typeof(ApplicationDependencyInjection).Assembly)
             .AddCache(configuration);
 
+        services.AddFileServiceHttpCommunication(configuration);
         return services;
     }
 

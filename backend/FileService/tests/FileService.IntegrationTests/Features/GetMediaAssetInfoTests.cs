@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using CSharpFunctionalExtensions;
 using FileService.Contracts.Responses;
-using FileService.Core.HttpCommunication;
 using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.IntegrationTests.Infrastructure;
+using SharedService.Framework.ControllersResults;
 using SharedService.SharedKernel;
 
 namespace FileService.IntegrationTests.Features;
