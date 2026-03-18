@@ -4,12 +4,12 @@ using CSharpFunctionalExtensions;
 using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
-using FileService.Core.HttpCommunication;
 using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.Framework.ControllersResults;
 using SharedService.SharedKernel;
 using CompleteMultipartUploadRequest = FileService.Contracts.Requests.CompleteMultipartUploadRequest;
 

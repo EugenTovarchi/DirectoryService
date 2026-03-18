@@ -2,9 +2,9 @@
 using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
-using FileService.Core.HttpCommunication;
 using FileService.Domain;
 using FileService.IntegrationTests.Infrastructure;
+using SharedService.Framework.ControllersResults;
 using SharedService.SharedKernel;
 
 namespace FileService.IntegrationTests.Features;
