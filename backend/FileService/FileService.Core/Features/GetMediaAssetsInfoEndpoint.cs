@@ -60,7 +60,7 @@ public sealed class GetMediaAssetsInfoHandler
             return new GetMediaAssetsResponse([]);
         }
 
-        List<StorageKey> keys = readyMediaAssets.Select(m => m.Key).ToList();
+        List<StorageKey> keys = readyMediaAssets.Select(m => m.Key).ToList()!;
 
         Result<IReadOnlyList<MediaUrl>, Error> urlsResult = await _fileStorageProvider
             .GenerateDownloadUrlsAsync(keys, cancellationToken);
@@ -79,7 +79,7 @@ public sealed class GetMediaAssetsInfoHandler
         {
             string? downloadUrl = null;
 
-            if (urlsDict.TryGetValue(readyMediaAsset.Key, out string? url))
+            if (urlsDict.TryGetValue(readyMediaAsset.Key!, out string? url))
             {
                 downloadUrl = url;
             }

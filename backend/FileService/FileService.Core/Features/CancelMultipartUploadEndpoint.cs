@@ -60,7 +60,7 @@ public sealed class CancelMultipartUploadHandler
         }
 
         UnitResult<Error> abortResult =
-            await _fileStorageProvider.AbortMultipartUploadAsync(mediaAsset.Key, request.UploadId, cancellationToken);
+            await _fileStorageProvider.AbortMultipartUploadAsync(mediaAsset.UploadKey, request.UploadId, cancellationToken);
         if (abortResult.IsFailure)
         {
             mediaAsset.MarkUploading();

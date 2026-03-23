@@ -54,8 +54,8 @@ public class MultipartUploadFileTests : FileServiceBaseTests
             IAmazonS3 s3Client = _factory.Services.GetRequiredService<IAmazonS3>();
 
             var s3Object = await s3Client.GetObjectAsync(
-                mediaAsset.Key.Location,
-                mediaAsset.Key.Value,
+                mediaAsset.UploadKey.Location,
+                mediaAsset.UploadKey.Value,
                 cancellationToken);
 
             Assert.Equal(s3Object.ContentLength, fileInfo.Length);

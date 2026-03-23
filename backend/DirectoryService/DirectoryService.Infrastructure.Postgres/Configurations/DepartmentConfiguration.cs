@@ -2,7 +2,6 @@ using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Path = DirectoryService.Contracts.ValueObjects.Path;
 
@@ -79,6 +78,10 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
 
         builder.Property(d => d.DeletedAt)
             .HasColumnName("deleted_at")
+            .IsRequired(false);
+
+        builder.Property(d => d.VideoId)
+            .HasColumnName("video_id")
             .IsRequired(false);
 
         builder.Property(d => d.CreatedAt)

@@ -59,7 +59,7 @@ public sealed class DeleteFIleHandler
         }
 
         Result<string, Error> deleteFilesFromS3Result = await _fileStorageProvider
-            .DeleteFileAsync(mediaAsset.Key, cancellationToken);
+            .DeleteFileAsync(mediaAsset.UploadKey, cancellationToken);
         if (deleteFilesFromS3Result.IsFailure)
         {
             _logger.LogError("Error when try to delete files!");

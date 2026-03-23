@@ -1,4 +1,5 @@
-﻿using FileService.Domain;
+﻿using System.Text.Json;
+using FileService.Domain;
 using FileService.Domain.Assets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -71,28 +72,19 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
             .HasColumnName("updated_at")
             .IsRequired();
 
-        builder.OwnsOne(m => m.Key, storageKey =>
-        {
-            storageKey.Property(mk => mk.Key)
-                .HasColumnName("key")
-                .HasMaxLength(500)
-                .IsRequired();
+        builder.Property(m => m.RawKey)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<StorageKey>(v, (JsonSerializerOptions?)null))
+                    .HasColumnName("raw_key")
+                    .HasColumnType("jsonb");
 
-            storageKey.Property(mk => mk.Prefix)
-                .HasColumnName("prefix")
-                .HasMaxLength(50)
-                .IsRequired(false);
-
-            storageKey.Property(mk => mk.Location)
-                .HasColumnName("location")
-                .HasMaxLength(500)
-                .IsRequired();
-
-            storageKey.Property(mk => mk.FullPath)
-                .HasColumnName("full_path")
-                .HasMaxLength(500)
-                .IsRequired();
-        });
+        builder.Property(m => m.Key)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<StorageKey>(v, (JsonSerializerOptions?)null))
+                    .HasColumnName("key")
+                    .HasColumnType("jsonb");
 
         builder.HasDiscriminator(m => m.AssetType)
             .HasValue<VideoAsset>(AssetType.VIDEO)

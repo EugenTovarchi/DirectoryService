@@ -13,10 +13,13 @@ public abstract class MediaAsset
     public AssetType AssetType { get; protected set; }
     public DateTime CreatedAt { get; protected set; }
     public DateTime UpdatedAt { get; protected set; }
-    public StorageKey Key { get; protected set; } = null!;
+    public StorageKey? Key { get; protected set; }
+    public StorageKey? RawKey { get; protected set; }
 
     // public MediaOwner Owner { get; protected set; } = null!;
     public MediaStatus Status { get; protected set; }
+
+    public StorageKey UploadKey => RequiresProcessing() ? RawKey! : Key!;
 
     protected MediaAsset() { }
 
@@ -25,7 +28,8 @@ public abstract class MediaAsset
         MediaData mediaData,
         MediaStatus status,
         AssetType assetType,
-        StorageKey key)
+        StorageKey key,
+        bool isDirectUpload = false)
     {
         Id = id;
         MediaData = mediaData;
@@ -34,7 +38,10 @@ public abstract class MediaAsset
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
         AssetType = assetType;
-        Key = key;
+        if (isDirectUpload)
+            Key = key;
+        else
+            RawKey = key;
     }
 
     public static Result<MediaAsset, Error> CreateForUpload(MediaData mediaData, AssetType assetType)
@@ -116,4 +123,6 @@ public abstract class MediaAsset
 
         return Result.Success<Error>();
     }
+
+    public virtual bool RequiresProcessing() => false;
 }

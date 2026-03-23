@@ -57,7 +57,7 @@ public sealed class GetDownloadUrlHandler
         }
 
         Result<string, Error> urlResult = await _fileStorageProvider
-            .GenerateDownloadUrlAsync(mediaAsset.Key, cancellationToken);
+            .GenerateDownloadUrlAsync(mediaAsset.UploadKey, cancellationToken);
         if (urlResult.IsFailure)
         {
             _logger.LogError("Error when try to generate download url!");

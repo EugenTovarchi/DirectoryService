@@ -76,14 +76,14 @@ public sealed class StartMultipartUploadHandler
         _logger.LogInformation("Media asset added to bd: {mediaAssetResult.Value.Id}", mediaAssetResult.Value.Id);
 
         var startUploadResult = await _fileStorageProvider.StartMultipartUploadAsync(
-            mediaAssetResult.Value.Key,
+            mediaAssetResult.Value.UploadKey,
             mediaAssetResult.Value.MediaData,
             cancellationToken);
         if (startUploadResult.IsFailure)
             return startUploadResult.Error.ToFailure();
 
         var chunkUploadUrlResult = await _fileStorageProvider.GenerateAllChunksUploadUrlsAsync(
-            mediaAssetResult.Value.Key,
+            mediaAssetResult.Value.UploadKey,
             startUploadResult.Value,
             chunkCalculatorResult.Value.TotalChunks,
             cancellationToken);

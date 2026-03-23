@@ -94,7 +94,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
             await ExecuteInFileProvider(async fileProvider =>
             {
-                await fileProvider.UploadFileAsync(videoAsset.Key, fileInfo.OpenRead(), mediaData, cancellationToken);
+                await fileProvider.UploadFileAsync(videoAsset.UploadKey, fileInfo.OpenRead(), mediaData, cancellationToken);
             });
 
             if (status != MediaStatus.UPLOADING)

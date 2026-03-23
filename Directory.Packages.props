@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="istreddev.core" Version="0.0.1" />
-    <PackageVersion Include="istreddev.fileservice.contracts" Version="0.0.1" />
+    <PackageVersion Include="istreddev.fileservice.contracts" Version="0.0.2" />
     <PackageVersion Include="istreddev.framework" Version="0.0.10" />
     <PackageVersion Include="istreddev.sharedkernel" Version="0.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="9.10.0" />

@@ -16,7 +16,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         Identifier identifier,
         Path path,
         short depth,
-        DepartmentId? parentId)
+        DepartmentId? parentId,
+        Guid? videoId)
         : base(departmentId)
     {
         Name = name;
@@ -24,6 +25,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         Path = path;
         Depth = depth;
         ParentId = parentId;
+        VideoId = videoId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -44,6 +46,7 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public Guid? VideoId { get; private set; }
 
     public override void Delete()
     {
@@ -54,6 +57,12 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     public override void Restore()
     {
         base.Restore();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateVideoId(Guid? videoId)
+    {
+        VideoId = videoId;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -103,7 +112,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             identifier,
             pathResult.Value,
             depth: 0,
-            parentId: null);
+            parentId: null,
+            videoId: null);
     }
 
     public UnitResult<Error> MoveTo(Department? newParent)
@@ -152,7 +162,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             identifier,
             pathResult.Value,
             depth: (short)(parent.Depth + 1),
-            parentId: parent.Id);
+            parentId: parent.Id,
+            videoId: null);
     }
 
     public UnitResult<Error> MoveAsChildDepartment(Department parent)
