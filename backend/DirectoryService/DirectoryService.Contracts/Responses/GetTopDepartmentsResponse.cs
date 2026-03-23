@@ -10,6 +10,14 @@ public record GetTopDepartmentsResponse
     public Guid ParentId { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime LastUpdatedAt { get; init; }
+    public MediaDto? MediaInfo { get; init; }
     public int PositionCount { get; init; }
     public int MaxPositionCount { get; init; }
+}
+
+public class MediaDto
+{
+    public Guid Id { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
 }

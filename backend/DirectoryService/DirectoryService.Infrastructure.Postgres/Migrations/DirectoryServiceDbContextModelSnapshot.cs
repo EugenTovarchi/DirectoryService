@@ -65,6 +65,10 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("timezone('utc',now())");
 
+                    b.Property<Guid?>("VideoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("video_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
@@ -184,26 +188,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Name", "Name", b1 =>
-                        {
-                            b1.Property<Guid>("DepartmentId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(120)
-                                .HasColumnType("character varying(120)")
-                                .HasColumnName("name");
-
-                            b1.HasKey("DepartmentId");
-
-                            b1.ToTable("departments");
-
-                            b1.WithOwner()
-                                .HasForeignKey("DepartmentId");
-                        });
-
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Identifier", "Identifier", b1 =>
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Identifier", "Identifier", b1 =>
                         {
                             b1.Property<Guid>("DepartmentId")
                                 .HasColumnType("uuid");
@@ -213,6 +198,25 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasMaxLength(150)
                                 .HasColumnType("character varying(150)")
                                 .HasColumnName("identifier");
+
+                            b1.HasKey("DepartmentId");
+
+                            b1.ToTable("departments");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DepartmentId");
+                        });
+
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Name", "Name", b1 =>
+                        {
+                            b1.Property<Guid>("DepartmentId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("character varying(120)")
+                                .HasColumnName("name");
 
                             b1.HasKey("DepartmentId");
 
@@ -261,26 +265,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Location", b =>
                 {
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Name", "Name", b1 =>
-                        {
-                            b1.Property<Guid>("LocationId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(120)
-                                .HasColumnType("character varying(120)")
-                                .HasColumnName("name");
-
-                            b1.HasKey("LocationId");
-
-                            b1.ToTable("locations");
-
-                            b1.WithOwner()
-                                .HasForeignKey("LocationId");
-                        });
-
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Address", "Address", b1 =>
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Address", "Address", b1 =>
                         {
                             b1.Property<Guid>("LocationId")
                                 .HasColumnType("uuid");
@@ -321,7 +306,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasForeignKey("LocationId");
                         });
 
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.TimeZone", "TimeZone", b1 =>
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.TimeZone", "TimeZone", b1 =>
                         {
                             b1.Property<Guid>("LocationId")
                                 .HasColumnType("uuid");
@@ -331,6 +316,25 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasMaxLength(50)
                                 .HasColumnType("character varying(50)")
                                 .HasColumnName("time_zone");
+
+                            b1.HasKey("LocationId");
+
+                            b1.ToTable("locations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("LocationId");
+                        });
+
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Name", "Name", b1 =>
+                        {
+                            b1.Property<Guid>("LocationId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("character varying(120)")
+                                .HasColumnName("name");
 
                             b1.HasKey("LocationId");
 
@@ -352,26 +356,7 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
 
             modelBuilder.Entity("DirectoryService.Domain.Entities.Position", b =>
                 {
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Name", "Name", b1 =>
-                        {
-                            b1.Property<Guid>("PositionId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(120)
-                                .HasColumnType("character varying(120)")
-                                .HasColumnName("name");
-
-                            b1.HasKey("PositionId");
-
-                            b1.ToTable("positions");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PositionId");
-                        });
-
-                    b.OwnsOne("DirectoryService.SharedKernel.ValueObjects.Description", "Description", b1 =>
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Description", "Description", b1 =>
                         {
                             b1.Property<Guid>("PositionId")
                                 .HasColumnType("uuid");
@@ -382,6 +367,25 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                                 .HasColumnType("character varying(1000)")
                                 .HasDefaultValue("")
                                 .HasColumnName("description");
+
+                            b1.HasKey("PositionId");
+
+                            b1.ToTable("positions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PositionId");
+                        });
+
+                    b.OwnsOne("DirectoryService.Contracts.ValueObjects.Name", "Name", b1 =>
+                        {
+                            b1.Property<Guid>("PositionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("character varying(120)")
+                                .HasColumnName("name");
 
                             b1.HasKey("PositionId");
 

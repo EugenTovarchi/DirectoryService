@@ -1,4 +1,5 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Net.Http.Json;
+using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using Microsoft.Extensions.Logging;
@@ -24,10 +25,9 @@ internal sealed class FileHttpClient : IFileCommunicationService
         try
         {
             HttpResponseMessage response =
-                await _httpClient.GetAsync("api/files/{mediaAssetId:guid}", cancellationToken);
+                await _httpClient.GetAsync($"api/files/{mediaAssetId}", cancellationToken);
 
             return await response.HandleResponseAsync<GetMediaAssetResponse>(cancellationToken);
-
         }
         catch (Exception ex)
         {
@@ -42,15 +42,31 @@ internal sealed class FileHttpClient : IFileCommunicationService
         try
         {
             HttpResponseMessage response =
-                await _httpClient.GetAsync("api/files/batch", cancellationToken);
+                await _httpClient.PostAsJsonAsync("files/batch", request, cancellationToken);
 
             return await response.HandleResponseAsync<GetMediaAssetsResponse>(cancellationToken);
-
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media asset info for {mediaAssetIds}", request.MediaAssetIds);
             return Error.Failure("server.internal", "Failed to request media asset info").ToFailure();
+        }
+    }
+
+    public async Task<Result<CheckMediaAssetExistResponse, Failure>> CheckMediaAssetExists(Guid mediaAssetId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            HttpResponseMessage response =
+                await _httpClient.GetAsync($"api/files/{mediaAssetId}/exists", cancellationToken);
+
+            return await response.HandleResponseAsync<CheckMediaAssetExistResponse>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking media asset:{mediaAssetIds}", mediaAssetId);
+            return Error.Failure("server.internal", "Failed to check media asset").ToFailure();
         }
     }
 }

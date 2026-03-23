@@ -9,6 +9,10 @@
     <PackageReference Include="istreddev.core" />
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="istreddev.sharedkernel" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

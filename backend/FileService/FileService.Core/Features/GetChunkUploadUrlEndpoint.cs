@@ -88,7 +88,7 @@ public sealed class GetChunkUploadUrlHandler
             return Errors.Validation.RecordIsInvalid("media_asset_status").ToFailure();
         }
 
-        StorageKey storageKey = mediaAsset.Key;
+        StorageKey storageKey = mediaAsset.UploadKey;
 
         var checkUploadId = await _fileStorageProvider
             .FileListMultipartUploadAsync(storageKey, cancellationToken);

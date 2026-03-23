@@ -2,6 +2,8 @@ using Dapper;
 using DirectoryService.Application.Cache;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
+using FileService.Contracts.HttpCommunication;
+using FileService.Contracts.Requests;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,18 +17,21 @@ public class
     private readonly INpgsqlConnectionFactory _connectionFactory;
     private readonly HybridCache _cache;
     private readonly CacheOptions _cacheOptions;
+    private readonly IFileCommunicationService _fileCommunicationService;
     private readonly ILogger<GetTopByPositionsDepartmentsHandler> _logger;
 
     public GetTopByPositionsDepartmentsHandler(
         INpgsqlConnectionFactory connectionFactory,
         HybridCache cache,
         IOptions<CacheOptions> cacheOptions,
-        ILogger<GetTopByPositionsDepartmentsHandler> logger)
+        ILogger<GetTopByPositionsDepartmentsHandler> logger,
+        IFileCommunicationService fileCommunicationService)
     {
         _connectionFactory = connectionFactory;
         _cache = cache;
         _cacheOptions = cacheOptions.Value;
         _logger = logger;
+        _fileCommunicationService = fileCommunicationService;
     }
 
     public async Task<List<GetTopDepartmentsResponse>> Handle(GetTopDepartmentsQuery query, CancellationToken ct)
@@ -73,6 +78,7 @@ public class
                  d.parent_id,
                  d.created_at,
                  d.updated_at as last_updated_at,
+                 d.video_id,
                  COUNT(dp.position_id) as position_count
                  FROM departments d
                  LEFT JOIN department_positions dp ON d.id = dp.department_id
@@ -86,7 +92,8 @@ public class
                              parent_department.name,
                              d.parent_id,
                              d.created_at,
-                             d.updated_at 
+                             d.updated_at,
+                             d.video_id
                  )
              SELECT
                  ds.name,
@@ -97,6 +104,7 @@ public class
                  ds.parent_id,
                  ds.created_at,
                  ds.last_updated_at,
+                 ds.video_id,
                  ds.position_count,
                  MAX (ds.position_count) OVER () as max_position_count
              FROM department_stats ds
@@ -104,6 +112,37 @@ public class
              LIMIT 5     
              """);
 
-        return departments.ToList();
+        var departmentList = departments.ToList();
+
+        var videoIds = departmentList
+            .Where(d => d.MediaInfo != null)
+            .Select(d => d.MediaInfo!.Id)
+            .Distinct()
+            .ToList();
+
+        if (videoIds.Any())
+        {
+            var request = new GetMediaAssetsRequest(videoIds);
+            var result = await _fileCommunicationService.GetMediaAssetsInfo(request, ct);
+
+            if (result.IsSuccess)
+            {
+                var videoInfoDict = result.Value.MediaAssets
+                    .ToDictionary(v => v.Id, v => v);
+
+                foreach (var department in departmentList
+                             .Where(d => d.MediaInfo?.Id != null))
+                {
+                    if (videoInfoDict.TryGetValue(department.MediaInfo!.Id, out var videoInfo))
+                    {
+                        department.MediaInfo.Id = videoInfo.Id;
+                        department.MediaInfo.Status = videoInfo.Status;
+                        department.MediaInfo.Url = videoInfo.Url ?? string.Empty;
+                    }
+                }
+            }
+        }
+
+        return departmentList;
     }
 }

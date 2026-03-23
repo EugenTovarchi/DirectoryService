@@ -56,7 +56,7 @@ public class GetChunkUploadUrlTests : FileServiceBaseTests
                 .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResponse.MediaAssetId, cancellationToken);
 
             var uploadingFilesInS3 = await CheckMultipartUploadExistsInS3(
-                mediaAsset!.Key,
+                mediaAsset!.UploadKey,
                 startMultipartUploadResponse.UploadId,
                 cancellationToken);
 
@@ -114,7 +114,7 @@ public class GetChunkUploadUrlTests : FileServiceBaseTests
                 .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResponse.MediaAssetId, cancellationToken);
 
             var abortResult = await fileStorageProvider.AbortMultipartUploadAsync(
-                mediaAsset!.Key,
+                mediaAsset!.UploadKey,
                 startMultipartUploadResponse.UploadId,
                 cancellationToken);
 

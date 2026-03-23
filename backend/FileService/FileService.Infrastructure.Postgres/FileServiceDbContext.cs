@@ -29,5 +29,6 @@ public class FileServiceDbContext : DbContext, IFileReadDbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfiguration(new MediaAssetsConfiguration());
+        modelBuilder.ApplyConfiguration(new VideoProcessesConfiguration());
     }
 }

@@ -2,6 +2,7 @@ using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
 using DirectoryService.Application.Commands.Departments.SoftDelete;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
+using DirectoryService.Application.Commands.Departments.UpdateVideo;
 using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
@@ -111,6 +112,23 @@ public class DepartmentController : ApplicationController
     {
         var command = new SoftDeleteCommand(departmentId);
         var result = await handler.Handle(command, cancellationToken);
+
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
+    }
+
+    [HttpPatch("api/departments/{departmentId:guid}/video")]
+    public async Task<IActionResult> UpdateDepartmentVideo(
+        [FromRoute] Guid departmentId,
+        [FromBody] UpdateVideoRequest request,
+        [FromServices] UpdateVideoHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateVideoCommand(departmentId, request);
+
+        var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsFailure)
+            return result.Error.ToResponse();
 
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }

@@ -54,7 +54,7 @@ public class DeleteFileTests : FileServiceBaseTests
                 .FirstOrDefaultAsync(m => m.Id == mediaAssetId, cancellationToken);
 
             var fileStorageProvider = _factory.Services.GetRequiredService<IFileStorageProvider>();
-            var storageKey = mediaAsset!.Key;
+            var storageKey = mediaAsset!.UploadKey;
 
             var fileExistsResult = await fileStorageProvider.FileExistsAsync(storageKey, cancellationToken);
 

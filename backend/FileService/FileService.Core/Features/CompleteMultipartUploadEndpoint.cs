@@ -52,7 +52,7 @@ public sealed class CompleteMultipartUploadHandler
             return Errors.General.ValueIsInvalid("Count of expected chunks are not equal to part etags count!").ToFailure();
 
         Result<string, Error> completeResult =
-            await _fileStorageProvider.CompleteMultipartUploadAsync(mediaAsset.Key, request.UploadId, request.PartETags,
+            await _fileStorageProvider.CompleteMultipartUploadAsync(mediaAsset.UploadKey, request.UploadId, request.PartETags,
                 cancellationToken);
         if (completeResult.IsFailure)
         {
