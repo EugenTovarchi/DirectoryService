@@ -7,17 +7,19 @@ namespace FileService.UnitTests;
 public class VideoProcessTests
 {
     private readonly StorageKey _validRawKey;
+    private readonly Guid _videoAssetId;
 
     public VideoProcessTests()
     {
         var rawKeyResult = StorageKey.Create("test-video.mp4", "raw", "file-service-videos");
         _validRawKey = rawKeyResult.Value;
+        _videoAssetId = Guid.NewGuid();
     }
 
     [Fact]
     public void Create_WithValidRawKey_ShouldReturnSuccess()
     {
-        var result = VideoProcess.Create(_validRawKey);
+        var result = VideoProcess.Create(_videoAssetId, _validRawKey);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
@@ -32,7 +34,7 @@ public class VideoProcessTests
     [Fact]
     public void Create_WithNullRawKey_ShouldReturnError()
     {
-        var result = VideoProcess.Create(null!);
+        var result = VideoProcess.Create(_videoAssetId, null!);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("videoProcess.rawKey.invalid");
@@ -41,8 +43,8 @@ public class VideoProcessTests
     [Fact]
     public void Create_ShouldInitializeStepsWithUniqueOrders()
     {
-        var result = VideoProcess.Create(_validRawKey);
-        var steps = result.Value.Steps;
+        var result = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
+        var steps = result.Steps;
 
         var orders = steps.Select(s => s.Order).ToList();
         orders.Should().OnlyHaveUniqueItems();
@@ -52,8 +54,8 @@ public class VideoProcessTests
     [Fact]
     public void HappyPath_PrepareForExecution_StartAllSteps_CompleteAllSteps_FinishProcessing_ShouldSucceed()
     {
-        var processResult = VideoProcess.Create(_validRawKey);
-        var process = processResult.Value;
+        var processResult = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
+        var process = processResult;
 
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
@@ -74,7 +76,7 @@ public class VideoProcessTests
     [Fact]
     public void PrepareForExecution_WhenStatusIsFailed_ShouldResetOnlyFailedAndSubsequentSteps()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var step1 = process.Steps[0];
@@ -111,7 +113,7 @@ public class VideoProcessTests
     [Fact]
     public void PrepareForExecution_WhenStatusIsCanceled_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var step = process.Steps[0];
@@ -129,7 +131,7 @@ public class VideoProcessTests
     [Fact]
     public void Fail_WhenStatusIsRunning_ShouldFailCurrentStepAndProcess()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
 
         var step = process.Steps[0];
         process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
@@ -146,7 +148,7 @@ public class VideoProcessTests
     [Fact]
     public void Fail_WhenStatusIsNotRunning_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
 
         var failResult = process.Fail("Some error");
 
@@ -158,7 +160,7 @@ public class VideoProcessTests
     [Fact]
     public void Fail_WithEmptyErrorMessage_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var step = process.Steps[0];
@@ -174,7 +176,7 @@ public class VideoProcessTests
     [Fact]
     public void TotalProgress_ShouldBe10AfterSecondStep()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var step1 = process.Steps.First(s => s.Name == StepNames.Initialize);
@@ -193,7 +195,7 @@ public class VideoProcessTests
     [Fact]
     public void TotalProgress_ShouldBe100WhenAllStepsCompleted()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         foreach (var step in process.Steps)
@@ -208,7 +210,7 @@ public class VideoProcessTests
     [Fact]
     public void StartStep_WhenOrderAndNameDoNotMatch_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var result = process.StartStep(99, "NonExistentStep");
@@ -220,7 +222,7 @@ public class VideoProcessTests
     [Fact]
     public void CompleteStep_WhenStepIsNotStarted_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
 
         var step = process.Steps[0];
         var result = process.CompleteStep(step.Order);
@@ -232,7 +234,7 @@ public class VideoProcessTests
     [Fact]
     public void FinishProcessing_WhenNotAllStepsCompleted_ShouldReturnError()
     {
-        var process = VideoProcess.Create(_validRawKey).Value;
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
         var step = process.Steps[0];
@@ -249,7 +251,8 @@ public class VideoProcessTests
     private static VideoProcess CreateValidProcess()
     {
         var rawKeyResult = StorageKey.Create("test-video.mp4", "raw", "file-service-videos");
-        var processResult = VideoProcess.Create(rawKeyResult.Value);
+        var videoAssetId = Guid.NewGuid();
+        var processResult = VideoProcess.Create(videoAssetId, rawKeyResult.Value);
         return processResult.Value;
     }
 }

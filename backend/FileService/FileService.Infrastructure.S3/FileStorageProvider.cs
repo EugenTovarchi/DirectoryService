@@ -314,13 +314,13 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         }
     }
 
-    public async Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, MediaData mediaData,
+    public async Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, string contentType,
         CancellationToken cancellationToken = default)
     {
         var request = new PutObjectRequest
         {
             BucketName = key.Location,
-            ContentType = mediaData.ContentType.Value,
+            ContentType = contentType ?? "application/octet-stream",
             Key = key.Value,
             InputStream = stream,
         };

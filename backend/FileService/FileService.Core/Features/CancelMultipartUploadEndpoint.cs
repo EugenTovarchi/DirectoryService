@@ -29,15 +29,18 @@ public sealed class CancelMultipartUploadHandler
     private readonly ILogger<CancelMultipartUploadHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
     private readonly IMediaAssetsRepository _mediaAssetsRepository;
+    private readonly ITransactionManager _transactionManager;
 
     public CancelMultipartUploadHandler(
         IFileStorageProvider fileStorageProvider,
         ILogger<CancelMultipartUploadHandler> logger,
-        IMediaAssetsRepository mediaAssetsRepository)
+        IMediaAssetsRepository mediaAssetsRepository,
+        ITransactionManager transactionManager)
     {
         _fileStorageProvider = fileStorageProvider;
         _logger = logger;
         _mediaAssetsRepository = mediaAssetsRepository;
+        _transactionManager = transactionManager;
     }
 
     public async Task<UnitResult<Failure>> Handle(CancelMultipartUploadRequest request,
@@ -64,7 +67,7 @@ public sealed class CancelMultipartUploadHandler
         if (abortResult.IsFailure)
         {
             mediaAsset.MarkUploading();
-            await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
+            await _transactionManager.SaveChangeAsync(cancellationToken);
 
             return abortResult.Error.ToFailure();
         }

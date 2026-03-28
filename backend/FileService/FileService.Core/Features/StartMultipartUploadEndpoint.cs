@@ -71,7 +71,7 @@ public sealed class StartMultipartUploadHandler
         if (mediaAssetResult.IsFailure)
             return mediaAssetResult.Error.ToFailure();
 
-        await _mediaAssetsRepository.AddAsync(mediaAssetResult.Value, cancellationToken);
+        _mediaAssetsRepository.Add(mediaAssetResult.Value);
 
         _logger.LogInformation("Media asset added to bd: {mediaAssetResult.Value.Id}", mediaAssetResult.Value.Id);
 

@@ -26,6 +26,7 @@ public sealed class VideoProcess
     private VideoProcess() { }
 
     public Guid Id { get; private set; }
+    public Guid VideoAssetId { get; private set; }
 
     // Исходный файл в S3 хранилище.
     public StorageKey RawKey { get; private set; }
@@ -45,7 +46,14 @@ public sealed class VideoProcess
 
     public DateTime? UpdatedAt { get; private set; }
 
+    public DateTime? NextRetryAt { get; private set; }
+
     public bool IsCompleted { get; private set; }
+
+    public bool IsCriticalError { get; private set; }
+
+    public int MaxRetries { get; private set; } = 3;
+    public int RetryCount { get; private set; }
 
     public IReadOnlyList<VideoProcessStep> Steps => _steps;
 
@@ -57,16 +65,21 @@ public sealed class VideoProcess
     public string? CurrentStepName => CurrentStep?.Name;
     public double CurrentStepProgress => CurrentStep?.Progress ?? 0;
 
-    public static Result<VideoProcess, Error> Create(
-        StorageKey rawKey)
+    public bool CanRetry() => RetryCount < MaxRetries && !IsCriticalError;
+
+    public static Result<VideoProcess, Error> Create(Guid videoAssetId, StorageKey rawKey)
     {
         if (rawKey is null)
             return Error.Validation("videoProcess.rawKey.invalid", "RawKey is required");
+
+        if (videoAssetId == Guid.Empty)
+            return Error.Validation("videoAssetId.is.empty", "videoAssetId is required");
 
         var process = new VideoProcess
         {
             Id = Guid.NewGuid(),
             RawKey = rawKey,
+            VideoAssetId = videoAssetId,
             Status = VideoProcessStatus.PENDING,
             TotalProgress = 0,
             CreatedAt = DateTime.UtcNow,
@@ -157,7 +170,6 @@ public sealed class VideoProcess
         }
     }
 
-    // Тут как я понял нужно выполнить перезапуск шага ?
     public UnitResult<Error> PrepareForExecution()
     {
         switch (Status)
@@ -198,7 +210,7 @@ public sealed class VideoProcess
 
     public UnitResult<Error> StartStep(int order, string name)
     {
-        if (Status != VideoProcessStatus.PENDING && Status != VideoProcessStatus.RUNNING)
+        if (Status is not(VideoProcessStatus.PENDING or VideoProcessStatus.RUNNING))
         {
             return Error.Validation("invalid.process.status",
                 $"Process must be in PENDING or RUNNING status, current: {Status}");
@@ -223,6 +235,35 @@ public sealed class VideoProcess
         RecalculateTotalProgress();
 
         return UnitResult.Success<Error>();
+    }
+
+    public Result<VideoProcessStep?, Error> ProcessNextStep()
+    {
+        if (Status != VideoProcessStatus.RUNNING)
+        {
+            return Error.Failure("processing.invalid.status",
+                $"Cannot process the next step when status is {Status}");
+        }
+
+        VideoProcessStep? currentStep = CurrentStep;
+        if (currentStep != null)
+            return currentStep;
+
+        VideoProcessStep? nextStep = _steps.OrderBy(step => step.Order)
+            .FirstOrDefault(step => step.Status == VideoProcessStatus.PENDING);
+
+        if (nextStep == null)
+        {
+            FinishProcessing();
+
+            return Result.Success<VideoProcessStep?, Error>(null);
+        }
+
+        UnitResult<Error> startResult = nextStep.Start();
+        if (startResult.IsFailure)
+            return startResult.Error;
+
+        return nextStep;
     }
 
     public UnitResult<Error> CompleteStep(int order)
@@ -276,8 +317,9 @@ public sealed class VideoProcess
     /// Убиваем весь процесс.
     /// </summary>
     /// <param name="errorMessage">Сообщение ошибки.</param>
+    /// <param name="isCritical">Является ли ошибка критической.</param>
     /// <returns>Статус: FAILED, сообщение об ошибке и явл ли ошибка критической.</returns>
-    public UnitResult<Error> Fail(string errorMessage)
+    public UnitResult<Error> Fail(string errorMessage, bool isCritical = false)
     {
         if (Status != VideoProcessStatus.RUNNING)
         {
@@ -298,6 +340,7 @@ public sealed class VideoProcess
 
         Status = VideoProcessStatus.FAILED;
         ErrorMessage = errorMessage;
+        IsCriticalError = isCritical;
         UpdatedAt = DateTime.UtcNow;
 
         return UnitResult.Success<Error>();
@@ -317,9 +360,36 @@ public sealed class VideoProcess
         Status = VideoProcessStatus.PENDING;
         UpdatedAt = DateTime.UtcNow;
         ErrorMessage = null;
+        IsCriticalError = false;
         IsCompleted = false;
 
         RecalculateTotalProgress();
+
+        return UnitResult.Success<Error>();
+    }
+
+    public UnitResult<Error> PlannedRetry(DateTime nextRetryAt)
+    {
+        if (Status != VideoProcessStatus.FAILED)
+        {
+            return Error.Validation("processing.invalid.status",
+                $"Cannot retry the step when status is {Status}");
+        }
+
+        if(IsCompleted)
+        {
+            return Error.Validation("processing.retry.critical",
+                $"Cannot retry critical failure");
+        }
+
+        if (RetryCount >= MaxRetries)
+        {
+            return Error.Validation("invalid.retry.count",
+                $"Max retries exceeded");
+        }
+
+        RetryCount++;
+        NextRetryAt = nextRetryAt;
 
         return UnitResult.Success<Error>();
     }
@@ -345,7 +415,6 @@ public sealed class VideoProcess
         return UnitResult.Success<Error>();
     }
 
-    // Каждый шаг должен начинаться с метода StartStер, который переводит статус в RUNNING.
     public UnitResult<Error> SetMetadata(VideoMetadata metadata)
     {
         if (Status != VideoProcessStatus.RUNNING)

@@ -27,13 +27,11 @@ public class MediaAssetsRepository(
         return UnitResult.Success<Error>();
     }
 
-    public async Task<Result<Guid, Error>> AddAsync(MediaAsset mediaAsset,
-        CancellationToken cancellationToken = default)
+    public Result<Guid, Error> Add(MediaAsset mediaAsset)
     {
         try
         {
-            await dbContext.MediaAssets.AddAsync(mediaAsset, cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            dbContext.MediaAssets.Add(mediaAsset);
 
             return mediaAsset.Id;
         }
@@ -64,6 +62,18 @@ public class MediaAssetsRepository(
         return mediaAsset;
     }
 
+    public async Task<Result<VideoAsset, Error>> GetVideoBy(Expression<Func<VideoAsset, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        VideoAsset? videoAsset = await dbContext.MediaAssets
+            .OfType<VideoAsset>()
+            .FirstOrDefaultAsync(predicate, cancellationToken);
+        if (videoAsset is null)
+            return Errors.General.NotFoundEntity("videoAsset");
+
+        return videoAsset;
+    }
+
     public async Task<Result<MediaAsset, Error>> GetById(Guid mediaAssetId, CancellationToken cancellationToken)
     {
         var mediaAsset = await dbContext.MediaAssets
@@ -73,34 +83,6 @@ public class MediaAssetsRepository(
             return Errors.General.NotFoundEntity("mediaAsset");
 
         return mediaAsset;
-    }
-
-    public async Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return UnitResult.Success<Error>();
-        }
-        catch(Exception ex)
-        {
-            logger.LogError(ex, "Failed to save changes");
-            return Error.Failure("database", "Failed to save changes");
-        }
-    }
-
-    public async Task<UnitResult<Error>> Update(MediaAsset mediaAsset, CancellationToken cancellationToken)
-    {
-        try
-        {
-            dbContext.MediaAssets.Update(mediaAsset);
-            return await SaveChangeAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to update media asset");
-            return Error.Failure("database.update", "Failed to update media asset");
-        }
     }
 
     private Result<Guid, Error> HandlePostgresException(PostgresException pgEx, Guid mediaAssetId)
