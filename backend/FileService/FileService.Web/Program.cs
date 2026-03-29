@@ -1,6 +1,7 @@
 using FileService.Core;
 using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.S3;
+using FileService.VideoProcessing;
 using FileService.Web.Configurations;
 using Serilog;
 
@@ -30,8 +31,9 @@ public partial class Program
             builder.Services.AddAuthorization();
 
             builder.Services.AddCore()
-                            .AddS3(builder.Configuration)
-                            .AddPostgresInfrastructure(builder.Configuration);
+                .AddS3(builder.Configuration)
+                .AddVideoProcessing(builder.Configuration)
+                .AddPostgresInfrastructure(builder.Configuration);
 
             var app = builder.Build();
 

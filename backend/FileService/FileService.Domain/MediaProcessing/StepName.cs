@@ -1,6 +1,6 @@
 ﻿namespace FileService.Domain.MediaProcessing;
 
-public static class StepNames
+public class StepNames
 {
     public const string Initialize = "INITIALIZE";
     public const string ExtractMetadata = "EXTRACT_METADATA";
@@ -9,7 +9,7 @@ public static class StepNames
     public const string GeneratePreview = "GENERATE_PREVIEW";
     public const string Cleanup = "CLEANUP";
 
-    public static readonly IReadOnlySet<string> All = new HashSet<string>
+    public readonly IReadOnlySet<string> All = new HashSet<string>
     {
         Initialize,
         ExtractMetadata,

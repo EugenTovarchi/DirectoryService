@@ -27,15 +27,18 @@ public sealed class DeleteFIleHandler
     private readonly ILogger<DeleteFIleHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
     private readonly IMediaAssetsRepository _mediaAssetsRepository;
+    private readonly ITransactionManager _transactionManager;
 
     public DeleteFIleHandler(
         IFileStorageProvider fileStorageProvider,
         ILogger<DeleteFIleHandler> logger,
-        IMediaAssetsRepository mediaAssetsRepository)
+        IMediaAssetsRepository mediaAssetsRepository,
+        ITransactionManager transactionManager)
     {
         _fileStorageProvider = fileStorageProvider;
         _logger = logger;
         _mediaAssetsRepository = mediaAssetsRepository;
+        _transactionManager = transactionManager;
     }
 
     public async Task<Result<Guid, Failure>> Handle(Guid mediaAssetId,
@@ -68,7 +71,7 @@ public sealed class DeleteFIleHandler
 
         mediaAsset.MarkDeleted();
 
-        var result = await _mediaAssetsRepository.SaveChangeAsync(cancellationToken);
+        var result = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (!result.IsFailure)
         {
             return mediaAsset.Id;

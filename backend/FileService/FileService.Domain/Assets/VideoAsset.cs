@@ -9,7 +9,12 @@ public class VideoAsset : MediaAsset
 
     public const string LOCATION = "file-service-videos";
     public const string RAW_PREFIX = "raw";
+    public const string HLS_PREFIX = "hls";
     public const string ALLOWED_CONTENT_TYPE = "video";
+
+    public const string MASTER_PLAYLIST_NAME = "master.m3u8";
+    public const string STREAM_PLAYLIST_PATTERN = "%v_stream.m3u8";
+    public const string SEGMENT_FILE_PATTERN = "%v_%06d.ts";
 
     public static readonly string[] AllowedExtensions = ["mp4", "mkv", "avi", "mov"];
 
@@ -61,4 +66,62 @@ public class VideoAsset : MediaAsset
     }
 
     public override bool RequiresProcessing() => true;
+
+    public UnitResult<Error> StartProcessing()
+    {
+        if (Status != MediaStatus.UPLOADED)
+            return Error.Validation("asset.invalid.status", "Can started only from UPLOADED status");
+
+        if (!RequiresProcessing())
+            return Error.Validation("not.required.processing", "This asset type does not require processing");
+
+        Status = MediaStatus.PROCESSING;
+        UpdatedAt = DateTime.UtcNow;
+        return UnitResult.Success<Error>();
+    }
+
+    /// <summary>
+    /// Путь будет выглядеть след образом:
+    /// videos/hls/videoid/master.m3u8
+    /// videos/hls/videoid/file1.ts
+    /// videos/hls/videoid/file2.ts
+    /// </summary>
+    /// <returns>Создаем storageKey с папкой: "hls".</returns>
+    public Result<StorageKey, Error> GetHlsRootKey()
+    {
+        return StorageKey.Create(Id.ToString(), HLS_PREFIX, LOCATION);
+    }
+
+    public Result<StorageKey, Error> GetMasterPlaylistKey()
+    {
+        Result<StorageKey, Error> hlsRoot = GetHlsRootKey();
+        if(hlsRoot.IsFailure)
+            return hlsRoot.Error;
+
+        return hlsRoot.Value.AppendKey(MASTER_PLAYLIST_NAME);
+    }
+
+    public UnitResult<Error> GetHlsMasterPlaylistKey(StorageKey key)
+    {
+        if (Status != MediaStatus.PROCESSING)
+            return Error.Validation("video.status.invalid", "Can only set processed data during processing");
+
+        Key = key;
+        UpdatedAt = DateTime.UtcNow;
+
+        return UnitResult.Success<Error>();
+    }
+
+    public UnitResult<Error> CompleteProcessing()
+    {
+        if (Status != MediaStatus.PROCESSING)
+        {
+            return Error.Validation("asset.invalid.status.transition",
+                "Can only complete processing from PROCESSING status");
+        }
+
+        Status = MediaStatus.READY;
+        UpdatedAt = DateTime.UtcNow;
+        return UnitResult.Success<Error>();
+    }
 }

@@ -48,4 +48,24 @@ public static class FileErrors
     {
         return Error.Failure("unknown.error", $"Unknown error occurred.");
     }
+
+    public static Error HlsProcessingFailed()
+    {
+        return Error.Failure("hls.processing.failed", $"Video processing error occurred.");
+    }
+
+    public static Error HlsProcessingFailed(string details)
+    {
+        return Error.Failure("hls.processing.failed", $"Video processing has error: {details}.");
+    }
+
+    public static Error ProcessFailed()
+    {
+        return Error.Failure("process.failed", "Process failed");
+    }
+
+    public static Error InvalidFfprobeOutput(string details)
+    {
+        return Error.Failure("ffprobe.invalid.output", $"Invalid output ffprobe: {details}.");
+    }
 }

@@ -14,6 +14,7 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
         builder.HasKey(v => v.Id);
 
         builder.Property(v => v.Id).HasColumnName("id");
+        builder.Property(v => v.VideoAssetId).HasColumnName("video_asset_id");
 
         builder.Property(m => m.RawKey)
             .HasConversion(
@@ -31,9 +32,11 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
 
         builder.Property(v => v.Status).HasConversion<string>().HasColumnName("status");
         builder.Property(v => v.TotalProgress).HasColumnName("total_progress");
+        builder.Property(v => v.IsCriticalError).HasColumnName("is_critical");
         builder.Property(v => v.ErrorMessage).HasColumnName("error_message");
         builder.Property(v => v.CreatedAt).HasColumnName("started_at");
         builder.Property(v => v.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(v => v.NextRetryAt).HasColumnName("next_retry_at");
 
         builder.OwnsMany(vp => vp.Steps, sb =>
         {
@@ -61,9 +64,6 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
             metaData.Property(md => md.Duration).HasColumnName("duration");
             metaData.Property(md => md.Width).HasColumnName("width");
             metaData.Property(md => md.Height).HasColumnName("height");
-            metaData.Property(md => md.FrameRate).HasColumnName("frame_rate");
-            metaData.Property(md => md.Codec).HasColumnName("codec");
-            metaData.Property(md => md.Bitrate).HasColumnName("bitrate");
         });
 
         builder.HasIndex(ps => new { ps.CreatedAt }).HasDatabaseName("ix_processes_created_at");

@@ -1,5 +1,6 @@
 ﻿using FileService.Core.FilesStorage;
 using FileService.Domain.Assets;
+using FileService.Domain.MediaProcessing;
 using FileService.Infrastructure.Postgres.Configurations;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,7 @@ public class FileServiceDbContext : DbContext, IFileReadDbContext
     }
 
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
+    public DbSet<VideoProcess> VideoProcesses => Set<VideoProcess>();
 
     public IQueryable<MediaAsset> ReadMediaAssets => MediaAssets.AsQueryable().AsNoTracking();
 

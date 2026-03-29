@@ -1,6 +1,9 @@
 ﻿using FileService.Core;
+using FileService.Core.Abstractions;
 using FileService.Core.FilesStorage;
+using FileService.Infrastructure.Postgres.Database;
 using FileService.Infrastructure.Postgres.Repositories;
+using FileService.VideoProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +54,8 @@ public static class PostgresDependancyInjection
 
         // Репозитории
         services.AddScoped<IMediaAssetsRepository, MediaAssetsRepository>();
+        services.AddScoped<IVideoProcessesRepository, VideoProcessesRepository>();
+        services.AddScoped<ITransactionManager, TransactionManager>();
     }
 
     private static IServiceCollection AddReadDbContext(this IServiceCollection services)

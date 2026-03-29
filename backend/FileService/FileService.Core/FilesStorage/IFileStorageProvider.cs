@@ -50,6 +50,6 @@ public interface IFileStorageProvider
 
     Task<Result<bool, Error>> FileExistsAsync(StorageKey storageKey, CancellationToken cancellationToken = default);
 
-    Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, MediaData mediaData,
+    Task<UnitResult<Error>> UploadFileAsync(StorageKey key, Stream stream, string contentType,
         CancellationToken cancellationToken = default);
 }
