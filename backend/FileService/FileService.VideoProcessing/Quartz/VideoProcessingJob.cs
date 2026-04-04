@@ -1,4 +1,5 @@
 ﻿using FileService.Core;
+using FileService.Core.Abstractions;
 using FileService.Domain;
 using FileService.VideoProcessing.Pipeline;
 using Microsoft.Extensions.Logging;

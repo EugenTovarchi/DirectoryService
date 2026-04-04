@@ -109,6 +109,24 @@ public sealed class CompleteMultipartUploadHandler
 
             var videoProcess = createVideoProcessResult.Value;
 
+            var firstStep = videoProcess.Steps.OrderBy(s => s.Order).FirstOrDefault();
+            if (firstStep is null)
+            {
+                _logger.LogError("No steps defined for video process for media asset: {id}", mediaAsset.Id);
+                return Errors.General.NotFoundValue("steps").ToFailure();
+            }
+
+            var startStepResult = videoProcess.StartStep(firstStep.Order, firstStep.Name);
+            if (startStepResult.IsFailure)
+            {
+                _logger.LogError("Failed to start first step for video process: {Error}",
+                    startStepResult.Error.Message);
+                return startStepResult.Error.ToFailure();
+            }
+
+            _logger.LogInformation("Started video process for asset {id} with first step {stepName}",
+                mediaAsset.Id, firstStep.Name);
+
             _videoProcessesRepository.Add(videoProcess);
 
             var saveVideoProcessResult = await _transactionManager.SaveChangeAsync(cancellationToken);

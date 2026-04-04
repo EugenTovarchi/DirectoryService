@@ -3,7 +3,7 @@ using CSharpFunctionalExtensions;
 using FileService.Domain.Assets;
 using SharedService.SharedKernel;
 
-namespace FileService.Core;
+namespace FileService.Core.Abstractions;
 
 public interface IMediaAssetsRepository
 {

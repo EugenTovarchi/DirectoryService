@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
 using SharedService.SharedKernel;
@@ -18,6 +19,18 @@ public sealed record ProcessingContext
     public string? HlsOutputDirectory { get; private set; }
 
     public string? MediaAssetUrl { get; private set; }
+
+    public IReadOnlyList<StorageKey> PreviewKeys => _previewKeys.AsReadOnly();
+    public StorageKey? SpritePreviewKey { get; private set; }
+
+    private readonly List<StorageKey> _previewKeys = [];
+
+    public void SetPreviewKeys(List<StorageKey> previewKeys, StorageKey? spriteKey = null)
+    {
+        _previewKeys.Clear();
+        _previewKeys.AddRange(previewKeys);
+        SpritePreviewKey = spriteKey;
+    }
 
     public UnitResult<Error> CreateWorkingDirectory()
     {

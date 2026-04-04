@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Core.FilesStorage;
 using FileService.Domain.MediaProcessing;
+using FileService.VideoProcessing.Pipeline.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedService.SharedKernel;

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FileService.IntegrationTests.Infrastructure;
 
+[Collection("FileServiceCollection")]
 public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFactory>, IAsyncLifetime
 {
     private readonly Func<Task> _resetDatabase;
@@ -59,6 +60,15 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         var fileStorageProvider = scope.ServiceProvider.GetRequiredService<IFileStorageProvider>();
 
         await action(fileStorageProvider);
+    }
+
+    protected async Task ExecuteInS3(Func<IAmazonS3, Task> action)
+    {
+        await using var scope = Services.CreateAsyncScope();
+
+        var amazonS3 = scope.ServiceProvider.GetRequiredService<IAmazonS3>();
+
+        await action(amazonS3);
     }
 
     protected async Task<string> CreateTestBucketAsync(string bucketName)

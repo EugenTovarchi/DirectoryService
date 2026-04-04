@@ -84,7 +84,7 @@ public class VideoAsset : MediaAsset
     /// Путь будет выглядеть след образом:
     /// videos/hls/videoid/master.m3u8
     /// videos/hls/videoid/file1.ts
-    /// videos/hls/videoid/file2.ts
+    /// videos/hls/videoid/file2.ts.
     /// </summary>
     /// <returns>Создаем storageKey с папкой: "hls".</returns>
     public Result<StorageKey, Error> GetHlsRootKey()

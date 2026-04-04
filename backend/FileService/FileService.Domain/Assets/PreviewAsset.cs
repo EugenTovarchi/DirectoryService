@@ -33,7 +33,7 @@ public class PreviewAsset : MediaAsset
                 $"File extension must be one of :{string.Join(",", AllowedExtensions)}");
         }
 
-        if (mediaData.ContentType.MediaType != MediaType.VIDEO)
+        if (mediaData.ContentType.MediaType != MediaType.IMAGE)
         {
             return Error.Validation("preview.invalid.content-type",
                 $"File content type must be {ALLOWED_CONTENT_TYPE}");
