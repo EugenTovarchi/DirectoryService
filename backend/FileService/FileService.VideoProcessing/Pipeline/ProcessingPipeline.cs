@@ -235,7 +235,11 @@ public class ProcessingPipeline : IProcessingPipeline
     {
         Guid videoAssetId = context.VideoProcess.VideoAssetId;
 
-        context.VideoProcess.CompleteStep(context.VideoProcess.CurrentStep!.Order);
+        if (context.VideoProcess.CurrentStep != null)
+        {
+            context.VideoProcess.CompleteStep(context.VideoProcess.CurrentStep.Order);
+        }
+
         context.VideoAsset.CompleteProcessing();
 
         _logger.LogInformation("Video processing complete successfully for video asset: {videoAssetId}",

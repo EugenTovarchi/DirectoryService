@@ -430,10 +430,6 @@ public sealed class VideoProcess
         MetaData = metadata;
         UpdatedAt = DateTime.UtcNow;
 
-        var currentStepCompleteResult = currentStep.Complete();
-        if (currentStepCompleteResult.IsFailure)
-            return currentStepCompleteResult.Error;
-
         RecalculateTotalProgress();
 
         return UnitResult.Success<Error>();
@@ -450,10 +446,10 @@ public sealed class VideoProcess
 
         HlsKey = hlsKey;
         UpdatedAt = DateTime.UtcNow;
-
-        var currentStepCompleteResult = step.Complete();
-        if (currentStepCompleteResult.IsFailure)
-            return currentStepCompleteResult.Error;
+        //
+        // var currentStepCompleteResult = step.Complete();
+        // if (currentStepCompleteResult.IsFailure)
+        //     return currentStepCompleteResult.Error;
 
         RecalculateTotalProgress();
 

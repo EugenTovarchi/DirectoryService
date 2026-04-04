@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Json;
-using Amazon.S3;
 using Amazon.S3.Model;
 using CSharpFunctionalExtensions;
 using FileService.Contracts;
@@ -7,6 +6,7 @@ using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Domain;
 using FileService.Domain.Assets;
+using FileService.Domain.MediaProcessing;
 using FileService.IntegrationTests.Infrastructure;
 using FileService.VideoProcessing.Pipeline;
 using Microsoft.EntityFrameworkCore;
@@ -52,7 +52,7 @@ public class VideoProcessingTests : FileServiceBaseTests
                 .AsNoTracking()
                 .FirstOrDefaultAsync(ma => ma.Id == videoAssetId, cancellationToken);
 
-            await dbContext.VideoProcesses
+            var videoProcess = await dbContext.VideoProcesses
                 .AsNoTracking()
                 .FirstOrDefaultAsync(vp => vp.VideoAssetId == videoAssetId, cancellationToken);
 
@@ -60,12 +60,15 @@ public class VideoProcessingTests : FileServiceBaseTests
             Assert.Equal(MediaStatus.READY, mediaAsset.Status);
 
             Assert.NotNull(mediaAsset.Key);
-            Assert.Equal($"hls/{videoAssetId}/master.m8u3", mediaAsset.Key.Value);
+            Assert.Equal($"hls/{videoAssetId}/{VideoAsset.MASTER_PLAYLIST_NAME}", mediaAsset.Key.Value);
 
             VideoAsset? videoAsset = mediaAsset as VideoAsset;
             Assert.NotNull(videoAsset);
             Assert.NotNull(videoAsset.RawKey);
             rawKey = videoAsset.RawKey.Value;
+
+            Assert.NotNull(videoProcess);
+            Assert.Equal(VideoProcessStatus.SUCCEEDED, videoProcess.Status);
         });
 
         await ExecuteInS3(async s3Client =>
@@ -84,11 +87,8 @@ public class VideoProcessingTests : FileServiceBaseTests
 
             Assert.NotNull(objectData);
 
-            var exception = await Assert.ThrowsAsync<AmazonS3Exception>(async () =>
-                await s3Client.GetObjectMetadataAsync(
-                    VideoAsset.LOCATION, rawKey, cancellationToken));
-
-            Assert.Equal(System.Net.HttpStatusCode.NotFound, exception.StatusCode);
+            bool rawKeyExists = listResponse.S3Objects.Any(o => o.Key == rawKey);
+            Assert.False(rawKeyExists, $"Raw file with key '{rawKey}' should have been deleted");
         });
     }
 
@@ -106,6 +106,7 @@ public class VideoProcessingTests : FileServiceBaseTests
         CancellationToken cancellationToken)
     {
         await CreateTestBucketAsync(VideoAsset.LOCATION);
+        await CreateTestBucketAsync(PreviewAsset.LOCATION);
 
         var request = new StartMultipartUploadRequest(
             fileInfo.Name,

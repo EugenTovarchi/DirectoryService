@@ -44,6 +44,11 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string outputDirectory,
         CancellationToken cancellationToken = default)
     {
+        if (!Directory.Exists(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
         string arguments = BuildFfmpegHlsArguments(inputFileUrl, outputDirectory);
         var command = new ProcessCommand(_videoOptions.FfmpegPath, arguments);
 
@@ -127,14 +132,8 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
 
     private static string BuildFfprobeArguments(string inputFileUrl)
     {
-        return $"""
-                -v error
-                -select_streams v:0
-                -show_entries stream=width,height
-                -show_entries format=duration
-                -of json
-                "{inputFileUrl}"
-                """;
+        return
+            $"-v error -select_streams v:0 -show_entries stream=width,height -show_entries format=duration -of json \"{inputFileUrl}\"";
     }
 
     private string BuildFfmpegHlsArguments(string inputFileUrl, string outputDirectory)
@@ -143,7 +142,14 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
             ? "-hwaccel cuda -hwaccel_output_format cuda"
             : string.Empty;
 
-        return $"-y -stats -loglevel error {hwaccel} -i \"{inputFileUrl}\" " +
+        string normalizedInputUrl = NormalizePath(inputFileUrl);
+        string normalizedOutputDir = NormalizePath(outputDirectory);
+
+        string segmentPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.SEGMENT_FILE_PATTERN);
+        string streamPlaylistPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.STREAM_PLAYLIST_PATTERN);
+        string masterPlaylistPath = CombineAndNormalize(normalizedOutputDir, VideoAsset.MASTER_PLAYLIST_NAME);
+
+        return $"-y -stats -loglevel error {hwaccel} -i \"{normalizedInputUrl}\" " +
                "-filter_complex \"" +
                "[0:v]split=3[v0][v1][v2]; " +
                "[v0]scale=w=-2:h=360[v0out]; " +
@@ -154,13 +160,13 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
                BuildAudioMappings() +
                "-f hls " +
                "-var_stream_map \"v:0,a:0,name:360p v:1,a:1,name:720p v:2,a:2,name:1080p\" " +
-               "-hls_time 4 " + // Длина сегмента видео
+               "-hls_time 4 " +
                "-hls_list_size 0 " +
                "-hls_segment_type mpegts " +
                "-hls_playlist_type vod " +
-               $"=hls_segment_filename {outputDirectory}/{VideoAsset.SEGMENT_FILE_PATTERN} " +
-               $"-master_pl_name {VideoAsset.MASTER_PLAYLIST_NAME} " +
-               $"{outputDirectory}/{VideoAsset.STREAM_PLAYLIST_PATTERN}";
+               $"-hls_segment_filename \"{segmentPattern}\" " +
+               $"-master_pl_name \"{VideoAsset.MASTER_PLAYLIST_NAME}\" " +
+               $"\"{streamPlaylistPattern}\"";
     }
 
     private string BuildVideoMappings()
@@ -168,15 +174,15 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string encoder = _videoOptions.VideoEncoder;
         string preset = _videoOptions.VideoPreset;
 
-        return $"-map \"[v0out]\" -c:v:0 {encoder} -preset {preset} -b:v:0 2M -maxrate:v:0 2M -bufsize:v:0 2M -g 20" +
+        return $"-map \"[v0out]\" -c:v:0 {encoder} -preset {preset} -b:v:0 2M -maxrate:v:0 2M -bufsize:v:0 2M -g 20 " +
                $"-map \"[v1out]\" -c:v:1 {encoder} -preset {preset} -b:v:1 3M -maxrate:v:1 3M -bufsize:v:1 3M -g 20 " +
                $"-map \"[v2out]\" -c:v:2 {encoder} -preset {preset} -b:v:2 5M -maxrate:v:2 5M -bufsize:v:2 5M -g 20 ";
     }
 
     private string BuildAudioMappings() =>
-        "-map \"[a0]\" -c:a:0 aac -b:a:0 96k -ac 2" +
-        "-map \"[a1]\" -c:a:1 aac -b:a:1 96k -ac 2" +
-        "-map \"[a2]\" -c:a:2 aac -b:a:2 96k -ac 2";
+        "-map \"[a0]\" -c:a:0 aac -b:a:0 96k -ac 2 " +
+        "-map \"[a1]\" -c:a:1 aac -b:a:1 96k -ac 2 " +
+        "-map \"[a2]\" -c:a:2 aac -b:a:2 96k -ac 2 ";
 
     private static string BuildExtractFrameArguments(
         string inputFileUrl,
@@ -184,9 +190,11 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         TimeSpan timestamp,
         int quality)
     {
+        string seconds = timestamp.TotalSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
+
         // -frames:v 1 - извлечь только один кадр
         // -q:v - качество JPEG (2 - отличное качество)
-        return $"-y -ss {timestamp.TotalSeconds:F3} -i \"{inputFileUrl}\" " +
+        return $"-y -ss {seconds} -i \"{inputFileUrl}\" " +
                $"-frames:v 1 -q:v {quality} \"{outputPath}\"";
     }
 
@@ -242,5 +250,22 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         // Собираем полную команду
         return $"{inputs} -filter_complex \"{filterComplex}\" -map \"[grid]\" " +
                $"-frames:v 1 -q:v {quality} \"{outputPath}\"";
+    }
+
+    /// <summary>
+    /// Нормализует путь для Windows (заменяет \ на /)
+    /// </summary>
+    private static string NormalizePath(string path)
+    {
+        return path?.Replace("\\", "/") ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Объединяет пути и нормализует результат
+    /// </summary>
+    private static string CombineAndNormalize(params string[] parts)
+    {
+        string combined = Path.Combine(parts);
+        return NormalizePath(combined);
     }
 }
