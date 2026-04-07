@@ -88,7 +88,7 @@ public class VideoProcessingTests : FileServiceBaseTests
             Assert.NotNull(objectData);
 
             bool rawKeyExists = listResponse.S3Objects.Any(o => o.Key == rawKey);
-            Assert.False(rawKeyExists, $"Raw file with key '{rawKey}' should have been deleted");
+            Assert.False(rawKeyExists, $"Raw file with key '{rawKey}' not founded");
         });
     }
 

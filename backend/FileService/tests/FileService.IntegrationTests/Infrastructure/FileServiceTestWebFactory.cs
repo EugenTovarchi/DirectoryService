@@ -117,8 +117,8 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddTransient<IChunkSizeCalculator, ChunkSizeCalculator>();
             services.AddScoped<IProcessRunner, ProcessRunner>();
 
-            // services.AddSingleton<IFfmpegProcessRunner, FakeHlsGenerator>();
-            // services.RemoveAll<IFfmpegProcessRunner>();
+            services.RemoveAll<IFfmpegProcessRunner>();
+            services.AddSingleton<IFfmpegProcessRunner, FakeFfmpegProcessRunner>();
         });
         base.ConfigureWebHost(builder);
     }
