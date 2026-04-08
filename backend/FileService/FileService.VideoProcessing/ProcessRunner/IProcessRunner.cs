@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using FileService.VideoProcessing.Pipeline;
 using SharedService.SharedKernel;
 
 namespace FileService.VideoProcessing.ProcessRunner;

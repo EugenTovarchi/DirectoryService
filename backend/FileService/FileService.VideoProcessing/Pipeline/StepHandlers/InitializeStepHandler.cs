@@ -31,14 +31,3 @@ public sealed class InitializeStepHandler : IProcessingStepHandler
         return Task.FromResult(Result.Success<ProcessingContext, Error>(context));
     }
 }
-
-public sealed class GeneratePreviewStepHandler : IProcessingStepHandler
-{
-    public string StepName => StepNames.GeneratePreview;
-
-    public Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-}

@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using FileService.Core.Abstractions;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using Microsoft.AspNetCore.Builder;

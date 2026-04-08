@@ -13,8 +13,8 @@ public class VideoAsset : MediaAsset
     public const string ALLOWED_CONTENT_TYPE = "video";
 
     public const string MASTER_PLAYLIST_NAME = "master.m3u8";
-    public const string STREAM_PLAYLIST_PATTERN = "%v_stream.m3u8";
-    public const string SEGMENT_FILE_PATTERN = "%v_%06d.ts";
+    public const string STREAM_PLAYLIST_PATTERN = "stream_%v.m3u8";
+    public const string SEGMENT_FILE_PATTERN = "segment_%v_%06d.ts";
 
     public static readonly string[] AllowedExtensions = ["mp4", "mkv", "avi", "mov"];
 
@@ -84,7 +84,7 @@ public class VideoAsset : MediaAsset
     /// Путь будет выглядеть след образом:
     /// videos/hls/videoid/master.m3u8
     /// videos/hls/videoid/file1.ts
-    /// videos/hls/videoid/file2.ts
+    /// videos/hls/videoid/file2.ts.
     /// </summary>
     /// <returns>Создаем storageKey с папкой: "hls".</returns>
     public Result<StorageKey, Error> GetHlsRootKey()

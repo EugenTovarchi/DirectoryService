@@ -1,4 +1,4 @@
-﻿namespace FileService.VideoProcessing.Pipeline;
+﻿namespace FileService.VideoProcessing.Pipeline.Options;
 
 public sealed record VideoProcessingOptions
 {

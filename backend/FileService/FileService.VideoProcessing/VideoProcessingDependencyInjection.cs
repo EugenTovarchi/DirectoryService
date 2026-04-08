@@ -1,5 +1,8 @@
 ﻿using FileService.Core.Abstractions;
+using FileService.VideoProcessing.FfmpegProcess;
 using FileService.VideoProcessing.Pipeline;
+using FileService.VideoProcessing.Pipeline.Options;
+using FileService.VideoProcessing.Preview;
 using FileService.VideoProcessing.Quartz;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,9 +19,22 @@ public static class VideoProcessingDependencyInjection
         services.Configure<VideoProcessingOptions>(
             configuration.GetSection(nameof(VideoProcessingOptions)));
 
-        services.AddScoped<VideoProcessingService>();
+        services.Configure<PreviewOptions>(
+            configuration.GetSection(nameof(PreviewOptions.SECTION_NAME)));
+
+        services.AddScoped<IVideoProcessingService, VideoProcessingService>();
         services.AddScoped<IProcessingPipeline, ProcessingPipeline>();
         services.AddScoped<IVideoProcessingScheduler, VideoProcessingScheduler>();
+        services.AddScoped<IPreviewCalculator, PreviewCalculator>();
+        services.AddScoped<IFfmpegProcessRunner, FfmpegProcessRunner>();
+        services.AddScoped<IPreviewUploader, PreviewUploader>();
+
+        // Добавляем все Handlers
+        services.Scan(scan => scan
+            .FromAssemblyOf<IProcessingStepHandler>()
+            .AddClasses(classes => classes.AssignableTo<IProcessingStepHandler>())
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
 
         services.AddQuartz(q =>
         {

@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
+using FileService.Core.Abstractions;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -31,17 +32,20 @@ public sealed class StartMultipartUploadHandler
     private readonly IFileStorageProvider _fileStorageProvider;
     private readonly IChunkSizeCalculator _chunkSizeCalculator;
     private readonly IMediaAssetsRepository _mediaAssetsRepository;
+    private readonly ITransactionManager _transactionManager;
 
     public StartMultipartUploadHandler(
         IFileStorageProvider fileStorageProvider,
         IChunkSizeCalculator chunkSizeCalculator,
         ILogger<StartMultipartUploadHandler> logger,
-        IMediaAssetsRepository mediaAssetsRepository)
+        IMediaAssetsRepository mediaAssetsRepository,
+        ITransactionManager transactionManager)
     {
         _fileStorageProvider = fileStorageProvider;
         _chunkSizeCalculator = chunkSizeCalculator;
         _logger = logger;
         _mediaAssetsRepository = mediaAssetsRepository;
+        _transactionManager = transactionManager;
     }
 
     public async Task<Result<StartMultipartUploadResponse, Failure>> Handle(StartMultipartUploadRequest request,
@@ -93,6 +97,13 @@ public sealed class StartMultipartUploadHandler
         mediaAssetResult.Value.MarkUploading();
         _logger.LogInformation("Media asset started uploading: {mediaAssetResult.Value.Key}",
             mediaAssetResult.Value.Key);
+
+        var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            _logger.LogError("Error when try to save media asset!");
+            return saveResult.Error.ToFailure();
+        }
 
         return new StartMultipartUploadResponse(
             mediaAssetResult.Value.Id,

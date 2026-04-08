@@ -13,4 +13,15 @@ public interface IFfmpegProcessRunner
 
     Task<Result<VideoMetadata, Error>> ExtractMetadataAsync(string inputFileUrl,
         CancellationToken cancellationToken = default);
+
+    Task<UnitResult<Error>> ExtractFrameAsync(
+        string inputFileUrl,
+        string outputPath,
+        TimeSpan timestamp,
+        CancellationToken cancellationToken = default);
+
+    Task<UnitResult<Error>> CreateSpriteSheetAsync(
+        List<string> imagePaths,
+        string outputPath,
+        CancellationToken cancellationToken = default);
 }

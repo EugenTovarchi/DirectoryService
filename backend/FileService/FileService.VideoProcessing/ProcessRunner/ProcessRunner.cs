@@ -45,17 +45,19 @@ public class ProcessRunner : IProcessRunner
             onOutput?.Invoke(args.Data);
         };
 
-        process.OutputDataReceived += (_, args) =>
+        process.ErrorDataReceived += (_, args) =>
         {
-            if (args.Data is null)
-                return;
-
+            if (args.Data is null) return;
             errorBuilder.AppendLine(args.Data);
             onOutput?.Invoke(args.Data);
+            _logger.LogDebug("STDERR: {Data}", args.Data);
         };
 
         _logger.LogInformation("Starting process: {fileName} {arguments}", command.ExecutableFile,
             command.Arguments);
+
+        _logger.LogDebug("Full command: {fileName} {arguments}",
+            command.ExecutableFile, command.Arguments);
 
         process.Start();
         process.BeginOutputReadLine();
@@ -76,8 +78,9 @@ public class ProcessRunner : IProcessRunner
 
         if (result.ExitCode != 0)
         {
-            _logger.LogError("Process failed: {FileName} {Arguments} ExitCode: {ExitCode} Error: {Error}",
-                command.ExecutableFile, command.Arguments, result.ExitCode, result.StandardError);
+            _logger.LogError("Process failed with exit code {ExitCode}", result.ExitCode);
+            _logger.LogError("STDERR: {Error}", result.StandardError);
+            _logger.LogError("STDOUT: {Output}", result.StandardOutput);
 
             return FileErrors.ProcessFailed();
         }

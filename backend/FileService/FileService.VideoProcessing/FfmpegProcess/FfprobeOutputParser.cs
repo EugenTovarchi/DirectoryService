@@ -46,27 +46,39 @@ public static class FfprobeOutputParser
 
 public sealed class FfprobeResponse
 {
-    [JsonPropertyName("streams")]
-    public List<StreamInfo?> Streams { get; set; }
+    [JsonPropertyName("streams")] public List<StreamInfo?> Streams { get; set; }
 
-    [JsonPropertyName("format")]
-    public FormatInfo? Format { get; set; }
+    [JsonPropertyName("format")] public FormatInfo? Format { get; set; }
 }
 
 public sealed class StreamInfo
 {
-    [JsonPropertyName("width")]
-    public int? Width { get; set; }
+    [JsonPropertyName("width")] public int? Width { get; set; }
 
-    [JsonPropertyName("height")]
-    public int? Height { get; set; }
+    [JsonPropertyName("height")] public int? Height { get; set; }
 }
 
 public sealed class FormatInfo
 {
+    private double? _duration;
+
     [JsonPropertyName("duration")]
-    [JsonConverter(typeof(StringToDoubleConverter))]
-    public double? Duration { get; set; }
+    public string? DurationString
+    {
+        get => _duration?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        set
+        {
+            if (value != null && double.TryParse(value,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out double result))
+            {
+                _duration = result;
+            }
+        }
+    }
+
+    [JsonIgnore] public double? Duration => _duration;
 }
 
 public sealed class StringToDoubleConverter : JsonConverter<double?>

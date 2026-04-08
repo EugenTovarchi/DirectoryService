@@ -4,7 +4,7 @@ using SharedService.SharedKernel;
 
 namespace FileService.VideoProcessing.Pipeline;
 
-public class VideoProcessingService
+public class VideoProcessingService : IVideoProcessingService
 {
     private readonly ILogger<VideoProcessingService> _logger;
     private readonly IProcessingPipeline _processingPipeline;
@@ -26,8 +26,8 @@ public class VideoProcessingService
         _logger.LogInformation("Starting processing video for video asset {VideoAssetId}", videoAssetId);
         try
         {
-            var duration = DateTime.UtcNow - startTime;
             var pipelineResult = await _processingPipeline.ProcessAllStepsAsync(videoAssetId, cancellationToken);
+            var duration = DateTime.UtcNow - startTime;
 
             if (pipelineResult.IsSuccess)
             {

@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using CSharpFunctionalExtensions;
 using FileService.Core;
+using FileService.Core.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;

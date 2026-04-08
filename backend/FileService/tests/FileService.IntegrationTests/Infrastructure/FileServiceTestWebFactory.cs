@@ -1,10 +1,14 @@
 using System.Data.Common;
 using Amazon.S3;
 using FileService.Core;
+using FileService.Core.Abstractions;
 using FileService.Core.FilesStorage;
 using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.Postgres.Repositories;
 using FileService.Infrastructure.S3;
+using FileService.IntegrationTests.Mocks;
+using FileService.VideoProcessing.FfmpegProcess;
+using FileService.VideoProcessing.ProcessRunner;
 using FileService.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -60,7 +64,12 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["S3Options:SecretKey"] = "minioadmin",
                 ["S3Options:WithSsl"] = "false",
                 ["S3Options:ForcePathStyle"] = "true",
-                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString()
+                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
+                ["VideoProcessingOptions:FfmpegPath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffmpeg.exe",
+                ["VideoProcessingOptions:FfprobePath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffprobe.exe",
+                ["VideoProcessingOptions:UseHardwareAcceleration"] = "false",
+                ["VideoProcessingOptions:VideoEncoder"] = "libx264",
+                ["VideoProcessingOptions:VideoPreset"] = "medium"
             };
 
             config.AddInMemoryCollection(settings);
@@ -71,6 +80,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<FileServiceDbContext>();
             services.RemoveAll<IFileReadDbContext>();
             services.RemoveAll<IFileStorageProvider>();
+            services.RemoveAll<IProcessRunner>();
             services.RemoveAll<IAmazonS3>();
 
             var bucketServiceDescriptor = services.FirstOrDefault(d =>
@@ -105,6 +115,10 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddScoped<IMediaAssetsRepository, MediaAssetsRepository>();
             services.AddScoped<IFileStorageProvider, FileStorageProvider>();
             services.AddTransient<IChunkSizeCalculator, ChunkSizeCalculator>();
+            services.AddScoped<IProcessRunner, ProcessRunner>();
+
+            services.RemoveAll<IFfmpegProcessRunner>();
+            services.AddSingleton<IFfmpegProcessRunner, FakeFfmpegProcessRunner>();
         });
         base.ConfigureWebHost(builder);
     }
