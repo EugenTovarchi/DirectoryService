@@ -3,7 +3,7 @@
 public enum AssetType
 {
     VIDEO,
-    AVATAR,
+    PHOTO,
     PREVIEW
 }
 
@@ -14,7 +14,7 @@ public static class AsseTypeExtensions
         return value.ToLowerInvariant() switch
         {
             "video" => AssetType.VIDEO,
-            "avatar" => AssetType.AVATAR,
+            "avatar" => AssetType.PHOTO,
             "preview" => AssetType.PREVIEW,
             _ => throw new ArgumentOutOfRangeException($"Invalid asset type: {value}", value)
         };

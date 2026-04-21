@@ -2,5 +2,4 @@
   <ItemGroup>
     <PackageReference Include="istreddev.sharedkernel" />
   </ItemGroup>
-
 </Project>

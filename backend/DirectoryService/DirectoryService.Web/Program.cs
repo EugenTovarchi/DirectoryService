@@ -1,4 +1,5 @@
 using DirectoryService.Application;
+using DirectoryService.Application.Messaging;
 using DirectoryService.Infrastructure.Postgres;
 using DirectoryService.Web.Configurations;
 using Serilog;
@@ -32,6 +33,8 @@ public class Program
 
             builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
                             .AddDirectoryServiceApplication(builder.Configuration);
+
+            builder.AddWolverine();
 
             var app = builder.Build();
 

@@ -3,6 +3,7 @@ using FileService.VideoProcessing.FfmpegProcess;
 using FileService.VideoProcessing.Pipeline;
 using FileService.VideoProcessing.Pipeline.Options;
 using FileService.VideoProcessing.Preview;
+using FileService.VideoProcessing.ProcessRunner;
 using FileService.VideoProcessing.Quartz;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,7 @@ public static class VideoProcessingDependencyInjection
         services.AddScoped<IPreviewCalculator, PreviewCalculator>();
         services.AddScoped<IFfmpegProcessRunner, FfmpegProcessRunner>();
         services.AddScoped<IPreviewUploader, PreviewUploader>();
+        services.AddScoped<IDataProcessRunner, DataDataProcessRunner>();
 
         // Добавляем все Handlers
         services.Scan(scan => scan

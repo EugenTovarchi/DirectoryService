@@ -58,6 +58,8 @@ public class VideoProcessingTests : FileServiceBaseTests
 
             Assert.NotNull(mediaAsset);
             Assert.Equal(MediaStatus.READY, mediaAsset.Status);
+            Assert.Equal(TEST_DEPARTMENT_ID, mediaAsset.OwnerId);
+            Assert.Equal(TEST_OWNER_TYPE, mediaAsset.OwnerType);
 
             Assert.NotNull(mediaAsset.Key);
             Assert.Equal($"hls/{videoAssetId}/{VideoAsset.MASTER_PLAYLIST_NAME}", mediaAsset.Key.Value);
@@ -113,8 +115,8 @@ public class VideoProcessingTests : FileServiceBaseTests
             "video",
             "video/mp4",
             fileInfo.Length,
-            "fileservice_test",
-            Guid.Empty);
+            TEST_OWNER_TYPE,
+            TEST_DEPARTMENT_ID);
 
         HttpResponseMessage startMultipartUploadResponse =
             await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);

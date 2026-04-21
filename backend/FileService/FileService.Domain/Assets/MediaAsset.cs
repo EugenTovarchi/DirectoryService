@@ -9,14 +9,23 @@ namespace FileService.Domain.Assets;
 public abstract class MediaAsset
 {
     public Guid Id { get; protected set; }
+
     public MediaData MediaData { get; protected set; } = null!;
+
     public AssetType AssetType { get; protected set; }
+
+    public Guid OwnerId { get; protected set; }
+
+    public string OwnerType { get; protected set; } = string.Empty;
+
     public DateTime CreatedAt { get; protected set; }
+
     public DateTime UpdatedAt { get; protected set; }
+
     public StorageKey? Key { get; protected set; }
+
     public StorageKey? RawKey { get; protected set; }
 
-    // public MediaOwner Owner { get; protected set; } = null!;
     public MediaStatus Status { get; protected set; }
 
     public StorageKey UploadKey => RequiresProcessing() ? RawKey! : Key!;
@@ -28,6 +37,8 @@ public abstract class MediaAsset
         MediaData mediaData,
         MediaStatus status,
         AssetType assetType,
+        Guid ownerId,
+        string ownerType,
         StorageKey key,
         bool isDirectUpload = false)
     {
@@ -35,6 +46,8 @@ public abstract class MediaAsset
         MediaData = mediaData;
         Status = status;
         AssetType = assetType;
+        OwnerId = ownerId;
+        OwnerType = ownerType;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
         AssetType = assetType;
@@ -44,22 +57,26 @@ public abstract class MediaAsset
             RawKey = key;
     }
 
-    public static Result<MediaAsset, Error> CreateForUpload(MediaData mediaData, AssetType assetType)
+    public static Result<MediaAsset, Error> CreateForUpload(
+        MediaData mediaData,
+        AssetType assetType,
+        Guid ownerId,
+        string ownerType)
     {
         var assetId = Guid.NewGuid();
 
         switch (assetType)
         {
             case AssetType.VIDEO:
-                var videoResult = VideoAsset.CreateForUpload(assetId, mediaData);
+                var videoResult = VideoAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
                 return videoResult.IsFailure ? videoResult.Error : videoResult.Value;
 
             case AssetType.PREVIEW:
-                var previewResult = VideoAsset.CreateForUpload(assetId, mediaData);
+                var previewResult = PreviewAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
                 return previewResult.IsFailure ? previewResult.Error : previewResult.Value;
 
-            case AssetType.AVATAR:
-                var avatarResult = VideoAsset.CreateForUpload(assetId, mediaData);
+            case AssetType.PHOTO:
+                var avatarResult = PhotoAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
                 return avatarResult.IsFailure ? avatarResult.Error : avatarResult.Value;
 
             default:

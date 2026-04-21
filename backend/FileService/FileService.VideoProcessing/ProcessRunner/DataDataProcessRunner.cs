@@ -8,11 +8,11 @@ using SharedService.SharedKernel;
 namespace FileService.VideoProcessing.ProcessRunner;
 
 // Класс-обёртка над процессом.
-public class ProcessRunner : IProcessRunner
+public class DataDataProcessRunner : IDataProcessRunner
 {
-    private readonly ILogger<ProcessRunner> _logger;
+    private readonly ILogger<DataDataProcessRunner> _logger;
 
-    public ProcessRunner(ILogger<ProcessRunner> logger)
+    public DataDataProcessRunner(ILogger<DataDataProcessRunner> logger)
     {
         _logger = logger;
     }

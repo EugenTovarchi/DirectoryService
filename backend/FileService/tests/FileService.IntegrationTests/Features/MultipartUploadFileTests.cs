@@ -73,8 +73,8 @@ public class MultipartUploadFileTests : FileServiceBaseTests
             "video",
             "video/mp4",
             fileInfo.Length,
-            "fileservice_test",
-            Guid.Empty);
+            TEST_OWNER_TYPE,
+            TEST_DEPARTMENT_ID);
 
         HttpResponseMessage startMultipartUploadResponse =
             await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);

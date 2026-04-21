@@ -50,8 +50,7 @@ public class VideoProcessingScheduler : IVideoProcessingScheduler
             var job = JobBuilder.Create<VideoProcessingJob>()
                 .WithIdentity(jobKey)
                 .UsingJobData("VideoAssetId", videoAssetId.ToString())
-
-                // тут также нужно будет добавить счётик попыток с retry функционалом(приоритет, Id пользователя кто загрузил)
+                .UsingJobData("AttemptNumber", 1)
                 .StoreDurably() // Задача сохраняется даже без триггеров
                 .RequestRecovery() // Восстанавливать при перезапуске
                 .Build();

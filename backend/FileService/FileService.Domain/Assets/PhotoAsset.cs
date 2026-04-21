@@ -3,27 +3,23 @@ using SharedService.SharedKernel;
 
 namespace FileService.Domain.Assets;
 
-public class PreviewAsset : MediaAsset
+public class PhotoAsset : MediaAsset
 {
-    public const long MAX_SIZE = 10_485_760;
-
-    public const string ASSET_TYPE = "preview";
-    public const string LOCATION = "file-service-preview";
-    public const string RAW_PREFIX = "raw";
+    public const long MAX_SIZE = 5_242_880; // 5MB
+    public const string LOCATION = "photos";
     public const string ALLOWED_CONTENT_TYPE = "image";
+    public static readonly string[] AllowedExtensions = ["jpeg", "jpg", "png"];
 
-    public static readonly string[] AllowedExtensions = ["jpeg", "jpg", "png", "webp"];
+    private PhotoAsset() { }
 
-    private PreviewAsset() { }
-
-    private PreviewAsset(
+    private PhotoAsset(
         Guid id,
         MediaData mediaData,
         MediaStatus mediaStatus,
         Guid ownerId,
         string ownerType,
         StorageKey key)
-        : base(id, mediaData, mediaStatus, AssetType.PREVIEW, ownerId, ownerType, key, true)
+        : base(id, mediaData, mediaStatus, AssetType.PHOTO, ownerId, ownerType, key, true)
     {
     }
 
@@ -31,26 +27,26 @@ public class PreviewAsset : MediaAsset
     {
         if (!AllowedExtensions.Contains(mediaData.FileName.Extension))
         {
-            return Error.Validation("preview.invalid.extension",
+            return Error.Validation("photo.invalid.extension",
                 $"File extension must be one of :{string.Join(",", AllowedExtensions)}");
         }
 
         if (mediaData.ContentType.MediaType != MediaType.IMAGE)
         {
-            return Error.Validation("preview.invalid.content-type",
+            return Error.Validation("photo.invalid.content-type",
                 $"File content type must be {ALLOWED_CONTENT_TYPE}");
         }
 
         if (mediaData.Size > MAX_SIZE)
         {
-            return Error.Validation("preview.invalid.max-size",
+            return Error.Validation("photo.invalid.max-size",
                 $"File size must be less than: {MAX_SIZE} bytes");
         }
 
         return UnitResult.Success<Error>();
     }
 
-    public static Result<PreviewAsset, Error> CreateForUpload(
+    public static Result<PhotoAsset, Error> CreateForUpload(
         Guid id,
         MediaData mediaData,
         Guid ownerId,
@@ -70,10 +66,10 @@ public class PreviewAsset : MediaAsset
             return Error.Validation("video.invalid.owner-type", "OwnerType cannot be empty");
         }
 
-        var key = StorageKey.Create(id.ToString(), null, LOCATION);
+        var key = StorageKey.Create($"photo_{id}", null, LOCATION);
         if (key.IsFailure)
             return key.Error;
 
-        return new PreviewAsset(id, mediaData, MediaStatus.UPLOADING, ownerId, ownerType, key.Value);
+        return new PhotoAsset(id, mediaData, MediaStatus.UPLOADING, ownerId, ownerType, key.Value);
     }
 }

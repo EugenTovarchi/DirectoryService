@@ -376,7 +376,7 @@ public sealed class VideoProcess
                 $"Cannot retry the step when status is {Status}");
         }
 
-        if(IsCompleted)
+        if (IsCompleted)
         {
             return Error.Validation("processing.retry.critical",
                 $"Cannot retry critical failure");
@@ -446,12 +446,57 @@ public sealed class VideoProcess
 
         HlsKey = hlsKey;
         UpdatedAt = DateTime.UtcNow;
-        //
-        // var currentStepCompleteResult = step.Complete();
-        // if (currentStepCompleteResult.IsFailure)
-        //     return currentStepCompleteResult.Error;
 
         RecalculateTotalProgress();
+
+        return UnitResult.Success<Error>();
+    }
+
+    /// <summary>
+    /// Возвращает задержку для следующей попытки.
+    /// </summary>
+    public TimeSpan GetNextRetryDelay()
+    {
+        return RetryCount switch
+        {
+            0 => TimeSpan.FromMinutes(1),
+            1 => TimeSpan.FromMinutes(2),
+            2 => TimeSpan.FromMinutes(4),
+            _ => TimeSpan.FromMinutes(8)
+        };
+    }
+
+    /// <summary>
+    /// Помечаем процесс как окончательно проваленный.
+    /// </summary>
+    /// <param name="error">Описание критической ошибки.</param>
+    /// <returns>Процесс обработки нужно начинать с начала.</returns>
+    public UnitResult<Error> MarkAsPermanentlyFailed(string error)
+    {
+        IsCompleted = true;
+        IsCriticalError = true;
+        ErrorMessage = $"Permanent failure: {error}";
+        UpdatedAt = DateTime.UtcNow;
+        Status = VideoProcessStatus.FAILED;
+
+        return UnitResult.Success<Error>();
+    }
+
+    /// <summary>
+    /// Готовимся к повторной попытке.
+    /// </summary>
+    public UnitResult<Error> PrepareForRetry()
+    {
+        if (!CanRetry())
+            return Error.Validation("retry.not.allowed", "Cannot retry this process");
+
+        // Тут сбрасываем статус текущего шага
+        var currentStep = CurrentStep ?? _steps.FirstOrDefault(s => s.Status == VideoProcessStatus.FAILED);
+        currentStep?.Reset();
+
+        Status = VideoProcessStatus.PENDING;
+        UpdatedAt = DateTime.UtcNow;
+        ErrorMessage = null;
 
         return UnitResult.Success<Error>();
     }

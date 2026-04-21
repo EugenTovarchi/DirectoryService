@@ -11,4 +11,6 @@ public interface ITransactionManager
         IsolationLevel? level = null);
 
     Task<UnitResult<Error>> SaveChangeAsync(CancellationToken cancellationToken);
+
+    Task<UnitResult<Error>> CommitTransactionAsync(CancellationToken cancellationToken = default);
 }

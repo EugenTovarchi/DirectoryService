@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using SharedService.SharedKernel;
 
-namespace FileService.Core;
+namespace FileService.Core.Abstractions;
 
 public interface ITransactionScope : IDisposable
 {

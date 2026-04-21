@@ -3,7 +3,7 @@ using SharedService.SharedKernel;
 
 namespace FileService.VideoProcessing.ProcessRunner;
 
-public interface IProcessRunner
+public interface IDataProcessRunner
 {
     Task<Result<ProcessResult, Error>> RunAsync(
         ProcessCommand processCommand,

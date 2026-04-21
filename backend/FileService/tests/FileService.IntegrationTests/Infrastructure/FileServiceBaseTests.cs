@@ -14,6 +14,8 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
     private readonly IAmazonS3 _s3Client;
 
     public const string TEST_FILE_NAME = "test-file.mp4";
+    public static readonly Guid TEST_DEPARTMENT_ID = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    public const string TEST_OWNER_TYPE = "department";
 
     protected FileServiceBaseTests(FileServiceTestWebFactory factory)
     {
@@ -85,8 +87,12 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
     }
 
     protected async Task<VideoAsset> CreateVideoAssetAsync(MediaStatus status,
+        Guid? ownerId = null,
+        string ownerType = TEST_OWNER_TYPE,
         CancellationToken cancellationToken = default)
     {
+        var effectiveOwnerId = ownerId ?? TEST_DEPARTMENT_ID;
+
         VideoAsset videoAsset = await ExecuteInDb(async dbContext =>
         {
             Guid mediaAssetId = Guid.NewGuid();
@@ -97,7 +103,8 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
             var contentType = ContentType.Create("video/mp4").Value;
             var mediaData = MediaData.Create(fileName, contentType, fileInfo.Length, 1).Value;
 
-            VideoAsset videoAsset = VideoAsset.CreateForUpload(mediaAssetId, mediaData).Value;
+            VideoAsset videoAsset =
+                VideoAsset.CreateForUpload(mediaAssetId, mediaData, effectiveOwnerId, ownerType).Value;
 
             dbContext.MediaAssets.Add(videoAsset);
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -145,5 +152,59 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         });
 
         return videoAsset;
+    }
+
+    protected async Task<PhotoAsset> CreatePhotoAssetAsync(
+        MediaStatus status,
+        Guid? ownerId = null,
+        string ownerType = TEST_OWNER_TYPE,
+        CancellationToken cancellationToken = default)
+    {
+        var effectiveOwnerId = ownerId ?? TEST_DEPARTMENT_ID;
+        const string photoFileName = "test-photo.jpg";
+
+        PhotoAsset photoAsset = await ExecuteInDb(async dbContext =>
+        {
+            Guid mediaAssetId = Guid.NewGuid();
+            FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", photoFileName));
+
+            var fileName = FileName.Create(photoFileName).Value;
+            var contentType = ContentType.Create("image/jpeg").Value;
+            var mediaData = MediaData.Create(fileName, contentType, fileInfo.Length, 1).Value;
+
+            PhotoAsset asset = PhotoAsset.CreateForUpload(
+                mediaAssetId,
+                mediaData,
+                effectiveOwnerId,
+                ownerType).Value;
+
+            dbContext.MediaAssets.Add(asset);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            await ExecuteInFileProvider(async fileProvider =>
+            {
+                await fileProvider.UploadFileAsync(
+                    asset.UploadKey,
+                    fileInfo.OpenRead(),
+                    mediaData.ContentType.Value,
+                    cancellationToken);
+            });
+
+            if (status == MediaStatus.UPLOADED)
+            {
+                asset.MarkUploaded();
+                asset.MarkReady();
+            }
+            else if (status == MediaStatus.READY)
+            {
+                asset.MarkUploaded();
+                asset.MarkReady();
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return asset;
+        });
+
+        return photoAsset;
     }
 }

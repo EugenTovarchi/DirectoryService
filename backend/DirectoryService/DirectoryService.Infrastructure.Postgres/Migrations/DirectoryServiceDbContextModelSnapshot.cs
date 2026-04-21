@@ -59,13 +59,17 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                         .HasColumnType("ltree")
                         .HasColumnName("path");
 
+                    b.Property<Guid?>("PhotoAssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("photo_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("timezone('utc',now())");
 
-                    b.Property<Guid?>("VideoId")
+                    b.Property<Guid?>("VideoAssetId")
                         .HasColumnType("uuid")
                         .HasColumnName("video_id");
 

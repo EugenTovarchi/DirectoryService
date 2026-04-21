@@ -64,6 +64,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["S3Options:SecretKey"] = "minioadmin",
                 ["S3Options:WithSsl"] = "false",
                 ["S3Options:ForcePathStyle"] = "true",
+                ["ConnectionStrings:RabbitMq"] = "amqp://localhost:5672",
                 ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
                 ["VideoProcessingOptions:FfmpegPath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffmpeg.exe",
                 ["VideoProcessingOptions:FfprobePath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffprobe.exe",
@@ -80,7 +81,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<FileServiceDbContext>();
             services.RemoveAll<IFileReadDbContext>();
             services.RemoveAll<IFileStorageProvider>();
-            services.RemoveAll<IProcessRunner>();
+            services.RemoveAll<IDataProcessRunner>();
             services.RemoveAll<IAmazonS3>();
 
             var bucketServiceDescriptor = services.FirstOrDefault(d =>
@@ -115,7 +116,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddScoped<IMediaAssetsRepository, MediaAssetsRepository>();
             services.AddScoped<IFileStorageProvider, FileStorageProvider>();
             services.AddTransient<IChunkSizeCalculator, ChunkSizeCalculator>();
-            services.AddScoped<IProcessRunner, ProcessRunner>();
+            services.AddScoped<IDataProcessRunner, DataDataProcessRunner>();
 
             services.RemoveAll<IFfmpegProcessRunner>();
             services.AddSingleton<IFfmpegProcessRunner, FakeFfmpegProcessRunner>();

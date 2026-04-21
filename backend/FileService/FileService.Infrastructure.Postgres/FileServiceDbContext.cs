@@ -3,6 +3,7 @@ using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
 using FileService.Infrastructure.Postgres.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Wolverine.EntityFrameworkCore;
 
 namespace FileService.Infrastructure.Postgres;
 
@@ -32,5 +33,6 @@ public class FileServiceDbContext : DbContext, IFileReadDbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfiguration(new MediaAssetsConfiguration());
         modelBuilder.ApplyConfiguration(new VideoProcessesConfiguration());
+        modelBuilder.MapWolverineEnvelopeStorage("public");
     }
 }

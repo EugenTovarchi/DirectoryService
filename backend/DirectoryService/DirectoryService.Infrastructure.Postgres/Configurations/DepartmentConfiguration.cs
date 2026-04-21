@@ -80,8 +80,12 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .HasColumnName("deleted_at")
             .IsRequired(false);
 
-        builder.Property(d => d.VideoId)
+        builder.Property(d => d.VideoAssetId)
             .HasColumnName("video_id")
+            .IsRequired(false);
+
+        builder.Property(d => d.PhotoAssetId)
+            .HasColumnName("photo_id")
             .IsRequired(false);
 
         builder.Property(d => d.CreatedAt)
