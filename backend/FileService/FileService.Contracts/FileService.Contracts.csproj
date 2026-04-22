@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>IstredDev.FileService.Contracts</PackageId>
-    <Version>0.0.2</Version>
+    <Version>0.0.3</Version>
     <Authors>Istred</Authors>
     <Company>Istred</Company>
     <PackageDescription>Framework</PackageDescription>
@@ -9,8 +9,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="istreddev.framework" />
+    <PackageReference Include="IstredDev.IntegrationEvents.Core" />
     <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="WolverineFx.EntityFrameworkCore" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+    <PackageReference Include="WolverineFx.RabbitMQ" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Extensions.Logging.Abstractions">

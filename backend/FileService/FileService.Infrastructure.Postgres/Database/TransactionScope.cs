@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using CSharpFunctionalExtensions;
-using FileService.Core;
+using FileService.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using SharedService.SharedKernel;
 
@@ -22,6 +22,7 @@ public class TransactionScope : ITransactionScope
         try
         {
             _transaction.Commit();
+            _logger.LogInformation("Transaction committed successfully");
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)
@@ -41,6 +42,7 @@ public class TransactionScope : ITransactionScope
         try
         {
             _transaction.Rollback();
+            _logger.LogInformation("Transaction rolled back");
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)

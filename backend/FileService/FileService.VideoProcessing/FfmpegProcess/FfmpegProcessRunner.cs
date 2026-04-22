@@ -12,16 +12,16 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
 {
     private readonly VideoProcessingOptions _videoOptions;
     private readonly PreviewOptions _previewOptions;
-    private readonly IProcessRunner _processRunner;
+    private readonly IDataProcessRunner _dataProcessRunner;
 
     public FfmpegProcessRunner(
         IOptions<VideoProcessingOptions> videoProcessingOptions,
-        IProcessRunner processRunner,
+        IDataProcessRunner dataProcessRunner,
         IOptions<PreviewOptions> previewOptions)
     {
         _videoOptions = videoProcessingOptions.Value;
         _previewOptions = previewOptions.Value;
-        _processRunner = processRunner;
+        _dataProcessRunner = dataProcessRunner;
     }
 
     public async Task<Result<VideoMetadata, Error>> ExtractMetadataAsync(
@@ -31,7 +31,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string arguments = BuildFfprobeArguments(inputFileUrl);
         var command = new ProcessCommand(_videoOptions.FfprobePath, arguments);
 
-        Result<ProcessResult, Error> processResult = await _processRunner.RunAsync(command,
+        Result<ProcessResult, Error> processResult = await _dataProcessRunner.RunAsync(command,
             cancellationToken: cancellationToken);
         if (processResult.IsFailure)
             return processResult.Error;
@@ -52,7 +52,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string arguments = BuildFfmpegHlsArguments(inputFileUrl, outputDirectory);
         var command = new ProcessCommand(_videoOptions.FfmpegPath, arguments);
 
-        Result<ProcessResult, Error> processResult = await _processRunner.RunAsync(command,
+        Result<ProcessResult, Error> processResult = await _dataProcessRunner.RunAsync(command,
             cancellationToken: cancellationToken);
         if (processResult.IsFailure)
             return processResult.Error;
@@ -78,7 +78,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
 
         var command = new ProcessCommand(_videoOptions.FfmpegPath, arguments);
 
-        Result<ProcessResult, Error> processResult = await _processRunner.RunAsync(
+        Result<ProcessResult, Error> processResult = await _dataProcessRunner.RunAsync(
             command,
             cancellationToken: cancellationToken);
 
@@ -120,7 +120,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
 
         var command = new ProcessCommand(_videoOptions.FfmpegPath, arguments);
 
-        Result<ProcessResult, Error> processResult = await _processRunner.RunAsync(
+        Result<ProcessResult, Error> processResult = await _dataProcessRunner.RunAsync(
             command,
             cancellationToken: cancellationToken);
 

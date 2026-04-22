@@ -13,6 +13,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${DEFAULT_CONNECTION}
+      - ConnectionStrings__RabbitMq=${RABBIT_CONNECTION}
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,6 +97,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       NUGET_USERNAME: ${NUGET_USERNAME}
       NUGET_PASSWORD: ${NUGET_PASSWORD}
+      ConnectionStrings__RabbitMq: ${RABBIT_CONNECTION} 
       
     depends_on:
       - postgres
@@ -105,10 +107,33 @@ services:
     tty: true
     stdin_open: true
     restart: unless-stopped
+    
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:4-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - .env
+    environment:
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+        - ASPNETCORE_ENVIRONMENT=Docker
+        - ConnectionStrings__RabbitMQ=${RABBIT_CONNECTION}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
 
 
   

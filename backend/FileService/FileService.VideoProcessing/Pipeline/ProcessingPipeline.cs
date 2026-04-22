@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using FileService.Core;
 using FileService.Core.Abstractions;
 using FileService.Domain.MediaProcessing;
 using Microsoft.Extensions.Logging;

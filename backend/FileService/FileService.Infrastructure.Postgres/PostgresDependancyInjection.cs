@@ -1,9 +1,7 @@
-﻿using FileService.Core;
-using FileService.Core.Abstractions;
+﻿using FileService.Core.Abstractions;
 using FileService.Core.FilesStorage;
 using FileService.Infrastructure.Postgres.Database;
 using FileService.Infrastructure.Postgres.Repositories;
-using FileService.VideoProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

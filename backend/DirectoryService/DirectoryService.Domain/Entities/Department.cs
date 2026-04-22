@@ -9,7 +9,10 @@ namespace DirectoryService.Domain.Entities;
 public sealed class Department : SoftDeletableEntity<DepartmentId>
 {
     private Department(DepartmentId id)
-        : base(id) { }
+        : base(id)
+    {
+    }
+
     private Department(
         DepartmentId departmentId,
         Name name,
@@ -17,7 +20,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         Path path,
         short depth,
         DepartmentId? parentId,
-        Guid? videoId)
+        Guid? videoAssetId,
+        Guid? photoAssetId)
         : base(departmentId)
     {
         Name = name;
@@ -25,7 +29,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         Path = path;
         Depth = depth;
         ParentId = parentId;
-        VideoId = videoId;
+        VideoAssetId = videoAssetId;
+        PhotoAssetId = photoAssetId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -35,6 +40,10 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
     public DepartmentId? ParentId { get; private set; }
     public Path Path { get; private set; } = null!;
     public short Depth { get; private set; }
+
+    public Guid? PhotoAssetId { get; private set; }
+
+    public Guid? VideoAssetId { get; private set; }
 
     private readonly List<Department> _childrenDepartment = [];
     private readonly List<DepartmentLocation> _departmentLocations = [];
@@ -46,7 +55,6 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
-    public Guid? VideoId { get; private set; }
 
     public override void Delete()
     {
@@ -60,9 +68,27 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateVideoId(Guid? videoId)
+    public void UpdateVideoId(Guid? videoAssetId)
     {
-        VideoId = videoId;
+        VideoAssetId = videoAssetId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdatePhotoId(Guid? photoAssetId)
+    {
+        PhotoAssetId = photoAssetId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void CleanVideoId()
+    {
+        VideoAssetId = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void CleanPhotoId()
+    {
+        PhotoAssetId = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -113,7 +139,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             pathResult.Value,
             depth: 0,
             parentId: null,
-            videoId: null);
+            videoAssetId: null,
+            photoAssetId: null);
     }
 
     public UnitResult<Error> MoveTo(Department? newParent)
@@ -163,7 +190,8 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
             pathResult.Value,
             depth: (short)(parent.Depth + 1),
             parentId: parent.Id,
-            videoId: null);
+            videoAssetId: null,
+            photoAssetId: null);
     }
 
     public UnitResult<Error> MoveAsChildDepartment(Department parent)

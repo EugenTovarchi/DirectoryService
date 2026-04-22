@@ -24,7 +24,7 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
 
         await CreateTestBucketAsync(VideoAsset.LOCATION);
 
-        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
+        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
 
         Guid mediaAssetId = mediaAsset.Id;
 
@@ -58,7 +58,7 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
 
-        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.UPLOADING, cancellationToken);
+        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.UPLOADING, cancellationToken: cancellationToken);
 
         // Act
         string url = $"/files/{mediaAsset.Id}";

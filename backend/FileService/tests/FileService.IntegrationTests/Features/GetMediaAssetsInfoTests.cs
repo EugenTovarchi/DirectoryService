@@ -22,8 +22,8 @@ public class GetMediaAssetsInfoTests : FileServiceBaseTests
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
 
-        var mediaAsset1 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
-        var mediaAsset2 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
+        var mediaAsset1 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
+        var mediaAsset2 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
 
         Guid mediaAssetId1 = mediaAsset1.Id;
         Guid mediaAssetId2 = mediaAsset2.Id;
@@ -68,8 +68,8 @@ public class GetMediaAssetsInfoTests : FileServiceBaseTests
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
 
-        var existingAsset1 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
-        var existingAsset2 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
+        var existingAsset1 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
+        var existingAsset2 = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
         var nonExistentId = Guid.NewGuid();
 
         List<Guid> mixedIds = [existingAsset1.Id, nonExistentId, existingAsset2.Id];
@@ -123,7 +123,7 @@ public class GetMediaAssetsInfoTests : FileServiceBaseTests
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
 
-        var asset = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken);
+        var asset = await CreateVideoAssetAsync(MediaStatus.UPLOADED, cancellationToken: cancellationToken);
 
         List<Guid> duplicateIds = [asset.Id, asset.Id];
         var getMediaAssetsInfoRequest = new GetMediaAssetsRequest(duplicateIds);

@@ -22,8 +22,10 @@ public class VideoAsset : MediaAsset
         Guid id,
         MediaData mediaData,
         MediaStatus mediaStatus,
+        Guid ownerId,
+        string ownerType,
         StorageKey rawKey)
-    : base(id, mediaData, mediaStatus, AssetType.VIDEO, rawKey)
+        : base(id, mediaData, mediaStatus, AssetType.VIDEO, ownerId, ownerType, rawKey)
     {
     }
 
@@ -52,17 +54,31 @@ public class VideoAsset : MediaAsset
         return UnitResult.Success<Error>();
     }
 
-    public static Result<VideoAsset, Error> CreateForUpload(Guid id, MediaData mediaData)
+    public static Result<VideoAsset, Error> CreateForUpload(
+        Guid id,
+        MediaData mediaData,
+        Guid ownerId,
+        string ownerType)
     {
         UnitResult<Error> validationResult = Validate(mediaData);
         if (validationResult.IsFailure)
             return validationResult.Error;
 
-        Result<StorageKey, Error> rawKey = StorageKey.Create(id.ToString(),  RAW_PREFIX, LOCATION);
+        if (ownerId == Guid.Empty)
+        {
+            return Error.Validation("video.invalid.owner-id", "OwnerId cannot be empty");
+        }
+
+        if (string.IsNullOrWhiteSpace(ownerType))
+        {
+            return Error.Validation("video.invalid.owner-type", "OwnerType cannot be empty");
+        }
+
+        Result<StorageKey, Error> rawKey = StorageKey.Create(id.ToString(), RAW_PREFIX, LOCATION);
         if (rawKey.IsFailure)
             return rawKey.Error;
 
-        return new VideoAsset(id, mediaData, MediaStatus.UPLOADING, rawKey.Value);
+        return new VideoAsset(id, mediaData, MediaStatus.UPLOADING, ownerId, ownerType, rawKey.Value);
     }
 
     public override bool RequiresProcessing() => true;
@@ -95,7 +111,7 @@ public class VideoAsset : MediaAsset
     public Result<StorageKey, Error> GetMasterPlaylistKey()
     {
         Result<StorageKey, Error> hlsRoot = GetHlsRootKey();
-        if(hlsRoot.IsFailure)
+        if (hlsRoot.IsFailure)
             return hlsRoot.Error;
 
         return hlsRoot.Value.AppendKey(MASTER_PLAYLIST_NAME);

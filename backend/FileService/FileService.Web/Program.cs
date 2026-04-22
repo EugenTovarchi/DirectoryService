@@ -1,3 +1,4 @@
+using FileService.Contracts.Messaging;
 using FileService.Core;
 using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.S3;
@@ -34,6 +35,8 @@ public partial class Program
                 .AddS3(builder.Configuration)
                 .AddVideoProcessing(builder.Configuration)
                 .AddPostgresInfrastructure(builder.Configuration);
+
+            builder.AddWolverine();
 
             var app = builder.Build();
 
