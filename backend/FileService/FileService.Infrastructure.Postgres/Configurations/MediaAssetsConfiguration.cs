@@ -88,8 +88,12 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
 
         builder.HasDiscriminator(m => m.AssetType)
             .HasValue<VideoAsset>(AssetType.VIDEO)
-            .HasValue<PreviewAsset>(AssetType.PREVIEW);
+            .HasValue<PreviewAsset>(AssetType.PREVIEW)
+            .HasValue<PhotoAsset>(AssetType.PHOTO);
 
-        builder.Property(m => m.Status).HasColumnName("status").HasConversion<string>().IsRequired();
+        builder.Property(m => m.Status)
+            .HasColumnName("status")
+            .HasConversion<string>()
+            .IsRequired();
     }
 }
