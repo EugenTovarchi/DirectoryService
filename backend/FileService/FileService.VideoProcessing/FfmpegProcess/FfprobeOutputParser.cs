@@ -46,16 +46,20 @@ public static class FfprobeOutputParser
 
 public sealed class FfprobeResponse
 {
-    [JsonPropertyName("streams")] public List<StreamInfo?> Streams { get; set; }
+    [JsonPropertyName("streams")]
+    public List<StreamInfo?> Streams { get; set; }
 
-    [JsonPropertyName("format")] public FormatInfo? Format { get; set; }
+    [JsonPropertyName("format")]
+    public FormatInfo? Format { get; set; }
 }
 
 public sealed class StreamInfo
 {
-    [JsonPropertyName("width")] public int? Width { get; set; }
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
 
-    [JsonPropertyName("height")] public int? Height { get; set; }
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
 }
 
 public sealed class FormatInfo
@@ -78,7 +82,8 @@ public sealed class FormatInfo
         }
     }
 
-    [JsonIgnore] public double? Duration => _duration;
+    [JsonIgnore]
+    public double? Duration => _duration;
 }
 
 public sealed class StringToDoubleConverter : JsonConverter<double?>

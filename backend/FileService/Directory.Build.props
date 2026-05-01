@@ -4,6 +4,7 @@
       <PrivateAssets>all</PrivateAssets>
       <Includeassets>runtime; build; native; contentfiles; analyzers; buildtransitive</Includeassets>
     </PackageReference>
+    
   </ItemGroup>
 
   <PropertyGroup>

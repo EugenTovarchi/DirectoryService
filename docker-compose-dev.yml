@@ -19,6 +19,8 @@ services:
         condition: service_healthy
       seq:
         condition: service_started
+      loki:
+        condition: service_started
     restart: unless-stopped
 
   seq:
@@ -97,12 +99,13 @@ services:
       ASPNETCORE_URLS: http://+:8080
       NUGET_USERNAME: ${NUGET_USERNAME}
       NUGET_PASSWORD: ${NUGET_PASSWORD}
-      ConnectionStrings__RabbitMq: ${RABBIT_CONNECTION} 
+      ConnectionStrings__RabbitMq: ${RABBIT_CONNECTION}
       
     depends_on:
       - postgres
       - redis
       - seq
+      - loki
       
     tty: true
     stdin_open: true
@@ -119,8 +122,8 @@ services:
     environment:
       RABBIT_USER: ${RABBIT_USER}
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
-        - ASPNETCORE_ENVIRONMENT=Docker
-        - ConnectionStrings__RabbitMQ=${RABBIT_CONNECTION}
+#        - ASPNETCORE_ENVIRONMENT=Docker
+#        - ConnectionStrings__RabbitMQ=${RABBIT_CONNECTION}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -129,6 +132,21 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+  
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
 
 volumes:
   postgres_data:
