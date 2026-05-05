@@ -37,7 +37,7 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            _logger.LogWarning("Position: {command} is invalid!", command.Request.PositionName);
+            _logger.LogWarning("Position: {Command} is invalid!", command.Request.PositionName);
 
             return validationResult.ToErrors();
         }

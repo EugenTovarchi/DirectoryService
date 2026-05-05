@@ -116,7 +116,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddScoped<IMediaAssetsRepository, MediaAssetsRepository>();
             services.AddScoped<IFileStorageProvider, FileStorageProvider>();
             services.AddTransient<IChunkSizeCalculator, ChunkSizeCalculator>();
-            services.AddScoped<IDataProcessRunner, DataDataProcessRunner>();
+            services.AddScoped<IDataProcessRunner, DataProcessRunner>();
 
             services.RemoveAll<IFfmpegProcessRunner>();
             services.AddSingleton<IFfmpegProcessRunner, FakeFfmpegProcessRunner>();

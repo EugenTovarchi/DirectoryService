@@ -10,7 +10,7 @@ public class StepNames
     public const string Cleanup = "CLEANUP";
 
     public readonly IReadOnlySet<string> All = new HashSet<string>(
-StringComparer.OrdinalIgnoreCase)
+        StringComparer.OrdinalIgnoreCase)
     {
         Initialize,
         ExtractMetadata,

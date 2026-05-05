@@ -272,7 +272,7 @@
             }
         }
 
-        private bool TryGetGuidFromJobData(JobDataMap jobDataMap, string key, out Guid result)
+        private static bool TryGetGuidFromJobData(JobDataMap jobDataMap, string key, out Guid result)
         {
             result = Guid.Empty;
 

@@ -1,6 +1,6 @@
 ﻿namespace DirectoryService.Contracts.ValueObjects.Ids;
 
-public class DepartmentId : ValueObject, IComparable<DepartmentId>
+public class DepartmentId : ValueObject, IComparable<DepartmentId>, IEquatable<DepartmentId>
 {
     public Guid Value { get; }
 
@@ -31,5 +31,13 @@ public class DepartmentId : ValueObject, IComparable<DepartmentId>
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Value;
+    }
+    
+    public bool Equals(DepartmentId? other)
+    {
+        if (other is null) 
+            return false;
+        
+        return Value == other.Value;
     }
 }

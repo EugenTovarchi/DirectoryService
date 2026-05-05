@@ -24,8 +24,9 @@ public record Identifier
             return Errors.General.ValueIsInvalid("identifier");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
+            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
 
-        return new Identifier(normilized);
+        return new Identifier(normalized);
     }
 }

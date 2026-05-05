@@ -66,13 +66,13 @@ public class LocationRepository : ILocationRepository
                 """;
 
             var connection = _dbContext.Database.GetDbConnection();
-            var updatedLocations = await connection.ExecuteAsync(sql, parameters);
+            int updatedLocations = await connection.ExecuteAsync(sql, parameters);
 
-            _logger.LogInformation("Count of updated locations: {updatedLocations}", updatedLocations);
+            _logger.LogInformation("Count of updated locations: {UpdatedLocations}", updatedLocations);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for locations of department{departmentId}", departmentId);
+            _logger.LogError(ex, "Update error for locations of department{DepartmentId}", departmentId);
             return Errors.General.DatabaseError("update.locations");
         }
 
@@ -110,13 +110,13 @@ public class LocationRepository : ILocationRepository
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogError(ex, "Operation was cancelled while creating location with name {name}",
+            _logger.LogError(ex, "Operation was cancelled while creating location with name {Name}",
                 location.Name.Value);
             return Errors.General.DatabaseError("creating_location_error");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while creating location with name {name}", location.Name.Value);
+            _logger.LogError(ex, "Unexpected error while creating location with name {Name}", location.Name.Value);
             return Errors.General.DatabaseError("creating_location_error");
         }
     }
@@ -125,7 +125,7 @@ public class LocationRepository : ILocationRepository
     {
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
-            _logger.LogError("Database error while creating location {name}: {Message}", locationName,
+            _logger.LogError("Database error while creating location {Name}: {Message}", locationName,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_location_error");
         }
@@ -134,29 +134,29 @@ public class LocationRepository : ILocationRepository
 
         if (constraintName == "ix_location_name")
         {
-            _logger.LogWarning("Duplicate location name: {name}", locationName);
+            _logger.LogWarning("Duplicate location name: {Name}", locationName);
             return Errors.General.Duplicate("location_name");
         }
 
         if (constraintName == "ix_location_address_unique")
         {
-            _logger.LogWarning("Duplicate location address for location: {name}", locationName);
+            _logger.LogWarning("Duplicate location address for location: {Name}", locationName);
             return Errors.General.Duplicate("address");
         }
 
         if (constraintName.Contains("name"))
         {
-            _logger.LogWarning("Duplicate name constraint violation for location: {name}", locationName);
+            _logger.LogWarning("Duplicate name constraint violation for location: {Name}", locationName);
             return Errors.General.Duplicate("name");
         }
 
         if (constraintName.Contains("address"))
         {
-            _logger.LogWarning("Duplicate address constraint violation for location: {name}", locationName);
+            _logger.LogWarning("Duplicate address constraint violation for location: {Name}", locationName);
             return Errors.General.Duplicate("address");
         }
 
-        _logger.LogError("Unknown unique constraint violation for location {name}: {Constraint}", locationName,
+        _logger.LogError("Unknown unique constraint violation for location {Name}: {Constraint}", locationName,
             pgEx.ConstraintName);
         return Errors.General.Duplicate("record");
     }

@@ -18,7 +18,10 @@ public class Program
 
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true);
 
-            builder.Configuration.AddUserSecrets<Program>();
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Configuration.AddUserSecrets<Program>(optional: true);
+            }
 
             builder.Services.AddControllers();
 

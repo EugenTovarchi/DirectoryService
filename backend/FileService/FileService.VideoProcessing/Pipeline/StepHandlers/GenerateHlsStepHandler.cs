@@ -10,12 +10,12 @@ namespace FileService.VideoProcessing.Pipeline.StepHandlers;
 
 public sealed class GenerateHlsStepHandler : IProcessingStepHandler
 {
-    private readonly ILogger<ExtractMetadataStepHandler> _logger;
+    private readonly ILogger<GenerateHlsStepHandler> _logger;
     private readonly IFfmpegProcessRunner _ffmpegProcessRunner;
     private readonly IFileStorageProvider _fileStorageProvider;
 
     public GenerateHlsStepHandler(
-        ILogger<ExtractMetadataStepHandler> logger,
+        ILogger<GenerateHlsStepHandler> logger,
         IFfmpegProcessRunner ffmpegProcessRunner,
         IFileStorageProvider fileStorageProvider)
     {

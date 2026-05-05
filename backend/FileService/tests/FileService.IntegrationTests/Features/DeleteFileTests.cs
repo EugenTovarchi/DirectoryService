@@ -18,6 +18,7 @@ namespace FileService.IntegrationTests.Features;
 public class DeleteFileTests : FileServiceBaseTests
 {
     private readonly FileServiceTestWebFactory _factory;
+    private const string TEST_PHOTO_FILE_NAME = "test-photo.jpg";
 
     public DeleteFileTests(FileServiceTestWebFactory factory)
         : base(factory)
@@ -30,7 +31,7 @@ public class DeleteFileTests : FileServiceBaseTests
     {
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
-        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_PHOTO_FILE_NAME));
 
         var startResponse = await StartMultipartUpload(fileInfo, cancellationToken);
 
@@ -223,12 +224,12 @@ public class DeleteFileTests : FileServiceBaseTests
         FileInfo fileInfo,
         CancellationToken cancellationToken)
     {
-        await CreateTestBucketAsync(VideoAsset.LOCATION);
+        await CreateTestBucketAsync(PhotoAsset.LOCATION);
 
         var request = new StartMultipartUploadRequest(
             fileInfo.Name,
-            "video",
-            "video/mp4",
+            "photo",
+            "image/jpeg",
             fileInfo.Length,
             TEST_OWNER_TYPE,
             TEST_DEPARTMENT_ID);

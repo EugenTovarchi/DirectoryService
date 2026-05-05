@@ -32,7 +32,7 @@ public sealed class Location : SoftDeletableEntity<LocationId>
     public DateTime UpdatedAt { get; private set; }
 
     private readonly List<DepartmentLocation> _departmentLocations = [];
-    public IReadOnlyCollection<DepartmentLocation> DepartmentLocations => _departmentLocations.ToList();
+    public IReadOnlyCollection<DepartmentLocation> DepartmentLocations => _departmentLocations.AsReadOnly();
 
     public override void Delete()
     {

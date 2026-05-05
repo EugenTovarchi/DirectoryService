@@ -23,8 +23,9 @@ public record Name
             return Errors.General.ValueIsInvalid("name");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
+            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
 
-        return new Name(normilized);
+        return new Name(normalized);
     }
 }

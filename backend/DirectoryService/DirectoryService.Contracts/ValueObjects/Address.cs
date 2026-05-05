@@ -22,6 +22,15 @@ public record Address
         House = house.Trim();
         Flat = flat;
     }
+    
+    // Для EF Core
+    private Address()
+    {
+        Country = string.Empty;
+        City = string.Empty;
+        Street = string.Empty;
+        House = string.Empty;
+    }
 
     public static Result<Address, Error> Create(
         string country,
@@ -48,9 +57,9 @@ public record Address
             return Errors.General.ValueIsRequired("city");
 
         if (street.Length > MAX_LENGTH)
-            return Errors.General.ValueIsEmptyOrWhiteSpace("street");
+            return Errors.General.ValueIsRequired("street");
 
-        if (street.Length > MAX_LENGTH)
+        if (house.Length > MAX_LENGTH)
             return Errors.General.ValueIsRequired("house");
 
         return new Address(
@@ -70,14 +79,5 @@ public record Address
             return Errors.General.ValueMustBePositive("flat");
 
         return new Address(country.Trim(), city.Trim(), street.Trim(), house.Trim(), flat);
-    }
-
-    // Для EF Core
-    private Address()
-    {
-        Country = string.Empty;
-        City = string.Empty;
-        Street = string.Empty;
-        House = string.Empty;
     }
 }

@@ -57,7 +57,7 @@ public class ProcessingPipeline : IProcessingPipeline
             if (stepResult.IsFailure)
             {
                 _logger.LogWarning("Failed processing step {Step} of video asset{VideoAssetId}: {Error}",
-                    stepResult.Error, videoAssetId, stepResult.Error.Message);
+                    processingContext.VideoProcess.CurrentStep?.Name, videoAssetId, stepResult.Error.Message);
                 return stepResult.Error;
             }
 
@@ -77,7 +77,7 @@ public class ProcessingPipeline : IProcessingPipeline
             if (stepHandler is null)
             {
                 string error = $"No step handler registered for this step: {currentStep.Name}";
-                _logger.LogError("No step handler registered for this step: {CurrentStep.Name}", currentStep.Name);
+                _logger.LogError("No step handler registered for this step: {CurrentStepName}", currentStep.Name);
 
                 processingContext.VideoProcess.Fail(error);
                 var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);

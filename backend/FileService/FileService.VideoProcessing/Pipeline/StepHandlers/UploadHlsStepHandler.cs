@@ -102,7 +102,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
             cancellationToken);
     }
 
-    private string GetContentType(string filePath)
+    private static string GetContentType(string filePath)
     {
         string extension = Path.GetExtension(filePath).ToLowerInvariant();
 
@@ -110,7 +110,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         {
             ".m3u8" => "application/vnd.apple.mpegurl",
             ".ts" => "video/mp2t",
-            _ => "application/octet-stream"
+            _ => "application/octet-stream",
         };
     }
 }

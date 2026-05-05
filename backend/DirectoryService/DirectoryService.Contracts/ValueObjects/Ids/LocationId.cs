@@ -1,6 +1,6 @@
 ﻿namespace DirectoryService.Contracts.ValueObjects.Ids;
 
-public class LocationId : ValueObject, IComparable<LocationId>
+public class LocationId : ValueObject, IComparable<LocationId>, IEquatable<LocationId>
 {
     private LocationId() { }
     private LocationId(Guid value) => Value = value;
@@ -28,5 +28,13 @@ public class LocationId : ValueObject, IComparable<LocationId>
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Value;
+    }
+    
+    public bool Equals(LocationId? other)
+    {
+        if (other is null) 
+            return false;
+        
+        return Value == other.Value;
     }
 }

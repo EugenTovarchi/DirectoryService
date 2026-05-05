@@ -15,7 +15,7 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<PagedList<GetLocationResponse>> Handle(GetLocationsQuery query, CancellationToken ct)
+    public async Task<PagedList<GetLocationResponse>> Handle(GetLocationsQuery query, CancellationToken ct = default)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
         var parameters = new DynamicParameters();
@@ -23,7 +23,7 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            conditions.Add("l.name ILIKE @search");
+            conditions.Add("l.name LIKE @search");
             parameters.Add("search", $"%{query.Search}%");
         }
 

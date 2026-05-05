@@ -2,8 +2,6 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 USER $APP_UID
 WORKDIR /app
-ARG NUGET_USERNAME
-ARG NUGET_PASSWORD
 EXPOSE 8080
 
 # This stage is used to build the service project
@@ -13,7 +11,6 @@ WORKDIR /src
 
 COPY ["Directory.Build.props", "."]
 COPY ["Directory.Packages.props", "."]
-COPY ["nuget.config", "."]
 COPY [".editorconfig", "."]
 COPY ["BannedSymbols.txt", "."]
 
@@ -23,20 +20,29 @@ COPY ["backend/DirectoryService/DirectoryService.Application/DirectoryService.Ap
 COPY ["backend/DirectoryService/DirectoryService.Contracts/DirectoryService.Contracts.csproj", "backend/DirectoryService/DirectoryService.Contracts/"]
 COPY ["backend/DirectoryService/DirectoryService.Domain/DirectoryService.Domain.csproj", "backend/DirectoryService/DirectoryService.Domain/"]
 COPY ["backend/DirectoryService/DirectoryService.Infrastructure.Postgres/DirectoryService.Infrastructure.Postgres.csproj", "backend/DirectoryService/DirectoryService.Infrastructure.Postgres/"]
-RUN dotnet restore "./backend/DirectoryService/DirectoryService.Web/DirectoryService.Web.csproj"
+RUN --mount=type=secret,id=nuget_config \
+    --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    cp /run/secrets/nuget_config /tmp/nuget.config && \
+    dotnet nuget update source github \
+        --configfile /tmp/nuget.config \
+        --username "$(cat /run/secrets/nuget_username)" \
+        --password "$(cat /run/secrets/nuget_password)" \
+        --store-password-in-clear-text && \
+    dotnet restore "./backend/DirectoryService/DirectoryService.Web/DirectoryService.Web.csproj" \
+        --configfile /tmp/nuget.config && \
+    rm /tmp/nuget.config
 
 COPY . .
 WORKDIR "/src/backend/DirectoryService/DirectoryService.Web"
 
 # Восстанавливаем user secrets во время сборки
-RUN dotnet restore "./DirectoryService.Web.csproj" /p:Configuration=$BUILD_CONFIGURATION
-
-RUN dotnet build "./DirectoryService.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./DirectoryService.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./DirectoryService.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./DirectoryService.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final

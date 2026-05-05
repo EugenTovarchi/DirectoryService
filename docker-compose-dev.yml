@@ -4,16 +4,17 @@ services:
     build:
       context: .
       dockerfile: /backend/DirectoryService/DirectoryService.Web/Dockerfile
-      args:
-        - NUGET_USERNAME=${NUGET_USERNAME}
-        - NUGET_PASSWORD=${NUGET_PASSWORD}
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
     ports:
       - "9002:8080"
+    env_file:
+      - DirectoryService.Development.env
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=${DEFAULT_CONNECTION}
-      - ConnectionStrings__RabbitMq=${RABBIT_CONNECTION}
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,16 +34,12 @@ services:
       - "15341:5341"
       - "8081:80"
     restart: always
-  
+
   postgres:
     container_name: directory-service-postgres
     image: postgres:15
     env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      - DirectoryService.Development.env
     ports:
       - "5434:5432"
     volumes:
@@ -53,64 +50,50 @@ services:
       timeout: 5s
       retries: 5
     restart: always
-  
+
   redis:
     container_name: redis
     image: redis:alpine
     ports:
       - "6379:6379"
     restart: always
-  
+
   minio:
     container_name: file-service-minio
     image: minio/minio:latest
+    env_file:
+      - FileService.Development.env
     ports:
       - "19000:9000"
       - "19001:9001"
-    environment:
-      MINIO_ROOT_USER: fileservice
-      MINIO_ROOT_PASSWORD: fileservice123
     command: server /data --console-address ":9001"
-
     restart: always
-    
+
   file-service:
     container_name: file-service
     build:
       context: .
       dockerfile: /backend/FileService/FileService.Web/Dockerfile
-      args:
-        - NUGET_USERNAME=${NUGET_USERNAME}
-        - NUGET_PASSWORD=${NUGET_PASSWORD}
-      
-    volumes:
-      - ./backend/FileService:/src
-      
-    working_dir: /src/FileService.Web
-      
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
     ports:
       - "8002:8080"
-      
     env_file:
-      - FileService.env
-      
+      - FileService.Development.env
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_URLS: http://+:8080
-      NUGET_USERNAME: ${NUGET_USERNAME}
-      NUGET_PASSWORD: ${NUGET_PASSWORD}
-      ConnectionStrings__RabbitMq: ${RABBIT_CONNECTION}
-      
     depends_on:
       - postgres
       - redis
       - seq
       - loki
-      
     tty: true
     stdin_open: true
     restart: unless-stopped
-    
+
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:4-management-alpine
@@ -118,12 +101,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     env_file:
-      - .env
-    environment:
-      RABBIT_USER: ${RABBIT_USER}
-      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
-#        - ASPNETCORE_ENVIRONMENT=Docker
-#        - ConnectionStrings__RabbitMQ=${RABBIT_CONNECTION}
+      - DirectoryService.Development.env
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -132,7 +110,7 @@ services:
       timeout: 5s
       retries: 5
     restart: always
-  
+
   loki:
     image: grafana/loki:latest
     container_name: loki
@@ -153,6 +131,10 @@ volumes:
   redis_data:
   rabbitmq_data:
 
-
-  
- 
+secrets:
+  nuget_config:
+    file: ./nuget.config
+  nuget_username:
+    environment: NUGET_USERNAME
+  nuget_password:
+    environment: NUGET_PASSWORD

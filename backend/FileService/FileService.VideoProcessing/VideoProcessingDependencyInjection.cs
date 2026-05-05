@@ -29,7 +29,7 @@ public static class VideoProcessingDependencyInjection
         services.AddScoped<IPreviewCalculator, PreviewCalculator>();
         services.AddScoped<IFfmpegProcessRunner, FfmpegProcessRunner>();
         services.AddScoped<IPreviewUploader, PreviewUploader>();
-        services.AddScoped<IDataProcessRunner, DataDataProcessRunner>();
+        services.AddScoped<IDataProcessRunner, DataProcessRunner>();
 
         // Добавляем все Handlers
         services.Scan(scan => scan

@@ -23,9 +23,10 @@ public record Path
             return Errors.General.ValueIsInvalid("path");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
+            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
 
-        return new Path(normilized);
+        return new Path(normalized);
     }
 
     public static Result<Path, Error> CreateForChild(Path parentPath, Identifier childIdentifier)

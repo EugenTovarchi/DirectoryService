@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpFunctionalExtensions;
 using FileService.Domain;
@@ -93,7 +94,10 @@ public sealed class StringToDoubleConverter : JsonConverter<double?>
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (double.TryParse(str, out double result))
+            if (double.TryParse(str,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out double result))
                 return result;
 
             return null;

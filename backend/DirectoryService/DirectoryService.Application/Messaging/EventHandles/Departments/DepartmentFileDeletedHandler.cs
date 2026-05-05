@@ -32,8 +32,8 @@ public class DepartmentFileDeletedHandler
             return;
         }
 
-        _logger.LogInformation("Received FileDeleted event for department: {departmentId}" +
-                               " with video: {videoId}", message.TargetEntityId, message.AssetId);
+        _logger.LogInformation("Received FileDeleted event for department: {DepartmentId}" +
+                               " with video: {VideoId}", message.TargetEntityId, message.AssetId);
 
         var departmentResult = await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
         if (departmentResult.IsFailure)

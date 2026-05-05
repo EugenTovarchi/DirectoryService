@@ -147,7 +147,6 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
 
         string segmentPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.SEGMENT_FILE_PATTERN);
         string streamPlaylistPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.STREAM_PLAYLIST_PATTERN);
-        string masterPlaylistPath = CombineAndNormalize(normalizedOutputDir, VideoAsset.MASTER_PLAYLIST_NAME);
 
         return $"-y -stats -loglevel error {hwaccel} -i \"{normalizedInputUrl}\" " +
                "-filter_complex \"" +
@@ -198,7 +197,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
                $"-frames:v 1 -q:v {quality} \"{outputPath}\"";
     }
 
-    private string BuildSpriteSheetArguments(
+    private static string BuildSpriteSheetArguments(
         List<string> imagePaths,
         string outputPath,
         int frameWidth,

@@ -12,7 +12,6 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
 {
     private readonly ILogger<CleanupStepHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
-    private readonly VideoProcessingOptions _options;
 
     public CleanupStepHandler(
         ILogger<CleanupStepHandler> logger,
@@ -21,7 +20,6 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
     {
         _logger = logger;
         _fileStorageProvider = fileStorageProvider;
-        _options = options.Value;
     }
 
     public string StepName => StepNames.Cleanup;
@@ -38,7 +36,8 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
             return await Task.FromResult(context);
         }
 
-        Result<string, Error> deleteResult = await _fileStorageProvider.DeleteFileAsync(context.VideoAsset.RawKey!, cancellationToken);
+        Result<string, Error> deleteResult = await _fileStorageProvider.DeleteFileAsync(context.VideoAsset.RawKey!,
+            cancellationToken);
         if (deleteResult.IsFailure)
         {
             _logger.LogWarning("Failed to delete raw file from storage for video asset: {VideoAssetId}. Error: {Error}",
@@ -52,7 +51,7 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
 
         try
         {
-            if(Directory.Exists(context.WorkingDirectory))
+            if (Directory.Exists(context.WorkingDirectory))
             {
                 Directory.Delete(context.WorkingDirectory, true);
                 _logger.LogDebug("Directory deleted: {Directory}", context.WorkingDirectory);
@@ -62,7 +61,7 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to delete working directory: {directory}. Will be cleaned later",
+            _logger.LogWarning(ex, "Failed to delete working directory: {Directory}. Will be cleaned later",
                 context.WorkingDirectory);
         }
 

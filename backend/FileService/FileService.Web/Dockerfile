@@ -9,7 +9,6 @@ WORKDIR /src
 
 COPY ["Directory.Build.props", "."]
 COPY ["Directory.Packages.props", "."]
-COPY ["nuget.config", "."]
 COPY [".editorconfig", "."]
 COPY ["BannedSymbols.txt", "."]
 
@@ -22,7 +21,18 @@ COPY ["backend/FileService/FileService.Infrastructure.S3/FileService.Infrastruct
 COPY ["backend/FileService/FileService.VideoProcessing/FileService.VideoProcessing.csproj", "backend/FileService/FileService.VideoProcessing/"]
 
 RUN --mount=type=cache,target=/root/.nuget/packages \
-    dotnet restore "./backend/FileService/FileService.Web/FileService.Web.csproj"
+    --mount=type=secret,id=nuget_config \
+    --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    cp /run/secrets/nuget_config /tmp/nuget.config && \
+    dotnet nuget update source github \
+        --configfile /tmp/nuget.config \
+        --username "$(cat /run/secrets/nuget_username)" \
+        --password "$(cat /run/secrets/nuget_password)" \
+        --store-password-in-clear-text && \
+    dotnet restore "./backend/FileService/FileService.Web/FileService.Web.csproj" \
+        --configfile /tmp/nuget.config && \
+    rm /tmp/nuget.config
 
 COPY . .
 WORKDIR "/src/backend/FileService/FileService.Web"

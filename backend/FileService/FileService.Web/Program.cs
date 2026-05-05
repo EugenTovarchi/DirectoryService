@@ -10,6 +10,8 @@ namespace FileService.Web;
 
 public partial class Program
 {
+    protected Program() { }
+
     public static async Task Main(string[] args)
     {
         try
@@ -21,7 +23,10 @@ public partial class Program
             builder.Configuration.AddJsonFile($"appsettings.{environment}.json", true, true)
                 .AddEnvironmentVariables();
 
-            builder.Configuration.AddUserSecrets<Program>();
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Configuration.AddUserSecrets<Program>(optional: true);
+            }
 
             builder.Services.AddControllers();
 

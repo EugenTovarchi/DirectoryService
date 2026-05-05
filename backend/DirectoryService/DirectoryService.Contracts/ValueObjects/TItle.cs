@@ -22,8 +22,9 @@ public record Title
             return Errors.General.ValueIsInvalid("title");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
+            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
 
-        return new Title(normilized);
+        return new Title(normalized);
     }
 }
