@@ -47,10 +47,10 @@ public static class FfprobeOutputParser
 public sealed class FfprobeResponse
 {
     [JsonPropertyName("streams")]
-    public List<StreamInfo?> Streams { get; set; }
+    public List<StreamInfo?> Streams { get; init; }
 
     [JsonPropertyName("format")]
-    public FormatInfo? Format { get; set; }
+    public FormatInfo? Format { get; init; }
 }
 
 public sealed class StreamInfo

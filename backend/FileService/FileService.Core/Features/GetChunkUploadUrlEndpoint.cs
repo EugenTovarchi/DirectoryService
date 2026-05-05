@@ -99,8 +99,8 @@ public sealed class GetChunkUploadUrlHandler
         var uploads = checkUploadId.Value.MultipartUploads ?? [];
 
         var existingUpload = uploads.FirstOrDefault(u =>
-            u.UploadId == request.UploadId &&
-            u.Key == storageKey.Value);
+            string.Equals(u.UploadId, request.UploadId, StringComparison.Ordinal) &&
+            string.Equals(u.Key, storageKey.Value, StringComparison.Ordinal));
 
         if (existingUpload == null)
         {

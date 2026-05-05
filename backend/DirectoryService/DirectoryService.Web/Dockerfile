@@ -15,6 +15,7 @@ COPY ["Directory.Build.props", "."]
 COPY ["Directory.Packages.props", "."]
 COPY ["nuget.config", "."]
 COPY [".editorconfig", "."]
+COPY ["BannedSymbols.txt", "."]
 
 # Копируем файлы проектов
 COPY ["backend/DirectoryService/DirectoryService.Web/DirectoryService.Web.csproj", "backend/DirectoryService/DirectoryService.Web/"]

@@ -66,7 +66,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         if (firstError.IsFailure)
             return firstError.Error;
 
-        _logger.LogInformation("Successfully uploaded {fileCount} hls files for video asset: {VideoAsset}",
+        _logger.LogInformation("Successfully uploaded {FileCount} hls files for video asset: {VideoAsset}",
             hlsFiles.Length, context.VideoProcess.VideoAssetId);
 
         var masterPlaylistKey = context.VideoAsset.GetMasterPlaylistKey();

@@ -56,7 +56,7 @@ public class ProcessingPipeline : IProcessingPipeline
             Result<VideoProcessStep?, Error> stepResult = processingContext.VideoProcess.ProcessNextStep();
             if (stepResult.IsFailure)
             {
-                _logger.LogWarning("Failed processing step {Step} of video asset{videoAssetId}: {Error}",
+                _logger.LogWarning("Failed processing step {Step} of video asset{VideoAssetId}: {Error}",
                     stepResult.Error, videoAssetId, stepResult.Error.Message);
                 return stepResult.Error;
             }
@@ -69,22 +69,22 @@ public class ProcessingPipeline : IProcessingPipeline
 
             VideoProcessStep? currentStep = stepResult.Value;
 
-            _logger.LogInformation("Processing step {name} (Order:{Order} for video asset : {videoAssetId})",
+            _logger.LogInformation("Processing step {Name} (Order:{Order} for video asset : {VideoAssetId})",
                 currentStep.Name, currentStep.Order, videoAssetId);
 
             IProcessingStepHandler? stepHandler = _stepHandlers
-                .FirstOrDefault(s => s.StepName.ToString() == currentStep.Name);
+                .FirstOrDefault(s => string.Equals(s.StepName.ToString(), currentStep.Name, StringComparison.OrdinalIgnoreCase));
             if (stepHandler is null)
             {
                 string error = $"No step handler registered for this step: {currentStep.Name}";
-                _logger.LogError("No step handler registered for this step: {currentStep.Name}", currentStep.Name);
+                _logger.LogError("No step handler registered for this step: {CurrentStep.Name}", currentStep.Name);
 
                 processingContext.VideoProcess.Fail(error);
                 var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                 if (saveResult.IsFailure)
                 {
-                    _logger.LogError("Failed to save context after missing handler for step {stepName}" +
-                                     " for video asset:{videoAssetId}", currentStep.Name, currentStep.Name);
+                    _logger.LogError("Failed to save context after missing handler for step {StepName}" +
+                                     " for video asset:{VideoAssetId}", currentStep.Name, currentStep.Name);
                 }
 
                 return Error.NotFound("pipeline.handler.not.found", error);
@@ -94,7 +94,7 @@ public class ProcessingPipeline : IProcessingPipeline
                 stepHandler, processingContext, cancellationToken);
             if (executionResult.IsFailure)
             {
-                _logger.LogError("Step {stepName} failed for  video asset {videoAssetId}. Error: {error}",
+                _logger.LogError("Step {StepName} failed for  video asset {VideoAssetId}. Error: {Error}",
                     currentStep.Name,
                     videoAssetId,
                     executionResult.Error);
@@ -104,8 +104,8 @@ public class ProcessingPipeline : IProcessingPipeline
                 var saveErrorResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                 if (saveErrorResult.IsFailure)
                 {
-                    _logger.LogError("Failed to save context after missing handler for step {stepName}" +
-                                     " for video asset:{videoAssetId}", currentStep.Name, currentStep.Name);
+                    _logger.LogError("Failed to save context after missing handler for step {StepName}" +
+                                     " for video asset:{VideoAssetId}", currentStep.Name, currentStep.Name);
                 }
 
                 return executionResult.Error;
@@ -113,13 +113,13 @@ public class ProcessingPipeline : IProcessingPipeline
 
             processingContext.VideoProcess.CompleteStep(processingContext.VideoProcess.CurrentStep!.Order);
 
-            _logger.LogInformation("Step {stepName} completed for VideoAssetId: {VideoAssetId}. Progress: {Progress}%",
+            _logger.LogInformation("Step {StepName} completed for VideoAssetId: {VideoAssetId}. Progress: {Progress}%",
                 currentStep.Name, videoAssetId, processingContext.VideoProcess.TotalProgress);
 
             var completeSaveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
             if (completeSaveResult.IsFailure)
             {
-                _logger.LogError("Failed to save progress after step {stepName} for VideoAssetId: {VideoAssetId}",
+                _logger.LogError("Failed to save progress after step {StepName} for VideoAssetId: {VideoAssetId}",
                     currentStep.Name, videoAssetId);
                 return completeSaveResult.Error;
             }
@@ -206,7 +206,7 @@ public class ProcessingPipeline : IProcessingPipeline
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in step handler {stepName} for video asset: {videoAssetId}",
+            _logger.LogError(ex, "Unhandled exception in step handler {StepName} for video asset: {VideoAssetId}",
                 step.StepName, context.VideoAsset.Id);
             return Error.Failure("pipeline.step.exception", ex.Message);
         }
@@ -219,7 +219,7 @@ public class ProcessingPipeline : IProcessingPipeline
 
         context.VideoProcess.Fail(error.GetMessage());
 
-        _logger.LogError("Video processing failed for video asset: {videoAssetId}. Error: {Error}.",
+        _logger.LogError("Video processing failed for video asset: {VideoAssetId}. Error: {Error}.",
             videoAssetId, error.GetMessage());
 
         var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
@@ -241,13 +241,13 @@ public class ProcessingPipeline : IProcessingPipeline
 
         context.VideoAsset.CompleteProcessing();
 
-        _logger.LogInformation("Video processing complete successfully for video asset: {videoAssetId}",
+        _logger.LogInformation("Video processing complete successfully for video asset: {VideoAssetId}",
             videoAssetId);
 
         var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            _logger.LogError("Failed to save final state for video asset: {videoAssetId}", videoAssetId);
+            _logger.LogError("Failed to save final state for video asset: {VideoAssetId}", videoAssetId);
             return saveResult.Error;
         }
 

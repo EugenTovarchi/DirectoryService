@@ -13,7 +13,9 @@ nuget.config
 *.user
 *.userosscache
 *.sln.docstates
-
+secrets/
+**/appsettings.*.local.json
+**/appsettings.*.Production.json
 backend/SharedService/
 
 # User-specific files (MonoDevelop/Xamarin Studio)

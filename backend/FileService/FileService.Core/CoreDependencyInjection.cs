@@ -31,7 +31,7 @@ public static class CoreDependencyInjection
         return services.Scan(scan => scan
             .FromAssemblies(typeof(CoreDependencyInjection).Assembly)
             .AddClasses(classes => classes
-                .Where(type => type.Name.EndsWith("Handler")))
+                .Where(type => type.Name.EndsWith("Handler", StringComparison.Ordinal)))
             .AsSelf()
             .WithScopedLifetime());
     }

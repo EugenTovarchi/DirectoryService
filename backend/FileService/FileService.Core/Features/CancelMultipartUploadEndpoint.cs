@@ -51,7 +51,7 @@ public sealed class CancelMultipartUploadHandler
             m => m.Id == request.MediaAssetId, cancellationToken);
         if (mediaAssetResult.IsFailure)
         {
-            _logger.LogError("Media asset with id {id} was not found", request.MediaAssetId);
+            _logger.LogError("Media asset with id {Id} was not found", request.MediaAssetId);
             return mediaAssetResult.Error.ToFailure();
         }
 
@@ -75,7 +75,7 @@ public sealed class CancelMultipartUploadHandler
 
         await _mediaAssetsRepository.DeleteMediaAssetById(mediaAsset.Id, cancellationToken);
 
-        _logger.LogInformation("Uploading media: {id} was aborted", request.MediaAssetId);
+        _logger.LogInformation("Uploading media: {Id} was aborted", request.MediaAssetId);
 
         return UnitResult.Success<Failure>();
     }

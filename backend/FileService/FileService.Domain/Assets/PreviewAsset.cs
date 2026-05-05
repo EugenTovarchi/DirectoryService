@@ -23,13 +23,13 @@ public class PreviewAsset : MediaAsset
         Guid ownerId,
         string ownerType,
         StorageKey key)
-        : base(id, mediaData, mediaStatus, AssetType.PREVIEW, ownerId, ownerType, key, true)
+        : base(id, mediaData, mediaStatus, AssetType.PREVIEW, ownerId, ownerType, key, isDirectUpload: true)
     {
     }
 
     public static UnitResult<Error> Validate(MediaData mediaData)
     {
-        if (!AllowedExtensions.Contains(mediaData.FileName.Extension))
+        if (!AllowedExtensions.Contains(mediaData.FileName.Extension, StringComparer.Ordinal))
         {
             return Error.Validation("preview.invalid.extension",
                 $"File extension must be one of :{string.Join(",", AllowedExtensions)}");
@@ -70,7 +70,7 @@ public class PreviewAsset : MediaAsset
             return Error.Validation("video.invalid.owner-type", "OwnerType cannot be empty");
         }
 
-        var key = StorageKey.Create(id.ToString(), null, LOCATION);
+        var key = StorageKey.Create(id.ToString(), prefix: null, LOCATION);
         if (key.IsFailure)
             return key.Error;
 

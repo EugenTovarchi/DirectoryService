@@ -179,7 +179,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
                $"-map \"[v2out]\" -c:v:2 {encoder} -preset {preset} -b:v:2 5M -maxrate:v:2 5M -bufsize:v:2 5M -g 20 ";
     }
 
-    private string BuildAudioMappings() =>
+    private static string BuildAudioMappings() =>
         "-map \"[a0]\" -c:a:0 aac -b:a:0 96k -ac 2 " +
         "-map \"[a1]\" -c:a:1 aac -b:a:1 96k -ac 2 " +
         "-map \"[a2]\" -c:a:2 aac -b:a:2 96k -ac 2 ";

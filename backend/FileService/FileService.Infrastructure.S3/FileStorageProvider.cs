@@ -165,7 +165,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
     }
 
     public async Task<Result<string, Error>> GenerateDownloadUrlAsync(StorageKey storageKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -225,13 +225,13 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 
             await _s3Client.DeleteObjectAsync(requestForDelete, cancellationToken);
 
-            _log.LogInformation("File: {key} was deleted", storageKey.Location);
+            _log.LogInformation("File: {Key} was deleted", storageKey.Location);
 
             return storageKey.Key;
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Failed to delete file: {key} from bucket: {bucket}",
+            _log.LogError(ex, "Failed to delete file: {Key} from bucket: {Bucket}",
                 storageKey.Value, storageKey.Location);
             return S3ErrorMapper.ToError(ex);
         }
@@ -251,7 +251,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 
             await _s3Client.AbortMultipartUploadAsync(request, cancellationToken);
 
-            _log.LogInformation("File: {key} was aborted to upload", storageKey.Location);
+            _log.LogInformation("File: {Key} was aborted to upload", storageKey.Location);
 
             return UnitResult.Success<Error>();
         }
