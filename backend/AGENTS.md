@@ -6,7 +6,10 @@ Primary entry point for work started from `backend/`.
 
 1. Read this file.
 2. Read `.codex/rules/*.md`.
-   - For Serena MCP usage, see [.codex/rules/serena-mcp.md](.codex/rules/serena-mcp.md).
+   - Use Serena MCP automatically for relevant C# code navigation, inspection, or refactoring tasks.
+   - Activate the owning Serena project: `FileService`, `DirectoryService`, or `SharedService`.
+   - Call `check_onboarding_performed` before project work.
+   - For full Serena MCP usage, see [.codex/rules/serena-mcp.md](.codex/rules/serena-mcp.md).
 3. Read [docs/architecture/overview.md](docs/architecture/overview.md).
 4. Read only the affected service doc:
    - [docs/services/directory-service.md](docs/services/directory-service.md)
