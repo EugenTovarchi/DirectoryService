@@ -228,7 +228,7 @@ public class DeleteFileTests : FileServiceBaseTests
 
         var request = new StartMultipartUploadRequest(
             fileInfo.Name,
-            "photo",
+            FileAssetTypes.Avatar,
             "image/jpeg",
             fileInfo.Length,
             TEST_OWNER_TYPE,
@@ -239,7 +239,12 @@ public class DeleteFileTests : FileServiceBaseTests
 
         response.EnsureSuccessStatusCode();
 
-        return (await response.Content.ReadFromJsonAsync<StartMultipartUploadResponse>(cancellationToken))!;
+        Result<StartMultipartUploadResponse, Failure> startUploadResult =
+            await response.HandleResponseAsync<StartMultipartUploadResponse>(cancellationToken);
+
+        Assert.True(startUploadResult.IsSuccess, startUploadResult.IsFailure ? startUploadResult.Error.ToString() : null);
+
+        return startUploadResult.Value;
     }
 
     private async Task<IReadOnlyList<PartETagDto>> UploadChunks(

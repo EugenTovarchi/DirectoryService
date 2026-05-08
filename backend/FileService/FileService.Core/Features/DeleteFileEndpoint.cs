@@ -71,10 +71,10 @@ public sealed class DeleteFIleHandler
 
             var statusCheckResult = mediaAsset.Status switch
             {
-                MediaStatus.UPLOADING => Error.Failure("media_asset.invalid_status",
+                MediaStatus.UPLOADING => Error.Validation("media_asset.invalid_status",
                     "Cannot delete file in UPLOADING status. Use cancel multipart upload instead."),
 
-                MediaStatus.PROCESSING => Error.Failure("media_asset.invalid_status",
+                MediaStatus.PROCESSING => Error.Validation("media_asset.invalid_status",
                     "Cannot delete file while it's being processed."),
 
                 MediaStatus.DELETED => Errors.General.ValueIsInvalid("media_asset_status.already_deleted"),

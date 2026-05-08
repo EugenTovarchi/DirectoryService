@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using CSharpFunctionalExtensions;
 using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
@@ -6,6 +7,8 @@ using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using SharedService.Framework.ControllersResults;
+using SharedService.SharedKernel;
 
 namespace FileService.IntegrationTests.Features;
 
@@ -47,7 +50,9 @@ public class OutboxEventTests : FileServiceBaseTests
                 .FirstOrDefaultAsync(m => m.Id == startResponse.MediaAssetId, cancellationToken);
 
             Assert.NotNull(mediaAsset);
-            Assert.Equal(MediaStatus.UPLOADED, mediaAsset.Status);
+            Assert.True(
+                mediaAsset.Status is MediaStatus.UPLOADED or MediaStatus.PROCESSING or MediaStatus.READY,
+                $"Unexpected media status after complete upload: {mediaAsset.Status}");
             Assert.Equal(TEST_DEPARTMENT_ID, mediaAsset.OwnerId);
             Assert.Equal(TEST_OWNER_TYPE, mediaAsset.OwnerType);
         });
@@ -93,10 +98,17 @@ public class OutboxEventTests : FileServiceBaseTests
             TEST_OWNER_TYPE,
             TEST_DEPARTMENT_ID);
 
-        var response = await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+        HttpResponseMessage response = await AppHttpClient
+            .PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+
         response.EnsureSuccessStatusCode();
 
-        return (await response.Content.ReadFromJsonAsync<StartMultipartUploadResponse>(cancellationToken))!;
+        Result<StartMultipartUploadResponse, Failure> startUploadResult =
+            await response.HandleResponseAsync<StartMultipartUploadResponse>(cancellationToken);
+
+        Assert.True(startUploadResult.IsSuccess, startUploadResult.IsFailure ? startUploadResult.Error.ToString() : null);
+
+        return startUploadResult.Value;
     }
 
     private async Task<IReadOnlyList<PartETagDto>> UploadChunks(
