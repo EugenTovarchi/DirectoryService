@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Core.Abstractions;
@@ -70,6 +71,11 @@ public sealed class StartMultipartUploadHandler
             chunkCalculatorResult.Value.TotalChunks);
         if (mediaDataResult.IsFailure)
             return mediaDataResult.Error.ToFailure();
+
+        if (!FileAssetTypes.IsSupported(request.AssetType))
+        {
+            return Error.Validation("file.invalid.asset-type", "AssetType is not supported").ToFailure();
+        }
 
         var mediaAssetResult = MediaAsset.CreateForUpload(
             mediaDataResult.Value,
