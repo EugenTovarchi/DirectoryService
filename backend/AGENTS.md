@@ -36,6 +36,12 @@ Primary entry point for work started from `backend/`.
 - Do not put secrets in appsettings, Docker images, logs, or committed config.
 - Do not edit generated `bin/` or `obj/` files.
 
+## Language
+
+- Use Russian by default for progress notes, explanations, plans, and final summaries.
+- Keep code, identifiers, file paths, CLI commands, logs, error messages, and commit messages in their original language unless explicitly asked to translate.
+- Do not translate existing source comments, public API names, error codes, or domain terminology unless the task explicitly requires it.
+
 ## Workspace Map
 
 - `backend.slnx`: combined Rider solution.
