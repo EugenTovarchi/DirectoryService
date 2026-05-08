@@ -13,6 +13,17 @@ nuget.config
 *.userosscache
 *.sln.docstates
 
+# Local Serena MCP state
+.serena/
+**/.serena/
+
+*.Development.env
+ffmpeg/
+  
+# Local Codex machine-specific config
+.codex/config.toml
+.codex/config.local.toml
+
 backend/SharedService/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
