@@ -3,7 +3,6 @@
   <Folder Name="/DirectoryService/">
     <File Path="DirectoryService/.dockerignore" />
     <File Path="DirectoryService/AGENTS.md" />
-    <File Path="DirectoryService/Directory.Build.props" />
     <File Path="DirectoryService/gitignore.txt" />
   </Folder>
   <Folder Name="/DirectoryService/src/">
@@ -20,7 +19,6 @@
     <File Path="FileService/.dockerignore" />
     <File Path="FileService/.gitignore" />
     <File Path="FileService/AGENTS.md" />
-    <File Path="FileService/Directory.Build.props" />
   </Folder>
   <Folder Name="/FileService/src/">
     <Project Path="FileService/FileService.Contracts/FileService.Contracts.csproj" />
