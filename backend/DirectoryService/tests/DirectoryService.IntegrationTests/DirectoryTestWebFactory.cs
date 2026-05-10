@@ -6,6 +6,7 @@ using DirectoryService.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -33,12 +34,14 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
             services.RemoveAll<DirectoryServiceDbContext>();
             services.RemoveAll<IDepartmentRepository>();
             services.RemoveAll<ILocationRepository>();
+            services.RemoveAll<IDistributedCache>();
 
             services.AddScoped(_ =>
                 DirectoryServiceDbContext.Create(_dbContainer.GetConnectionString()));
 
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
             services.AddScoped<ILocationRepository, LocationRepository>();
+            services.AddDistributedMemoryCache();
         });
 
         base.ConfigureWebHost(builder);
@@ -48,10 +51,10 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
     {
         await _dbContainer.StartAsync();
 
+        await CreateDatabaseDirectlyAsync();
+
         _dbConnection = new NpgsqlConnection(_dbContainer.GetConnectionString());
         await _dbConnection.OpenAsync();
-
-        await CreateDatabaseDirectlyAsync();
 
         await InitializeRespawnerAsync();
     }
