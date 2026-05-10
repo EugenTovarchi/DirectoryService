@@ -9,7 +9,7 @@ This backend workspace is a .NET 9 multi-service system. Current services are Di
 - DirectoryService owns directory data: departments, locations, positions, hierarchy, and assignment of file/video assets to directory entities.
 - FileService owns files, media assets, S3/MinIO storage, multipart upload, raw video upload, and HLS/video processing.
 - SharedService owns generic, service-neutral kernel/framework pieces used by services.
-- IntegrationEvents/shared messaging contracts must remain compatible across producers and consumers.
+- Shared messaging contracts must remain compatible across producers and consumers.
 
 See:
 

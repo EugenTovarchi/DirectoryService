@@ -48,7 +48,6 @@ Primary entry point for work started from `backend/`.
 - `DirectoryService/DirectoryService.sln`: DirectoryService solution.
 - `FileService/FileService.sln`: FileService solution.
 - `SharedService/SharedService.sln`: shared kernel/framework solution.
-- `IntegrationEvents/IntegrationEvents.sln`: integration event contracts.
 - `../docker-compose-dev.yml`: local Docker compose file.
 
 For adding future services, see [docs/architecture/how-to-add-service.md](docs/architecture/how-to-add-service.md).

@@ -34,7 +34,6 @@ test -f .env || echo "MISSING: .env"
 dotnet build DirectoryService/DirectoryService.sln
 dotnet build FileService/FileService.sln
 dotnet build SharedService/SharedService.sln
-dotnet build IntegrationEvents/IntegrationEvents.sln
 ```
 
 Expected: 0 errors.
@@ -116,7 +115,6 @@ Run relevant tests first:
 dotnet test DirectoryService/DirectoryService.sln
 dotnet test FileService/FileService.sln
 dotnet test SharedService/SharedService.sln
-dotnet test IntegrationEvents/IntegrationEvents.sln
 ```
 
 If the whole suite is too slow, run affected test projects.

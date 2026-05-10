@@ -36,4 +36,4 @@ dotnet build FileService/FileService.sln
 dotnet test FileService/FileService.sln
 ```
 
-Broaden to DirectoryService/SharedService/IntegrationEvents only when touched by the change.
+Broaden to DirectoryService/SharedService only when touched by the change.

@@ -20,8 +20,6 @@ Activate the project that owns the code being inspected or changed:
 - Activate `DirectoryService` for departments, locations, positions, hierarchy, DirectoryService contracts, messaging consumers, and DirectoryService tests.
 - Activate `SharedService` for shared kernel/framework/core abstractions and NuGet package changes consumed by FileService or DirectoryService.
 
-Do not activate or use `IntegrationEvents`. That project was removed and must be ignored.
-
 ## Startup Use
 
 - After activating a Serena project, call `check_onboarding_performed`.
