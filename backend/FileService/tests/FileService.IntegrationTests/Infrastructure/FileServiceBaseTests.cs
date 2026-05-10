@@ -133,6 +133,11 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
                         videoAsset.MarkUploaded();
                         break;
 
+                    case MediaStatus.PROCESSING:
+                        videoAsset.MarkUploaded();
+                        videoAsset.StartProcessing();
+                        break;
+
                     case MediaStatus.DELETED:
                         {
                             videoAsset.MarkUploaded();
