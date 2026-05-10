@@ -108,7 +108,7 @@ public class S3TestController : ControllerBase
         {
             // Способ 1: ListBuckets (надежный)
             var allBuckets = await _s3Client.ListBucketsAsync();
-            bool existsInList = allBuckets.Buckets.Any(b => b.BucketName == bucketName);
+            bool existsInList = allBuckets.Buckets.Any(b => string.Equals(b.BucketName, bucketName, StringComparison.Ordinal));
 
             // Способ 2: DoesS3BucketExistV2Async (может врать)
             bool existsV2 = await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, bucketName);

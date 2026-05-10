@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpFunctionalExtensions;
 using FileService.Domain;
@@ -46,16 +47,20 @@ public static class FfprobeOutputParser
 
 public sealed class FfprobeResponse
 {
-    [JsonPropertyName("streams")] public List<StreamInfo?> Streams { get; set; }
+    [JsonPropertyName("streams")]
+    public List<StreamInfo?> Streams { get; init; }
 
-    [JsonPropertyName("format")] public FormatInfo? Format { get; set; }
+    [JsonPropertyName("format")]
+    public FormatInfo? Format { get; init; }
 }
 
 public sealed class StreamInfo
 {
-    [JsonPropertyName("width")] public int? Width { get; set; }
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
 
-    [JsonPropertyName("height")] public int? Height { get; set; }
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
 }
 
 public sealed class FormatInfo
@@ -78,7 +83,8 @@ public sealed class FormatInfo
         }
     }
 
-    [JsonIgnore] public double? Duration => _duration;
+    [JsonIgnore]
+    public double? Duration => _duration;
 }
 
 public sealed class StringToDoubleConverter : JsonConverter<double?>
@@ -88,7 +94,10 @@ public sealed class StringToDoubleConverter : JsonConverter<double?>
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (double.TryParse(str, out double result))
+            if (double.TryParse(str,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out double result))
                 return result;
 
             return null;

@@ -16,7 +16,7 @@ public interface IDepartmentRepository
     Task<UnitResult<Error>> DeleteDepartmentLocationsByDepartmentId(DepartmentId departmentId,
         CancellationToken cancellationToken = default);
 
-    Task<UnitResult<Error>> MarkDepartmentAsDeleted(
+    Task<Result<string, Error>> MarkDepartmentAsDeleted(
         string prefix,
         DepartmentId deletedDepartmentId,
         CancellationToken cancellationToken);

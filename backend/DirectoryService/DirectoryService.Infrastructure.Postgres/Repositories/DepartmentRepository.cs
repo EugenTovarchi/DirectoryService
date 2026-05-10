@@ -234,7 +234,7 @@ public class DepartmentRepository(
                 return Errors.Database.ResourceLocked("locked_dep_descendants");
             }
 
-            logger.LogInformation("Successfully locked descendants: {lockedCount}", lockedCount);
+            logger.LogInformation("Successfully locked descendants: {LockedCount}", lockedCount);
             return UnitResult.Success<Error>();
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
@@ -264,29 +264,37 @@ public class DepartmentRepository(
 
         try
         {
-            await dbContext.Database.ExecuteSqlRawAsync(
-                $"""
-                 UPDATE departments dept
-                 SET 
-                     path = @newPath::ltree || subpath(dept.path, nlevel(@oldPath::ltree)),
-                     depth = nlevel(@newPath::ltree) + (dept.depth - nlevel(@oldPath::ltree)),
-                     updated_at = @updated_at
-                 WHERE dept.is_deleted = false
-                         AND dept.path <@ @oldPath::ltree
-                         AND dept.id != @parent_department_id
-                 """,
-                parameters);
+            const string sql = """
+                               UPDATE departments dept
+                               SET
+                                   path = @newPath::ltree || subpath(dept.path, nlevel(@oldPath::ltree)),
+                                   depth = nlevel(@newPath::ltree) + (dept.depth - nlevel(@oldPath::ltree)),
+                                   updated_at = @updated_at
+                               WHERE dept.is_deleted = false
+                                       AND dept.path <@ @oldPath::ltree
+                                       AND dept.id != @parent_department_id
+                               """;
+
+            var connection = dbContext.Database.GetDbConnection();
+            var command = new CommandDefinition(
+                sql,
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30,
+                cancellationToken: cancellationToken);
+
+            await connection.ExecuteAsync(command);
 
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Update error for descendants of department{parentDepartmentId}", parentDepartmentId);
+            logger.LogError(ex, "Update error for descendants of department{ParentDepartmentId}", parentDepartmentId);
             return Errors.General.DatabaseError("update.descendants");
         }
     }
 
-    public async Task<UnitResult<Error>> MarkDepartmentAsDeleted(
+    public async Task<Result<string, Error>> MarkDepartmentAsDeleted(
         string prefix,
         DepartmentId deletedDepartmentId,
         CancellationToken cancellationToken)
@@ -295,26 +303,45 @@ public class DepartmentRepository(
 
         parameters.Add("@prefix", prefix);
         parameters.Add("@deleted_department_id", deletedDepartmentId.Value);
+        parameters.Add("@deleted_at", DateTime.UtcNow);
+        parameters.Add("@updated_at", DateTime.UtcNow);
 
         try
         {
             const string sql =
                 """
                 UPDATE departments dept
-                SET 
-                    path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree
-                    WHERE dept.is_deleted = true
-                        AND dept.id = @deleted_department_id
+                SET
+                    is_deleted = true,
+                    deleted_at = @deleted_at,
+                    updated_at = @updated_at,
+                    path = CASE
+                        WHEN nlevel(dept.path) = 1 THEN (@prefix || dept.path::text)::ltree
+                        ELSE subpath(dept.path, 0, nlevel(dept.path) - 1)
+                             || (@prefix || subpath(dept.path, nlevel(dept.path) - 1, 1)::text)::ltree
+                    END
+                WHERE dept.is_deleted = false
+                    AND dept.id = @deleted_department_id
+                RETURNING path::text
                 """;
 
             var connection = dbContext.Database.GetDbConnection();
-            await connection.ExecuteAsync(sql, parameters);
+            var command = new CommandDefinition(
+                sql,
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30,
+                cancellationToken: cancellationToken);
 
-            return UnitResult.Success<Error>();
+            string? newPath = await connection.QuerySingleOrDefaultAsync<string>(command);
+            if (newPath is null)
+                return Errors.General.NotFoundEntity("department");
+
+            return newPath;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Path of department: {deletedDepartmentId} was updated",
+            logger.LogError(ex, "Path of department: {DeletedDepartmentId} was updated",
                 deletedDepartmentId.Value);
             return Errors.General.DatabaseError("update.descendant_path");
         }
@@ -463,7 +490,7 @@ public class DepartmentRepository(
 
         if (existingDepartment != null)
         {
-            logger.LogWarning("Duplicate department name: {name}", department.Name.Value);
+            logger.LogWarning("Duplicate department name: {Name}", department.Name.Value);
             return Errors.General.Duplicate("department_name");
         }
 
@@ -485,14 +512,14 @@ public class DepartmentRepository(
         catch (OperationCanceledException ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            logger.LogError(ex, "Operation was cancelled while creating department with name {name}",
+            logger.LogError(ex, "Operation was cancelled while creating department with name {Name}",
                 department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            logger.LogError(ex, "Unexpected error while creating department with name {name}", department.Name.Value);
+            logger.LogError(ex, "Unexpected error while creating department with name {Name}", department.Name.Value);
             return Errors.General.DatabaseError("creating_department_error");
         }
     }
@@ -501,32 +528,30 @@ public class DepartmentRepository(
     {
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
-            logger.LogError("Database error while creating department {name}: {Message}", departmentName,
+            logger.LogError("Database error while creating department {Name}: {Message}", departmentName,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_department_error");
         }
 
         string constraintName = pgEx.ConstraintName.ToLower();
 
-        if (constraintName == "ix_department_name")
+        switch (constraintName)
         {
-            logger.LogWarning("Duplicate department name: {name}", departmentName);
-            return Errors.General.Duplicate("department_name");
-        }
-
-        if (constraintName == "ix_department_identifier")
-        {
-            logger.LogWarning("Duplicate department identifier: {identifier}", departmentName);
-            return Errors.General.Duplicate("department_name");
+            case "ix_department_name":
+                logger.LogWarning("Duplicate department name: {Name}", departmentName);
+                return Errors.General.Duplicate("department_name");
+            case "ix_department_identifier":
+                logger.LogWarning("Duplicate department identifier: {Identifier}", departmentName);
+                return Errors.General.Duplicate("department_name");
         }
 
         if (constraintName.Contains("name"))
         {
-            logger.LogWarning("Duplicate name constraint violation for department: {name}", departmentName);
+            logger.LogWarning("Duplicate name constraint violation for department: {Name}", departmentName);
             return Errors.General.Duplicate("name");
         }
 
-        logger.LogError("Unknown unique constraint violation for department {name}: {Constraint}", departmentName,
+        logger.LogError("Unknown unique constraint violation for department {Name}: {Constraint}", departmentName,
             pgEx.ConstraintName);
         return Errors.General.Duplicate("record");
     }

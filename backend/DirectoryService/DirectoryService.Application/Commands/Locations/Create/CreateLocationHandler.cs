@@ -15,12 +15,12 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
 {
     private readonly ILocationRepository _locationRepository;
     private readonly IValidator<CreateLocationCommand> _validator;
-    private readonly ILogger<CreateLocationCommand> _logger;
+    private readonly ILogger<CreateLocationHandler> _logger;
 
     public CreateLocationHandler(
         ILocationRepository locationRepository,
         IValidator<CreateLocationCommand> validator,
-        ILogger<CreateLocationCommand> logger)
+        ILogger<CreateLocationHandler> logger)
     {
         _locationRepository = locationRepository;
         _validator = validator;
@@ -35,7 +35,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            _logger.LogWarning("Location: {command} is invalid!", command.Request.LocationName);
+            _logger.LogWarning("Location: {Command} is invalid!", command.Request.LocationName);
 
             return validationResult.ToErrors();
         }
@@ -65,7 +65,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         if(result.IsFailure)
             return result.Error.ToFailure();
 
-        _logger.LogInformation("Location: {location} was created", locationResult.Value.Id.Value);
+        _logger.LogInformation("Location: {Location} was created", locationResult.Value.Id.Value);
 
         return locationResult.Value.Id.Value;
     }

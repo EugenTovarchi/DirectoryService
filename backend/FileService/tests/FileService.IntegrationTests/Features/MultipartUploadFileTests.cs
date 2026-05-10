@@ -7,6 +7,7 @@ using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Domain;
 using FileService.Domain.Assets;
+using FileService.Domain.MediaProcessing;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,17 +50,30 @@ public class MultipartUploadFileTests : FileServiceBaseTests
             var mediaAsset = await dbContext.MediaAssets
                 .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResponse.MediaAssetId, cancellationToken);
 
-            Assert.Equal(MediaStatus.UPLOADED, mediaAsset?.Status);
             Assert.NotNull(mediaAsset);
+
+            MediaStatus[] validStatuses = [MediaStatus.UPLOADED, MediaStatus.PROCESSING, MediaStatus.READY];
+            Assert.Contains(mediaAsset.Status, validStatuses.AsEnumerable());
+
+            var videoProcess = await dbContext.VideoProcesses
+                .FirstOrDefaultAsync(v => v.VideoAssetId == mediaAsset.Id, cancellationToken);
+
+            Assert.NotNull(videoProcess);
+            VideoProcessStatus[] validProcessStatuses =
+                [VideoProcessStatus.RUNNING, VideoProcessStatus.SUCCEEDED];
+            Assert.Contains(videoProcess.Status, validProcessStatuses.AsEnumerable());
 
             IAmazonS3 s3Client = _factory.Services.GetRequiredService<IAmazonS3>();
 
-            var s3Object = await s3Client.GetObjectAsync(
-                mediaAsset.UploadKey.Location,
-                mediaAsset.UploadKey.Value,
-                cancellationToken);
+            if (mediaAsset.Status != MediaStatus.READY)
+            {
+                var s3Object = await s3Client.GetObjectAsync(
+                    mediaAsset.UploadKey.Location,
+                    mediaAsset.UploadKey.Value,
+                    cancellationToken);
 
-            Assert.Equal(s3Object.ContentLength, fileInfo.Length);
+                Assert.Equal(s3Object.ContentLength, fileInfo.Length);
+            }
         });
     }
 

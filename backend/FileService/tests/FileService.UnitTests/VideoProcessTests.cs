@@ -179,13 +179,13 @@ public class VideoProcessTests
         var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
         process.PrepareForExecution().IsSuccess.Should().BeTrue();
 
-        var step1 = process.Steps.First(s => s.Name == StepNames.Initialize);
+        var step1 = process.Steps.First(s => string.Equals(s.Name, StepNames.Initialize, StringComparison.OrdinalIgnoreCase));
         process.StartStep(step1.Order, step1.Name).IsSuccess.Should().BeTrue();
         process.CompleteStep(step1.Order).IsSuccess.Should().BeTrue();
 
         process.TotalProgress.Should().Be(0);
 
-        var step2 = process.Steps.First(s => s.Name == StepNames.ExtractMetadata);
+        var step2 = process.Steps.First(s => string.Equals(s.Name, StepNames.ExtractMetadata, StringComparison.OrdinalIgnoreCase));
         process.StartStep(step2.Order, step2.Name).IsSuccess.Should().BeTrue();
         process.CompleteStep(step2.Order).IsSuccess.Should().BeTrue();
 
@@ -246,13 +246,5 @@ public class VideoProcessTests
         finishResult.IsFailure.Should().BeTrue();
         finishResult.Error.Code.Should().Be("processing.incomplete.steps");
         process.Status.Should().Be(VideoProcessStatus.RUNNING);
-    }
-
-    private static VideoProcess CreateValidProcess()
-    {
-        var rawKeyResult = StorageKey.Create("test-video.mp4", "raw", "file-service-videos");
-        var videoAssetId = Guid.NewGuid();
-        var processResult = VideoProcess.Create(videoAssetId, rawKeyResult.Value);
-        return processResult.Value;
     }
 }

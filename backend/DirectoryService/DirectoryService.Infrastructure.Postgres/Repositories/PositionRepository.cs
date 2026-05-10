@@ -13,7 +13,6 @@ namespace DirectoryService.Infrastructure.Postgres.Repositories;
 public class PositionRepository : IPositionRepository
 {
     private readonly DirectoryServiceDbContext _dbContext;
-    private readonly INpgsqlConnectionFactory _connectionFactory;
     private readonly ILogger<PositionRepository> _logger;
 
     public PositionRepository(DirectoryServiceDbContext dbContext,
@@ -22,7 +21,6 @@ public class PositionRepository : IPositionRepository
     {
         _dbContext = dbContext;
         _logger = logger;
-        _connectionFactory = connectionFactory;
     }
 
     public async Task<Result<Position, Error>> GetById(Guid positionId, CancellationToken cancellationToken)
@@ -71,11 +69,11 @@ public class PositionRepository : IPositionRepository
              var connection = _dbContext.Database.GetDbConnection();
              int updatedPositions = await connection.ExecuteAsync(sql, parameters);
 
-             _logger.LogInformation("Count of updated positions: {updatedPostions}", updatedPositions);
+             _logger.LogInformation("Count of updated positions: {UpdatedPositions}", updatedPositions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update error for positions of department{departmentId}", departmentId);
+            _logger.LogError(ex, "Update error for positions of department{DepartmentId}", departmentId);
             return Errors.General.DatabaseError("update.positions");
         }
 
@@ -101,7 +99,7 @@ public class PositionRepository : IPositionRepository
 
         if (existingPosition != null)
         {
-            _logger.LogWarning("Duplicate position name: {name}", position.Name.Value);
+            _logger.LogWarning("Duplicate position name: {Name}", position.Name.Value);
             return Errors.General.Duplicate("position_name");
         }
 
@@ -123,14 +121,14 @@ public class PositionRepository : IPositionRepository
         catch (OperationCanceledException ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Operation was cancelled while creating position with name {name}",
+            _logger.LogError(ex, "Operation was cancelled while creating position with name {Name}",
                 position.Name.Value);
             return Errors.General.DatabaseError("creating_position_error");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Unexpected error while creating position with name {name}", position.Name.Value);
+            _logger.LogError(ex, "Unexpected error while creating position with name {Name}", position.Name.Value);
             return Errors.General.DatabaseError("creating_position_error");
         }
     }
@@ -139,7 +137,7 @@ public class PositionRepository : IPositionRepository
     {
         if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.ConstraintName == null)
         {
-            _logger.LogError("Database error while creating position {name}: {Message}", positionName,
+            _logger.LogError("Database error while creating position {Name}: {Message}", positionName,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_position_error");
         }
@@ -148,17 +146,17 @@ public class PositionRepository : IPositionRepository
 
         if (constraintName == "ix_position_name")
         {
-            _logger.LogWarning("Duplicate position name: {name}", positionName);
+            _logger.LogWarning("Duplicate position name: {Name}", positionName);
             return Errors.General.Duplicate("position_name");
         }
 
         if (constraintName.Contains("name"))
         {
-            _logger.LogWarning("Duplicate name constraint violation for position: {name}", positionName);
+            _logger.LogWarning("Duplicate name constraint violation for position: {Name}", positionName);
             return Errors.General.Duplicate("name");
         }
 
-        _logger.LogError("Unknown unique constraint violation for position {name}: {Constraint}", positionName,
+        _logger.LogError("Unknown unique constraint violation for position {Name}: {Constraint}", positionName,
             pgEx.ConstraintName);
         return Errors.General.Duplicate("record");
     }

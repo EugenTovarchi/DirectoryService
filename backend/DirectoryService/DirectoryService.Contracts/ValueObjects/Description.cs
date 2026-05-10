@@ -22,8 +22,9 @@ public record Description
             return Errors.General.ValueIsInvalid("description");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
+            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
 
-        return new Description(normilized);
+        return new Description(normalized);
     }
 }

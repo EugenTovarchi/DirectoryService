@@ -1,33 +1,52 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:9.0
+# syntax=docker/dockerfile:1.4
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-ARG NUGET_USERNAME
-ARG NUGET_PASSWORD
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Packages.props", "."]
+COPY [".editorconfig", "."]
+COPY ["BannedSymbols.txt", "."]
 
-ENV NUGET_USERNAME=$NUGET_USERNAME
-ENV NUGET_PASSWORD=$NUGET_PASSWORD
+COPY ["backend/FileService/FileService.Web/FileService.Web.csproj", "backend/FileService/FileService.Web/"]
+COPY ["backend/FileService/FileService.Core/FileService.Core.csproj", "backend/FileService/FileService.Core/"]
+COPY ["backend/FileService/FileService.Contracts/FileService.Contracts.csproj", "backend/FileService/FileService.Contracts/"]
+COPY ["backend/FileService/FileService.Domain/FileService.Domain.csproj", "backend/FileService/FileService.Domain/"]
+COPY ["backend/FileService/FileService.Infrastructure.Postgres/FileService.Infrastructure.Postgres.csproj", "backend/FileService/FileService.Infrastructure.Postgres/"]
+COPY ["backend/FileService/FileService.Infrastructure.S3/FileService.Infrastructure.S3.csproj", "backend/FileService/FileService.Infrastructure.S3/"]
+COPY ["backend/FileService/FileService.VideoProcessing/FileService.VideoProcessing.csproj", "backend/FileService/FileService.VideoProcessing/"]
 
-RUN dotnet tool install --global dotnet-watch
-ENV PATH="${PATH}:/root/.dotnet/tools"
-
-# --- shared configs ---
-COPY nuget.config .
-COPY backend/FileService/Directory.Build.props .
-COPY backend/FileService/Directory.Packages.props .
-COPY .editorconfig .
-
-# --- csproj ---
-COPY backend/FileService/FileService.Web/FileService.Web.csproj backend/FileService/FileService.Web/
-COPY backend/FileService/FileService.Core/FileService.Core.csproj backend/FileService/FileService.Core/
-COPY backend/FileService/FileService.Contracts/FileService.Contracts.csproj backend/FileService/FileService.Contracts/
-COPY backend/FileService/FileService.Domain/FileService.Domain.csproj backend/FileService/FileService.Domain/
-COPY backend/FileService/FileService.Infrastructure.Postgres/FileService.Infrastructure.Postgres.csproj backend/FileService/FileService.Infrastructure.Postgres/
-COPY backend/FileService/FileService.Infrastructure.S3/FileService.Infrastructure.S3.csproj backend/FileService/FileService.Infrastructure.S3/
-
-RUN dotnet restore backend/FileService/FileService.Web/FileService.Web.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    --mount=type=secret,id=nuget_config \
+    --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    cp /run/secrets/nuget_config /tmp/nuget.config && \
+    dotnet nuget update source github \
+        --configfile /tmp/nuget.config \
+        --username "$(cat /run/secrets/nuget_username)" \
+        --password "$(cat /run/secrets/nuget_password)" \
+        --store-password-in-clear-text && \
+    dotnet restore "./backend/FileService/FileService.Web/FileService.Web.csproj" \
+        --configfile /tmp/nuget.config && \
+    rm /tmp/nuget.config
 
 COPY . .
+WORKDIR "/src/backend/FileService/FileService.Web"
 
-WORKDIR /src/backend/FileService/FileService.Web
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish "./FileService.Web.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
 
-ENTRYPOINT ["dotnet", "watch", "run", "--no-launch-profile", "--urls", "http://0.0.0.0:8080"]
+FROM base AS final
+WORKDIR /app
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:8080
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "FileService.Web.dll"]

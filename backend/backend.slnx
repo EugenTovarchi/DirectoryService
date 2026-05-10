@@ -1,0 +1,72 @@
+<Solution>
+  <Folder Name="/AuthService/" />
+  <Folder Name="/DirectoryService/">
+    <File Path="DirectoryService/.dockerignore" />
+    <File Path="DirectoryService/AGENTS.md" />
+    <File Path="DirectoryService/gitignore.txt" />
+  </Folder>
+  <Folder Name="/DirectoryService/src/">
+    <Project Path="DirectoryService/DirectoryService.Application/DirectoryService.Application.csproj" />
+    <Project Path="DirectoryService/DirectoryService.Contracts/DirectoryService.Contracts.csproj" />
+    <Project Path="DirectoryService/DirectoryService.Domain/DirectoryService.Domain.csproj" />
+    <Project Path="DirectoryService/DirectoryService.Infrastructure.Postgres/DirectoryService.Infrastructure.Postgres.csproj" />
+    <Project Path="DirectoryService/DirectoryService.Web/DirectoryService.Web.csproj" />
+  </Folder>
+  <Folder Name="/DirectoryService/tests/">
+    <Project Path="DirectoryService/tests/DirectoryService.IntegrationTests/DirectoryService.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/FileService/">
+    <File Path="FileService/.dockerignore" />
+    <File Path="FileService/.gitignore" />
+    <File Path="FileService/AGENTS.md" />
+  </Folder>
+  <Folder Name="/FileService/src/">
+    <Project Path="FileService/FileService.Contracts/FileService.Contracts.csproj" />
+    <Project Path="FileService/FileService.Core/FileService.Core.csproj" />
+    <Project Path="FileService/FileService.Domain/FileService.Domain.csproj" />
+    <Project Path="FileService/FileService.Infrastructure.Postgres/FileService.Infrastructure.Postgres.csproj" />
+    <Project Path="FileService/FileService.Infrastructure.S3/FileService.Infrastructure.S3.csproj" />
+    <Project Path="FileService/FileService.VideoProcessing/FileService.VideoProcessing.csproj" />
+    <Project Path="FileService/FileService.Web/FileService.Web.csproj" />
+  </Folder>
+  <Folder Name="/FileService/tests/">
+    <Project Path="FileService/tests/FileService.IntegrationTests/FileService.IntegrationTests.csproj" />
+    <Project Path="FileService/tests/FileService.UnitTests/FileService.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/SolutionFolder/">
+    <File Path="AGENTS.md" />
+    <File Path="DS-FS.md" />
+    <File Path="README-CODEX-PACK.md" />
+    <File Path=".codex/settings.json" />
+    <File Path=".codex/agents/architect.md" />
+    <File Path=".codex/agents/code-reviewer.md" />
+    <File Path=".codex/agents/debugger.md" />
+    <File Path=".codex/agents/microservice-reviewer.md" />
+    <File Path=".codex/agents/security-reviewer.md" />
+    <File Path=".codex/agents/test-runner.md" />
+    <File Path=".codex/rules/backend-migrations.md" />
+    <File Path=".codex/rules/backend-patterns.md" />
+    <File Path=".codex/rules/docker-ci.md" />
+    <File Path=".codex/rules/documentation-maintenance.md" />
+    <File Path=".codex/rules/integration-tests.md" />
+    <File Path=".codex/rules/security.md" />
+    <File Path=".codex/skills/add-api-endpoint/SKILL.md" />
+    <File Path=".codex/skills/full-dev-verification/SKILL.md" />
+    <File Path=".codex/skills/observability/SKILL.md" />
+    <File Path=".codex/skills/rabbitmq-event/SKILL.md" />
+    <File Path=".codex/skills/update-shared-nuget/SKILL.md" />
+    <File Path=".codex/skills/video-hls-pipeline/SKILL.md" />
+    <File Path="../.editorconfig" />
+    <File Path="../.env" />
+    <File Path="../.gitignore" />
+    <File Path="../BannedSymbols.txt" />
+    <File Path="../Directory.Build.props" />
+    <File Path="../Directory.Packages.props" />
+    <File Path="../DirectoryService.Development.env" />
+    <File Path="../docker-compose-dev.yml" />
+    <File Path="../FileService.Development.env" />
+    <File Path="../FileService.env" />
+    <File Path="../nuget.config" />
+    <File Path="../README.md" />
+  </Folder>
+</Solution>

@@ -17,7 +17,7 @@ public sealed class VideoProcess
     ];
 
     private static readonly Dictionary<string, double> _stepWeights =
-        _stepsProgress.ToDictionary(sp => sp.Name, sp => sp.Progress);
+        _stepsProgress.ToDictionary(sp => sp.Name, sp => sp.Progress, StringComparer.OrdinalIgnoreCase);
 
     // Этапы обработки видео.
     private readonly List<VideoProcessStep> _steps = [];
@@ -108,32 +108,6 @@ public sealed class VideoProcess
     public bool CheckIsCompleted() => Status is VideoProcessStatus.SUCCEEDED or VideoProcessStatus.CANCELED
         or VideoProcessStatus.FAILED;
 
-    private UnitResult<Error> ReportStepProgress(double progress)
-    {
-        var currentStep = CurrentStep;
-        if (currentStep is null)
-        {
-            return Error.Validation("processing.no.active.step",
-                "No active step to report progress");
-        }
-
-        if (progress < 0 || progress > 100)
-        {
-            return Error.Validation("progress.invalid",
-                "Progress must be between 0 and 100");
-        }
-
-        var setProgressResult = currentStep.SetProgress(progress);
-        if (setProgressResult.IsFailure)
-            return setProgressResult.Error;
-
-        RecalculateTotalProgress();
-
-        UpdatedAt = DateTime.UtcNow;
-
-        return UnitResult.Success<Error>();
-    }
-
     private void RecalculateTotalProgress()
     {
         double totalProgress = 0;
@@ -216,7 +190,8 @@ public sealed class VideoProcess
                 $"Process must be in PENDING or RUNNING status, current: {Status}");
         }
 
-        VideoProcessStep? stepToStart = _steps.FirstOrDefault(s => s.Order == order && s.Name == name);
+        VideoProcessStep? stepToStart = _steps.FirstOrDefault(
+            s => s.Order == order && string.Equals(s.Name, name, StringComparison.Ordinal));
         if (stepToStart is null)
             return Error.Validation("step.not.found", "Step not found");
 
@@ -423,7 +398,8 @@ public sealed class VideoProcess
                 $"Cannot process the next step when status is {Status}");
         }
 
-        var currentStep = _steps.FirstOrDefault(s => s.Name == StepNames.ExtractMetadata);
+        var currentStep = _steps.FirstOrDefault(s => string.Equals(s.Name, StepNames.ExtractMetadata,
+            StringComparison.OrdinalIgnoreCase));
         if (currentStep is null)
             return Error.NotFound("step.not.found", "Not found extract metadata step");
 
@@ -440,7 +416,8 @@ public sealed class VideoProcess
         if (Status != VideoProcessStatus.RUNNING)
             return Error.Failure("processing.invalid.status", $"Status is {Status}");
 
-        var step = _steps.FirstOrDefault(s => s.Name == StepNames.GenerateHls);
+        var step = _steps.FirstOrDefault(s => string.Equals(s.Name, StepNames.GenerateHls,
+            StringComparison.OrdinalIgnoreCase));
         if (step?.Status != VideoProcessStatus.RUNNING)
             return Error.Validation("step.invalid.status", "GenerateHls step is not running");
 

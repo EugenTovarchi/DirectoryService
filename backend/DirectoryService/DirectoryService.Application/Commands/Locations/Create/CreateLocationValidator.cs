@@ -36,7 +36,7 @@ public class CreateLocationValidator : AbstractValidator<CreateLocationCommand>
                         address.House));
     }
 
-    private bool BeValidTimeZoneFormat(string timeZone)
+    private static bool BeValidTimeZoneFormat(string timeZone)
     {
         if (string.IsNullOrWhiteSpace(timeZone))
             return false;

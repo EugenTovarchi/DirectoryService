@@ -66,7 +66,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         if (firstError.IsFailure)
             return firstError.Error;
 
-        _logger.LogInformation("Successfully uploaded {fileCount} hls files for video asset: {VideoAsset}",
+        _logger.LogInformation("Successfully uploaded {FileCount} hls files for video asset: {VideoAsset}",
             hlsFiles.Length, context.VideoProcess.VideoAssetId);
 
         var masterPlaylistKey = context.VideoAsset.GetMasterPlaylistKey();
@@ -102,7 +102,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
             cancellationToken);
     }
 
-    private string GetContentType(string filePath)
+    private static string GetContentType(string filePath)
     {
         string extension = Path.GetExtension(filePath).ToLowerInvariant();
 
@@ -110,7 +110,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         {
             ".m3u8" => "application/vnd.apple.mpegurl",
             ".ts" => "video/mp2t",
-            _ => "application/octet-stream"
+            _ => "application/octet-stream",
         };
     }
 }

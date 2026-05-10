@@ -27,13 +27,13 @@ public sealed class GetMediaAssetInfoEndpoint : IEndpoint
 
 public sealed class GetMediaAssetInfoHandler
 {
-    private readonly ILogger<GetMediaAssetsInfoHandler> _logger;
+    private readonly ILogger<GetMediaAssetInfoHandler> _logger;
     private readonly IFileReadDbContext _fileReadDbContext;
     private readonly IFileStorageProvider _fileStorageProvider;
 
     public GetMediaAssetInfoHandler(
         IFileStorageProvider fileStorageProvider,
-        ILogger<GetMediaAssetsInfoHandler> logger,
+        ILogger<GetMediaAssetInfoHandler> logger,
         IFileReadDbContext fileReadDbContext)
     {
         _fileStorageProvider = fileStorageProvider;

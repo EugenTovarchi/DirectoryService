@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Core.Abstractions;
@@ -71,6 +72,11 @@ public sealed class StartMultipartUploadHandler
         if (mediaDataResult.IsFailure)
             return mediaDataResult.Error.ToFailure();
 
+        if (!FileAssetTypes.IsSupported(request.AssetType))
+        {
+            return Error.Validation("file.invalid.asset-type", "AssetType is not supported").ToFailure();
+        }
+
         var mediaAssetResult = MediaAsset.CreateForUpload(
             mediaDataResult.Value,
             request.AssetType.ToAssetType(),
@@ -82,7 +88,8 @@ public sealed class StartMultipartUploadHandler
 
         _mediaAssetsRepository.Add(mediaAssetResult.Value);
 
-        _logger.LogInformation("Media asset added to bd: {mediaAssetResult.Value.Id}", mediaAssetResult.Value.Id);
+        var assetId = mediaAssetResult.Value.Id;
+        _logger.LogInformation("Media asset added to database: {AssetId}", assetId);
 
         var startUploadResult = await _fileStorageProvider.StartMultipartUploadAsync(
             mediaAssetResult.Value.UploadKey,
@@ -100,8 +107,9 @@ public sealed class StartMultipartUploadHandler
             return chunkUploadUrlResult.Error.ToFailure();
 
         mediaAssetResult.Value.MarkUploading();
-        _logger.LogInformation("Media asset started uploading: {mediaAssetResult.Value.Key}",
-            mediaAssetResult.Value.Key);
+        var mediaAssetValueKey = mediaAssetResult.Value.Id;
+        _logger.LogInformation("Media asset started uploading: {MediaAssetResultValueKey}",
+            mediaAssetValueKey);
 
         var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

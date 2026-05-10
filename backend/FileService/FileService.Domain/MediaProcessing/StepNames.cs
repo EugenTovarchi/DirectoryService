@@ -9,7 +9,8 @@ public class StepNames
     public const string GeneratePreview = "GENERATE_PREVIEW";
     public const string Cleanup = "CLEANUP";
 
-    public readonly IReadOnlySet<string> All = new HashSet<string>
+    public readonly IReadOnlySet<string> All = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase)
     {
         Initialize,
         ExtractMetadata,

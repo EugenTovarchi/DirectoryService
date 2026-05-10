@@ -8,25 +8,25 @@ using SharedService.SharedKernel;
 namespace FileService.VideoProcessing.ProcessRunner;
 
 // Класс-обёртка над процессом.
-public class DataDataProcessRunner : IDataProcessRunner
+public class DataProcessRunner : IDataProcessRunner
 {
-    private readonly ILogger<DataDataProcessRunner> _logger;
+    private readonly ILogger<DataProcessRunner> _logger;
 
-    public DataDataProcessRunner(ILogger<DataDataProcessRunner> logger)
+    public DataProcessRunner(ILogger<DataProcessRunner> logger)
     {
         _logger = logger;
     }
 
     public async Task<Result<ProcessResult, Error>> RunAsync(
-        ProcessCommand command,
+        ProcessCommand processCommand,
         Action<string?> onOutput = null!,
         CancellationToken cancellationToken = default)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
-            FileName = command.ExecutableFile,
-            Arguments = command.NormalizedArguments,
+            FileName = processCommand.ExecutableFile,
+            Arguments = processCommand.NormalizedArguments,
             RedirectStandardOutput = true, // данные из консоли перенаправляем в наше приложение.
             RedirectStandardError = true, // данные из консоли перенаправляем в наше приложение.
             UseShellExecute = false,
@@ -53,11 +53,11 @@ public class DataDataProcessRunner : IDataProcessRunner
             _logger.LogDebug("STDERR: {Data}", args.Data);
         };
 
-        _logger.LogInformation("Starting process: {fileName} {arguments}", command.ExecutableFile,
-            command.Arguments);
+        _logger.LogInformation("Starting process: {FileName} {Arguments}", processCommand.ExecutableFile,
+            processCommand.Arguments);
 
-        _logger.LogDebug("Full command: {fileName} {arguments}",
-            command.ExecutableFile, command.Arguments);
+        _logger.LogDebug("Full command: {FileName} {Arguments}",
+            processCommand.ExecutableFile, processCommand.Arguments);
 
         process.Start();
         process.BeginOutputReadLine();
@@ -67,10 +67,11 @@ public class DataDataProcessRunner : IDataProcessRunner
         {
             await process.WaitForExitAsync(cancellationToken);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Process was canceled: {fileName} {Arguments}", command.ExecutableFile,
-                command.Arguments);
+            _logger.LogWarning(ex, "Process was canceled: {FileName} {Arguments}", processCommand.ExecutableFile,
+                processCommand.Arguments);
+
             return FileErrors.OperationCancelled();
         }
 

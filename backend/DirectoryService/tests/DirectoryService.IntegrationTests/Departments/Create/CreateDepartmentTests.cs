@@ -6,6 +6,7 @@ using DirectoryService.Domain.Entities;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using DirectoryPath = DirectoryService.Contracts.ValueObjects.Path;
 using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.IntegrationTests.Departments.Create;
@@ -40,6 +41,80 @@ public class CreateDepartmentTests : DirectoryBaseTests
             result.IsSuccess.Should().BeTrue();
             result.Value.Should().NotBeEmpty();
         });
+    }
+
+    [Fact]
+    public async Task CreateDepartment_with_underscore_identifier_should_succeed()
+    {
+        // Arrange
+        var locationId = await CreateLocation("location1");
+        var request = new CreateDepartmentRequest("testName", "codex_test", [locationId.Value], null);
+        var command = new CreateDepartmentCommand(request);
+
+        // Act
+        var result = await ExecuteHandler((sut) =>
+        {
+            return sut.Handle(command, CancellationToken.None);
+        });
+
+        // Assert
+        await ExecuteInDb(async dbContext =>
+        {
+            result.IsSuccess.Should().BeTrue();
+
+            var department = await dbContext.Departments.FirstAsync(d => d.Id == result.Value, CancellationToken.None);
+            department.Identifier.Value.Should().Be("codex_test");
+            department.Path.Value.Should().Be("codex_test");
+        });
+    }
+
+    [Theory]
+    [InlineData("codex-test")]
+    [InlineData("codex test")]
+    public async Task CreateDepartment_with_ltree_unsafe_identifier_should_fail_validation(string identifier)
+    {
+        // Arrange
+        var locationId = await CreateLocation("location1");
+        var request = new CreateDepartmentRequest("testName", identifier, [locationId.Value], null);
+        var command = new CreateDepartmentCommand(request);
+
+        // Act
+        var result = await ExecuteHandler((sut) =>
+        {
+            return sut.Handle(command, CancellationToken.None);
+        });
+
+        // Assert
+        await ExecuteInDb(async dbContext =>
+        {
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().Contain(error => error.Code == "value.is.invalid");
+
+            bool departments = await dbContext.Departments.AnyAsync();
+            departments.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public void CreateDepartment_path_with_ltree_safe_segments_should_succeed()
+    {
+        // Act
+        var result = DirectoryPath.Create("root.child_1");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Value.Should().Be("root.child_1");
+    }
+
+    [Fact]
+    public void CreateDepartment_path_with_ltree_unsafe_segment_should_fail_validation()
+    {
+        // Act
+        var result = DirectoryPath.Create("root.child-1");
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("value.is.invalid");
     }
 
     [Fact]

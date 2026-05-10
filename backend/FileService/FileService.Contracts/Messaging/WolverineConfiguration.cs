@@ -12,17 +12,25 @@ public static class WolverineConfiguration
     // Метод расширения Host.
     public static void AddWolverine(this WebApplicationBuilder builder)
     {
-        string rabbitConnectionString = builder.Configuration.GetConnectionString(ConnectionStringNames.RABBIT_MQ)
-                                        ?? throw new InvalidOperationException();
-        string postgresConnectionString = builder.Configuration.GetConnectionString(ConnectionStringNames.DATABASE)
-                                          ?? throw new InvalidOperationException();
+        bool useExternalTransports = builder.Configuration.GetValue("Messaging:UseExternalTransports", true);
 
         builder.Host.UseWolverine(opts =>
             {
                 opts.ApplicationAssembly = typeof(WolverineConfiguration).Assembly;
 
-                opts.ConfigureDurableMessaging(postgresConnectionString);
-                opts.ConfigureRabbitMq(rabbitConnectionString);
+                if (useExternalTransports)
+                {
+                    string postgresConnectionString = builder.Configuration.GetConnectionString(ConnectionStringNames.DATABASE)
+                                                      ?? throw new InvalidOperationException(
+                                                          "Connection string 'DefaultConnection' is required for Wolverine durable messaging.");
+                    string rabbitConnectionString = builder.Configuration.GetConnectionString(ConnectionStringNames.RABBIT_MQ)
+                                                    ?? throw new InvalidOperationException(
+                                                        "Connection string 'RabbitMq' is required when Messaging:UseExternalTransports is enabled.");
+
+                    opts.ConfigureDurableMessaging(postgresConnectionString);
+                    opts.ConfigureRabbitMq(rabbitConnectionString);
+                }
+
                 opts.ConfigureStandardErrorPolicies();
             },
             ExtensionDiscovery.ManualOnly); // Чтобы Wolverine не сканировал все сборки. Лучше указывать.

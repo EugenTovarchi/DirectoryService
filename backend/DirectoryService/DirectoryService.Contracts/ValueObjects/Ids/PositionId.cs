@@ -1,6 +1,6 @@
 ﻿namespace DirectoryService.Contracts.ValueObjects.Ids;
 
-public class PositionId : ValueObject, IComparable<PositionId>
+public class PositionId : ValueObject, IComparable<PositionId>, IEquatable<PositionId>
 {
     public Guid Value { get; }
 
@@ -31,5 +31,13 @@ public class PositionId : ValueObject, IComparable<PositionId>
     {
         return other is null ? 1 : // Все ненулевые объекты больше null
             Value.CompareTo(other.Value);
+    }
+    
+    public bool Equals(PositionId? other)
+    {
+        if (other is null) 
+            return false;
+        
+        return Value == other.Value;
     }
 }

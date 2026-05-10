@@ -25,13 +25,13 @@ internal sealed class FileHttpClient : IFileCommunicationService
         try
         {
             HttpResponseMessage response =
-                await _httpClient.GetAsync($"api/files/{mediaAssetId}", cancellationToken);
+                await _httpClient.GetAsync($"api/files/{mediaAssetId}", cancellationToken).ConfigureAwait(false);
 
-            return await response.HandleResponseAsync<GetMediaAssetResponse>(cancellationToken);
+            return await response.HandleResponseAsync<GetMediaAssetResponse>(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting media asset info for {mediaAssetId}", mediaAssetId);
+            _logger.LogError(ex, "Error getting media asset info for {MediaAssetId}", mediaAssetId);
             return Error.Failure("server.internal", "Failed to request media asset info").ToFailure();
         }
     }
@@ -42,13 +42,13 @@ internal sealed class FileHttpClient : IFileCommunicationService
         try
         {
             HttpResponseMessage response =
-                await _httpClient.PostAsJsonAsync("files/batch", request, cancellationToken);
+                await _httpClient.PostAsJsonAsync("files/batch", request, cancellationToken).ConfigureAwait(false);
 
-            return await response.HandleResponseAsync<GetMediaAssetsResponse>(cancellationToken);
+            return await response.HandleResponseAsync<GetMediaAssetsResponse>(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting media asset info for {mediaAssetIds}", request.MediaAssetIds);
+            _logger.LogError(ex, "Error getting media asset info for {MediaAssetIds}", request.MediaAssetIds);
             return Error.Failure("server.internal", "Failed to request media asset info").ToFailure();
         }
     }
@@ -59,13 +59,13 @@ internal sealed class FileHttpClient : IFileCommunicationService
         try
         {
             HttpResponseMessage response =
-                await _httpClient.GetAsync($"api/files/{mediaAssetId}/exists", cancellationToken);
+                await _httpClient.GetAsync($"api/files/{mediaAssetId}/exists", cancellationToken).ConfigureAwait(false);
 
-            return await response.HandleResponseAsync<CheckMediaAssetExistResponse>(cancellationToken);
+            return await response.HandleResponseAsync<CheckMediaAssetExistResponse>(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking media asset:{mediaAssetIds}", mediaAssetId);
+            _logger.LogError(ex, "Error checking media asset:{MediaAssetIds}", mediaAssetId);
             return Error.Failure("server.internal", "Failed to check media asset").ToFailure();
         }
     }

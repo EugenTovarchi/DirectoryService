@@ -18,6 +18,12 @@ namespace FileService.Core.Features;
 
 public sealed class CompleteMultipartUploadEndpoint : IEndpoint
 {
+    /// <summary>
+    /// Завершает загрузку файла в S3.
+    /// Выполняет отправку Id файла в DS сервис.
+    /// Если видео, то начинает hls обработку через планировщик Quartz.
+    /// </summary>
+    /// <param name="app">FileService</param>
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost("/files/multipart/end",
@@ -130,7 +136,7 @@ public sealed class CompleteMultipartUploadHandler
                 var createVideoProcessResult = VideoProcess.Create(mediaAsset.Id, mediaAsset.UploadKey);
                 if (createVideoProcessResult.IsFailure)
                 {
-                    _logger.LogError("Failed to create video process: {Error} for media asset: {id}",
+                    _logger.LogError("Failed to create video process: {Error} for media asset: {Id}",
                         createVideoProcessResult.Error.Message, mediaAsset.Id);
 
                     return createVideoProcessResult.Error.ToFailure();
@@ -141,7 +147,7 @@ public sealed class CompleteMultipartUploadHandler
                 var firstStep = videoProcess.Steps.OrderBy(s => s.Order).FirstOrDefault();
                 if (firstStep is null)
                 {
-                    _logger.LogError("No steps defined for video process for media asset: {id}", mediaAsset.Id);
+                    _logger.LogError("No steps defined for video process for media asset: {Id}", mediaAsset.Id);
                     return Errors.General.NotFoundValue("steps").ToFailure();
                 }
 
@@ -153,7 +159,7 @@ public sealed class CompleteMultipartUploadHandler
                     return startStepResult.Error.ToFailure();
                 }
 
-                _logger.LogInformation("Started video process for asset {id} with first step {stepName}",
+                _logger.LogInformation("Started video process for asset {Id} with first step {StepName}",
                     mediaAsset.Id, firstStep.Name);
 
                 _videoProcessesRepository.Add(videoProcess);
@@ -169,7 +175,7 @@ public sealed class CompleteMultipartUploadHandler
                     cancellationToken);
                 if (scheduleResult.IsFailure)
                 {
-                    _logger.LogError("Schedule processing failed: {Error} for media asset: {id} ",
+                    _logger.LogError("Schedule processing failed: {Error} for media asset: {Id} ",
                         scheduleResult.Error.Message, videoProcess.VideoAssetId);
                 }
                 else
@@ -184,7 +190,7 @@ public sealed class CompleteMultipartUploadHandler
             if (finalCommitResult.IsFailure)
                 return finalCommitResult.Error.ToFailure();
 
-            _logger.LogInformation("Success complete to upload of {id}", mediaAsset.Id);
+            _logger.LogInformation("Success complete to upload of {Id}", mediaAsset.Id);
 
             return UnitResult.Success<Failure>();
         }

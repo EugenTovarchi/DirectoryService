@@ -25,7 +25,7 @@ public class PhotoAsset : MediaAsset
 
     public static UnitResult<Error> Validate(MediaData mediaData)
     {
-        if (!AllowedExtensions.Contains(mediaData.FileName.Extension))
+        if (!AllowedExtensions.Contains(mediaData.FileName.Extension, StringComparer.Ordinal))
         {
             return Error.Validation("photo.invalid.extension",
                 $"File extension must be one of :{string.Join(",", AllowedExtensions)}");

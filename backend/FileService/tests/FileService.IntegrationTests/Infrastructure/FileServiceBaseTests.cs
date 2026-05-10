@@ -92,6 +92,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         CancellationToken cancellationToken = default)
     {
         var effectiveOwnerId = ownerId ?? TEST_DEPARTMENT_ID;
+        await CreateTestBucketAsync(VideoAsset.LOCATION);
 
         VideoAsset videoAsset = await ExecuteInDb(async dbContext =>
         {
@@ -111,11 +112,13 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
             await ExecuteInFileProvider(async fileProvider =>
             {
-                await fileProvider.UploadFileAsync(
+                var uploadResult = await fileProvider.UploadFileAsync(
                     videoAsset.UploadKey,
                     fileInfo.OpenRead(),
                     mediaData.ContentType.Value,
                     cancellationToken);
+
+                Assert.True(uploadResult.IsSuccess, uploadResult.IsFailure ? uploadResult.Error.Message : null);
             });
 
             if (status != MediaStatus.UPLOADING)
@@ -128,6 +131,11 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
                     case MediaStatus.UPLOADED:
                         videoAsset.MarkUploaded();
+                        break;
+
+                    case MediaStatus.PROCESSING:
+                        videoAsset.MarkUploaded();
+                        videoAsset.StartProcessing();
                         break;
 
                     case MediaStatus.DELETED:
@@ -162,6 +170,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
     {
         var effectiveOwnerId = ownerId ?? TEST_DEPARTMENT_ID;
         const string photoFileName = "test-photo.jpg";
+        await CreateTestBucketAsync(PhotoAsset.LOCATION);
 
         PhotoAsset photoAsset = await ExecuteInDb(async dbContext =>
         {
@@ -183,11 +192,13 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
             await ExecuteInFileProvider(async fileProvider =>
             {
-                await fileProvider.UploadFileAsync(
+                var uploadResult = await fileProvider.UploadFileAsync(
                     asset.UploadKey,
                     fileInfo.OpenRead(),
                     mediaData.ContentType.Value,
                     cancellationToken);
+
+                Assert.True(uploadResult.IsSuccess, uploadResult.IsFailure ? uploadResult.Error.Message : null);
             });
 
             if (status == MediaStatus.UPLOADED)

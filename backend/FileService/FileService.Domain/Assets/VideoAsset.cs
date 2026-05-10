@@ -33,7 +33,7 @@ public class VideoAsset : MediaAsset
 
     public static UnitResult<Error> Validate(MediaData mediaData)
     {
-        if (!AllowedExtensions.Contains(mediaData.FileName.Extension))
+        if (!AllowedExtensions.Contains(mediaData.FileName.Extension, StringComparer.OrdinalIgnoreCase))
         {
             return Error.Validation("video.invalid.extension",
                 $"File extension must be one of :{string.Join(",", AllowedExtensions)}");

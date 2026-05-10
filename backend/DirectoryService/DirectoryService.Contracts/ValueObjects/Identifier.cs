@@ -1,4 +1,3 @@
-﻿using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
 using SharedService.SharedKernel;
 
@@ -19,13 +18,32 @@ public record Identifier
 
     public static Result<Identifier, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH || value.Length < MIN_LENGTH)
+        if (string.IsNullOrEmpty(value))
         {
             return Errors.General.ValueIsInvalid("identifier");
         }
 
-        string normilized = Regex.Replace(value.Trim(), @"\s+", " ");
+        string trimmed = value.Trim();
 
-        return new Identifier(normilized);
+        if (trimmed.Length > MAX_LENGTH || trimmed.Length < MIN_LENGTH || !IsValidLtreeLabel(trimmed))
+        {
+            return Errors.General.ValueIsInvalid("identifier");
+        }
+
+        return new Identifier(trimmed);
+    }
+
+    private static bool IsValidLtreeLabel(string value)
+    {
+        foreach (char character in value)
+        {
+            bool isAsciiLetter = character is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
+            bool isDigit = character is >= '0' and <= '9';
+
+            if (!isAsciiLetter && !isDigit && character != '_')
+                return false;
+        }
+
+        return true;
     }
 }

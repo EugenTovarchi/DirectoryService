@@ -19,6 +19,4 @@ public sealed record VideoProcessingOptions
     public int MaxRetries { get; init; } = 3;
 
     public int RetryDelaySeconds { get; init; } = 10;
-
-    // public string CronSchedule { get; set; } = "0/30 * * * * ?";
 }

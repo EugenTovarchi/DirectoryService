@@ -93,7 +93,8 @@ public class PreviewUploader : IPreviewUploader
 
         for (int i = 0; i < timestamps.Count; i++)
         {
-            string fileName = _previewOptions.FileNamePattern.Replace("{index}", i.ToString());
+            string fileName = _previewOptions.FileNamePattern.Replace("{index}",
+                i.ToString(System.Globalization.CultureInfo.InvariantCulture));
             string outputPath = Path.Combine(previewDirectory, fileName);
 
             var result = await _ffmpegRunner.ExtractFrameAsync(
@@ -198,7 +199,7 @@ public class PreviewUploader : IPreviewUploader
         return uploadResult.Value;
     }
 
-    private Result<StorageKey, Error> CreateStorageKey(Guid videoAssetId, string fileName)
+    private static Result<StorageKey, Error> CreateStorageKey(Guid videoAssetId, string fileName)
     {
         return StorageKey.Create(
             fileName,

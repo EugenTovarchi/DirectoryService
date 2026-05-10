@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet build*)",
+      "PowerShell(dotnet test*)",
+      "PowerShell(docker compose -f ../docker-compose-dev.yml config*)",
+      "PowerShell(docker compose -f ../docker-compose-dev.yml ps*)",
+      "PowerShell(docker compose -f ../docker-compose-dev.yml build*)",
+      "PowerShell(docker compose -f ../docker-compose-dev.yml up -d --build*)",
+      "PowerShell(docker exec*)",
+      "PowerShell(docker logs*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git log*)",
+      "PowerShell(git status*)",
+      "PowerShell(rg*)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-ChildItem*)",
+      "Bash(dotnet build*)",
+      "Bash(dotnet test*)",
+      "Bash(docker compose -f ../docker-compose-dev.yml config*)",
+      "Bash(docker compose -f ../docker-compose-dev.yml ps*)",
+      "Bash(docker compose -f ../docker-compose-dev.yml build*)",
+      "Bash(docker compose -f ../docker-compose-dev.yml up -d --build*)",
+      "Bash(docker exec*)",
+      "Bash(docker logs*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git checkout*)",
+      "Bash(grep*)",
+      "Bash(rg*)",
+      "Bash(git status*)"
+    ]
+  }
+}

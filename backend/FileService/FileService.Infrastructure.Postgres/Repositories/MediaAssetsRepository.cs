@@ -23,7 +23,7 @@ public class MediaAssetsRepository(
             .Where(m => m.Id == mediaAssetId)
             .ExecuteDeleteAsync(cancellationToken);
 
-        logger.LogInformation("Media asset with id: {id} was deleted", mediaAssetId);
+        logger.LogInformation("Media asset with id: {Id} was deleted", mediaAssetId);
 
         return UnitResult.Success<Error>();
     }
@@ -48,7 +48,7 @@ public class MediaAssetsRepository(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unexpected error while creating media asset with id {id}", mediaAsset.Id);
+            logger.LogError(ex, "Unexpected error while creating media asset with id {Id}", mediaAsset.Id);
             return Errors.General.DatabaseError("creating_media_asset_error");
         }
     }
@@ -88,14 +88,15 @@ public class MediaAssetsRepository(
 
     private Result<Guid, Error> HandlePostgresException(PostgresException pgEx, Guid mediaAssetId)
     {
-        if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.File == null)
+        if (!string.Equals(pgEx.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.OrdinalIgnoreCase)
+            || pgEx.File == null)
         {
-            logger.LogError("Database error while creating media asset {id}: {Message}", mediaAssetId,
+            logger.LogError("Database error while creating media asset {Id}: {Message}", mediaAssetId,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_media_asset_error");
         }
 
-        logger.LogError("Unknown unique constraint violation for media asset {id}: {File}", mediaAssetId,
+        logger.LogError("Unknown unique constraint violation for media asset {Id}: {File}", mediaAssetId,
             pgEx.File);
         return Errors.General.Duplicate("record");
     }

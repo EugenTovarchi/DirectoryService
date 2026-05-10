@@ -44,7 +44,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            _logger.LogWarning("Department: {command} is invalid!", command.Request.DepartmentName);
+            _logger.LogWarning("Department: {Command} is invalid!", command.Request.DepartmentName);
 
             return validationResult.ToErrors();
         }
@@ -57,7 +57,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
 
         if (command.Request.LocationIds.Any())
         {
-            var locationIds = command.Request.LocationIds.Select(id => LocationId.Create(id));
+            var locationIds = command.Request.LocationIds.Select(LocationId.Create);
 
             var locationsCheck = await CheckLocationsExist(locationIds, cancellationToken);
             if (locationsCheck.IsFailure)

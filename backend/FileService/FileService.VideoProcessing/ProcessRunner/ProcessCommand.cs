@@ -8,7 +8,7 @@ public partial record ProcessCommand(string ExecutableFile, string Arguments)
 
     private static string NormalizeWhiteSpace(string input) => WhitespaceRegex().Replace(input.Trim(), " ");
 
-    [GeneratedRegex(@"\s+", RegexOptions.Compiled)]
+    [GeneratedRegex(@"\s+", RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex WhitespaceRegex();
 }
 

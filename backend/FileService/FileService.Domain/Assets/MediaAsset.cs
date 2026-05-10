@@ -64,19 +64,24 @@ public abstract class MediaAsset
         string ownerType)
     {
         var assetId = Guid.NewGuid();
+        var mediaOwnerResult = MediaOwner.Create(ownerType, ownerId);
+        if (mediaOwnerResult.IsFailure)
+            return mediaOwnerResult.Error;
+
+        var mediaOwner = mediaOwnerResult.Value;
 
         switch (assetType)
         {
             case AssetType.VIDEO:
-                var videoResult = VideoAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
+                var videoResult = VideoAsset.CreateForUpload(assetId, mediaData, mediaOwner.EntityId, mediaOwner.Context);
                 return videoResult.IsFailure ? videoResult.Error : videoResult.Value;
 
             case AssetType.PREVIEW:
-                var previewResult = PreviewAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
+                var previewResult = PreviewAsset.CreateForUpload(assetId, mediaData, mediaOwner.EntityId, mediaOwner.Context);
                 return previewResult.IsFailure ? previewResult.Error : previewResult.Value;
 
             case AssetType.PHOTO:
-                var avatarResult = PhotoAsset.CreateForUpload(assetId, mediaData, ownerId, ownerType);
+                var avatarResult = PhotoAsset.CreateForUpload(assetId, mediaData, mediaOwner.EntityId, mediaOwner.Context);
                 return avatarResult.IsFailure ? avatarResult.Error : avatarResult.Value;
 
             default:

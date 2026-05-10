@@ -28,7 +28,7 @@ public sealed class Position : SoftDeletableEntity<PositionId>
     public DateTime UpdatedAt { get; private set; }
 
     private readonly List<DepartmentPosition> _departmentPositions = [];
-    public IReadOnlyCollection<DepartmentPosition> DepartmentPositions => _departmentPositions.ToList();
+    public IReadOnlyCollection<DepartmentPosition> DepartmentPositions => _departmentPositions.AsReadOnly();
 
     public override void Delete()
     {
@@ -95,10 +95,10 @@ public sealed class Position : SoftDeletableEntity<PositionId>
 
     public UnitResult<Error> AddDepartmentPosition(DepartmentId departmentId)
     {
-        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
+        if (departmentId == null || departmentId.Equals(DepartmentId.EmptyDepartmentId()))
             return Errors.General.ValueIsInvalid("locationId");
 
-        if (_departmentPositions.Any(dl => dl.DepartmentId == departmentId))
+        if (_departmentPositions.Any(dl => dl.DepartmentId.Equals(departmentId)))
             return Errors.General.Duplicate("departmentId");
 
         var departmentPositionResult = DepartmentPosition.Create(Id, departmentId);
@@ -113,10 +113,10 @@ public sealed class Position : SoftDeletableEntity<PositionId>
 
     public UnitResult<Error> RemoveDepartmentPosition(DepartmentId departmentId)
     {
-        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
+        if (departmentId == null || departmentId.Equals(DepartmentId.EmptyDepartmentId()))
             return Errors.General.ValueIsInvalid("departmentId");
 
-        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.DepartmentId == departmentId);
+        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.DepartmentId.Equals(departmentId));
         if (departmentPosition == null)
             return Errors.General.NotFound(departmentId.Value);
 

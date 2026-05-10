@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Responses;
 using FileService.Core.FilesStorage;
+using FileService.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -36,7 +37,10 @@ public sealed class CheckMediaAssetExistHandler
         CancellationToken cancellationToken)
     {
         bool mediaAssetIsExists =
-            await _fileReadDbContext.ReadMediaAssets.AnyAsync(m => m.Id == mediaAssetId, cancellationToken);
+            await _fileReadDbContext.ReadMediaAssets.AnyAsync(
+                m => m.Id == mediaAssetId
+                     && (m.Status == MediaStatus.UPLOADED || m.Status == MediaStatus.READY),
+                cancellationToken);
 
         return new CheckMediaAssetExistResponse(mediaAssetIsExists);
     }

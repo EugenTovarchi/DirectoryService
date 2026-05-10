@@ -7,7 +7,7 @@ public sealed class VideoProcessStep
 {
     public Guid Id { get; private set; }
 
-    public Guid VideoProcessId { get; private set; } // FK
+    public Guid VideoProcessId { get; } // FK
     public int Order { get; private set; }
     public string Name { get; private set; }
     public VideoProcessStatus Status { get; private set; }

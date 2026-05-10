@@ -23,7 +23,7 @@ public class VideoProcessesRepository(
             .Where(m => m.Id == videoProcessId)
             .ExecuteDeleteAsync(cancellationToken);
 
-        logger.LogInformation("Video process with id: {id} was deleted", videoProcessId);
+        logger.LogInformation("Video process with id: {Id} was deleted", videoProcessId);
 
         return UnitResult.Success<Error>();
     }
@@ -48,7 +48,7 @@ public class VideoProcessesRepository(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unexpected error while creating video process with id {id}", videoProcess.Id);
+            logger.LogError(ex, "Unexpected error while creating video process with id {Id}", videoProcess.Id);
             return Errors.General.DatabaseError("creating_video_process_error");
         }
     }
@@ -80,14 +80,15 @@ public class VideoProcessesRepository(
 
     private Result<Guid, Error> HandlePostgresException(PostgresException pgEx, Guid videoProcessId)
     {
-        if (pgEx.SqlState != PostgresErrorCodes.UniqueViolation || pgEx.File == null)
+        if (!string.Equals(pgEx.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.OrdinalIgnoreCase)
+            || pgEx.File == null)
         {
-            logger.LogError("Database error while creating video process {id}: {Message}", videoProcessId,
+            logger.LogError("Database error while creating video process {Id}: {Message}", videoProcessId,
                 pgEx.MessageText);
             return Errors.General.DatabaseError("creating_media_asset_error");
         }
 
-        logger.LogError("Unknown unique constraint violation for video process {id}: {File}", videoProcessId,
+        logger.LogError("Unknown unique constraint violation for video process {Id}: {File}", videoProcessId,
             pgEx.File);
         return Errors.General.Duplicate("record");
     }
