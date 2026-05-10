@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+      <ProjectReference Include="..\FileService.Core\FileService.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Quartz" />
+      <PackageReference Include="Quartz.Extensions.Hosting" />
+    </ItemGroup>
+
+</Project>
