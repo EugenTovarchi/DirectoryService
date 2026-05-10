@@ -1,4 +1,3 @@
-﻿using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
 using SharedService.SharedKernel;
 
@@ -18,15 +17,19 @@ public record Path
 
     public static Result<Path, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH)
+        if (string.IsNullOrEmpty(value))
         {
             return Errors.General.ValueIsInvalid("path");
         }
 
-        string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
-            RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
+        string trimmed = value.Trim();
 
-        return new Path(normalized);
+        if (trimmed.Length > MAX_LENGTH || !IsValidLtreePath(trimmed))
+        {
+            return Errors.General.ValueIsInvalid("path");
+        }
+
+        return new Path(trimmed);
     }
 
     public static Result<Path, Error> CreateForChild(Path parentPath, Identifier childIdentifier)
@@ -45,5 +48,32 @@ public record Path
             : $"{parentPath.Value}{SEPARATOR}{childIdentifier.Value}";
 
         return Create(fullPath);
+    }
+
+    private static bool IsValidLtreePath(string value)
+    {
+        string[] segments = value.Split(SEPARATOR);
+
+        foreach (string segment in segments)
+        {
+            if (string.IsNullOrEmpty(segment) || !IsValidLtreeLabel(segment))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsValidLtreeLabel(string value)
+    {
+        foreach (char character in value)
+        {
+            bool isAsciiLetter = character is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
+            bool isDigit = character is >= '0' and <= '9';
+
+            if (!isAsciiLetter && !isDigit && character != '_')
+                return false;
+        }
+
+        return true;
     }
 }
