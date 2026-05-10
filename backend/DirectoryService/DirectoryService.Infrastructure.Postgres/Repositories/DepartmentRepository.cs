@@ -264,18 +264,26 @@ public class DepartmentRepository(
 
         try
         {
-            await dbContext.Database.ExecuteSqlRawAsync(
-                $"""
-                 UPDATE departments dept
-                 SET 
-                     path = @newPath::ltree || subpath(dept.path, nlevel(@oldPath::ltree)),
-                     depth = nlevel(@newPath::ltree) + (dept.depth - nlevel(@oldPath::ltree)),
-                     updated_at = @updated_at
-                 WHERE dept.is_deleted = false
-                         AND dept.path <@ @oldPath::ltree
-                         AND dept.id != @parent_department_id
-                 """,
-                parameters);
+            const string sql = """
+                               UPDATE departments dept
+                               SET
+                                   path = @newPath::ltree || subpath(dept.path, nlevel(@oldPath::ltree)),
+                                   depth = nlevel(@newPath::ltree) + (dept.depth - nlevel(@oldPath::ltree)),
+                                   updated_at = @updated_at
+                               WHERE dept.is_deleted = false
+                                       AND dept.path <@ @oldPath::ltree
+                                       AND dept.id != @parent_department_id
+                               """;
+
+            var connection = dbContext.Database.GetDbConnection();
+            var command = new CommandDefinition(
+                sql,
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30,
+                cancellationToken: cancellationToken);
+
+            await connection.ExecuteAsync(command);
 
             return UnitResult.Success<Error>();
         }
@@ -286,7 +294,7 @@ public class DepartmentRepository(
         }
     }
 
-    public async Task<UnitResult<Error>> MarkDepartmentAsDeleted(
+    public async Task<Result<string, Error>> MarkDepartmentAsDeleted(
         string prefix,
         DepartmentId deletedDepartmentId,
         CancellationToken cancellationToken)
@@ -295,22 +303,41 @@ public class DepartmentRepository(
 
         parameters.Add("@prefix", prefix);
         parameters.Add("@deleted_department_id", deletedDepartmentId.Value);
+        parameters.Add("@deleted_at", DateTime.UtcNow);
+        parameters.Add("@updated_at", DateTime.UtcNow);
 
         try
         {
             const string sql =
                 """
                 UPDATE departments dept
-                SET 
-                    path =  subpath(dept.path, 0, -1) || (@prefix|| subpath(dept.path, -1)::text)::ltree
-                    WHERE dept.is_deleted = true
-                        AND dept.id = @deleted_department_id
+                SET
+                    is_deleted = true,
+                    deleted_at = @deleted_at,
+                    updated_at = @updated_at,
+                    path = CASE
+                        WHEN nlevel(dept.path) = 1 THEN (@prefix || dept.path::text)::ltree
+                        ELSE subpath(dept.path, 0, nlevel(dept.path) - 1)
+                             || (@prefix || subpath(dept.path, nlevel(dept.path) - 1, 1)::text)::ltree
+                    END
+                WHERE dept.is_deleted = false
+                    AND dept.id = @deleted_department_id
+                RETURNING path::text
                 """;
 
             var connection = dbContext.Database.GetDbConnection();
-            await connection.ExecuteAsync(sql, parameters);
+            var command = new CommandDefinition(
+                sql,
+                parameters,
+                transaction: dbContext.Database.CurrentTransaction?.GetDbTransaction(),
+                commandTimeout: 30,
+                cancellationToken: cancellationToken);
 
-            return UnitResult.Success<Error>();
+            string? newPath = await connection.QuerySingleOrDefaultAsync<string>(command);
+            if (newPath is null)
+                return Errors.General.NotFoundEntity("department");
+
+            return newPath;
         }
         catch (Exception ex)
         {

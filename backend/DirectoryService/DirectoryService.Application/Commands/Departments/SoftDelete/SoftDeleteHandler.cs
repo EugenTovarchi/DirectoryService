@@ -56,8 +56,6 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
             return lockDescendantsResult.Error.ToFailure();
         }
 
-        department.Delete();
-
         string deletionPrefix = Constants.DELETION_PREFIX;
 
         var updateDepPathResult = await _departmentRepository
@@ -69,7 +67,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
             return updateDepPathResult.Error.ToFailure();
         }
 
-        string newPath = department.Path.Value;
+        string newPath = updateDepPathResult.Value;
 
         var updateDescendantsPathResult = await _departmentRepository.UpdateAllDescendantsPath(
             oldPath,
