@@ -179,10 +179,6 @@ services:
     volumes:
       - D:/Projects/DirectoryService/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - D:/docker-data/backend/nginx/logs:/var/log/nginx
-    depends_on:
-      - file-service
-      - directory-service
-      - auth-service
 
 
 secrets:
