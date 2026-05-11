@@ -38,6 +38,34 @@ RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=lock
 
 COPY --link ["backend/AuthService/", "backend/AuthService/"]
 
+FROM build AS migration-bundle
+WORKDIR /src
+
+RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=locked \
+    --mount=type=secret,id=nuget_config \
+    --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    cp /run/secrets/nuget_config /tmp/nuget.config && \
+    dotnet nuget update source github \
+        --configfile /tmp/nuget.config \
+        --username "$(cat /run/secrets/nuget_username)" \
+        --password "$(cat /run/secrets/nuget_password)" \
+        --store-password-in-clear-text && \
+    dotnet tool install dotnet-ef \
+        --tool-path /tools \
+        --version 9.0.10 \
+        --configfile /tmp/nuget.config && \
+    ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=auth_service;Username=postgres;Password=postgres" \
+        /tools/dotnet-ef migrations bundle \
+        --project "backend/AuthService/AuthService.Infrastructure.Postgres/AuthService.Infrastructure.Postgres.csproj" \
+        --startup-project "backend/AuthService/AuthService.Web/AuthService.Web.csproj" \
+        --context "AuthServiceDbContext" \
+        --configuration Release \
+        --output /app/migrations/efbundle \
+        --force && \
+    rm /tmp/nuget.config
+
+FROM build AS publish
 WORKDIR /src/backend/AuthService/AuthService.Web
 
 RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=locked \
@@ -47,10 +75,10 @@ RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=lock
     --no-restore \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS final
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS app
 WORKDIR /app
 
-COPY --link --from=build /app/publish .
+COPY --link --from=publish /app/publish .
 
 ENV ASPNETCORE_HTTP_PORTS=8003
 
@@ -58,3 +86,15 @@ USER app
 EXPOSE 8003
 
 ENTRYPOINT ["dotnet", "AuthService.Web.dll"]
+
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS migrator
+WORKDIR /app
+
+COPY --link --from=migration-bundle /app/migrations/efbundle /app/migrations/efbundle
+COPY --link ["backend/AuthService/AuthService.Web/migrate.sh", "/app/migrate.sh"]
+
+RUN chmod +x /app/migrate.sh /app/migrations/efbundle
+
+USER app
+
+ENTRYPOINT ["/app/migrate.sh"]

@@ -102,7 +102,8 @@ services:
     container_name: auth-service
     build:
       context: .
-      dockerfile: /backend/AuthService/AuthService.Web/Dockerfile
+      dockerfile: backend/AuthService/AuthService.Web/Dockerfile
+      target: app
       secrets:
         - nuget_config
         - nuget_username
@@ -112,8 +113,8 @@ services:
     env_file:
       - AuthService.Development.env
     depends_on:
-      postgres:
-        condition: service_healthy
+      auth-service-migrator:
+        condition: service_completed_successfully
       seq:
         condition: service_started
       loki:
@@ -121,6 +122,22 @@ services:
     tty: true
     stdin_open: true
     restart: unless-stopped
+
+  auth-service-migrator:
+    container_name: auth-service-migrator
+    build:
+      context: .
+      dockerfile: backend/AuthService/AuthService.Web/Dockerfile
+      target: migrator
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
+    env_file:
+      - AuthService.Development.env
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   rabbitmq:
     container_name: rabbitmq
