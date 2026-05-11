@@ -1,0 +1,34 @@
+using Serilog;
+using SharedService.Framework.EndpointSettings;
+using SharedService.Framework.Middlewares;
+
+namespace AuthService.Web.Configurations;
+
+public static class AppExtensions
+{
+    public static IApplicationBuilder WebConfigure(this WebApplication app)
+    {
+        app.UseRouting();
+        app.UseExceptionMiddleware();
+        app.UseRequestCorrelationId();
+
+        app.UseAuthorization();
+        app.MapControllers();
+
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Auth Service v1");
+                c.RoutePrefix = "swagger";
+            });
+        }
+
+        app.UseSerilogRequestLogging();
+
+        app.MapEndpoints();
+
+        return app;
+    }
+}

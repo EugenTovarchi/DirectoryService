@@ -98,6 +98,30 @@ services:
     stdin_open: true
     restart: unless-stopped
 
+  auth-service:
+    container_name: auth-service
+    build:
+      context: .
+      dockerfile: /backend/AuthService/AuthService.Web/Dockerfile
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
+    ports:
+      - "8003:8003"
+    env_file:
+      - AuthService.Development.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
+      loki:
+        condition: service_started
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:4-management-alpine
