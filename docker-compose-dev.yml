@@ -1,4 +1,5 @@
 services:
+  # Бэкенд-сервисы: прямые порты оставлены для разработки без Nginx.
   directory-service:
     container_name: directory-service
     build:
@@ -24,6 +25,7 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Общая инфраструктура для локального Docker-окружения.
   seq:
     container_name: directory-service-seq
     image: datalust/seq:latest
@@ -98,6 +100,47 @@ services:
     stdin_open: true
     restart: unless-stopped
 
+  auth-service:
+    container_name: auth-service
+    build:
+      context: .
+      dockerfile: backend/AuthService/AuthService.Web/Dockerfile
+      target: app
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
+    ports:
+      - "8003:8003"
+    env_file:
+      - AuthService.Development.env
+    depends_on:
+      auth-service-migrator:
+        condition: service_completed_successfully
+      seq:
+        condition: service_started
+      loki:
+        condition: service_started
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+
+  auth-service-migrator:
+    container_name: auth-service-migrator
+    build:
+      context: .
+      dockerfile: backend/AuthService/AuthService.Web/Dockerfile
+      target: migrator
+      secrets:
+        - nuget_config
+        - nuget_username
+        - nuget_password
+    env_file:
+      - AuthService.Development.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:4-management-alpine
@@ -130,8 +173,19 @@ services:
     depends_on:
       - loki
 
+  # Опциональный reverse proxy: запускается отдельно и не стартует backend-сервисы.
+  nginx:
+    image: nginx:alpine
+    container_name: backend-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - D:/Projects/DirectoryService/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - D:/docker-data/backend/nginx/logs:/var/log/nginx
+
 
 secrets:
+  # BuildKit secrets нужны только для NuGet restore во время сборки images.
   nuget_config:
     file: ./nuget.config
   nuget_username:

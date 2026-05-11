@@ -1,5 +1,18 @@
 <Solution>
-  <Folder Name="/AuthService/" />
+  <Folder Name="/AuthService/">
+    <File Path="AuthService/AGENTS.md" />
+  </Folder>
+  <Folder Name="/AuthService/src/">
+    <Project Path="AuthService/AuthService.Contracts/AuthService.Contracts.csproj" />
+    <Project Path="AuthService/AuthService.Core/AuthService.Core.csproj" />
+    <Project Path="AuthService/AuthService.Domain/AuthService.Domain.csproj" />
+    <Project Path="AuthService/AuthService.Infrastructure.Postgres/AuthService.Infrastructure.Postgres.csproj" />
+    <Project Path="AuthService/AuthService.Web/AuthService.Web.csproj" />
+  </Folder>
+  <Folder Name="/AuthService/tests/">
+    <Project Path="AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj" />
+    <Project Path="AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/DirectoryService/">
     <File Path="DirectoryService/.dockerignore" />
     <File Path="DirectoryService/AGENTS.md" />
@@ -57,15 +70,14 @@
     <File Path=".codex/skills/update-shared-nuget/SKILL.md" />
     <File Path=".codex/skills/video-hls-pipeline/SKILL.md" />
     <File Path="../.editorconfig" />
-    <File Path="../.env" />
     <File Path="../.gitignore" />
+    <File Path="../AuthService.Development.env" />
     <File Path="../BannedSymbols.txt" />
     <File Path="../Directory.Build.props" />
     <File Path="../Directory.Packages.props" />
     <File Path="../DirectoryService.Development.env" />
     <File Path="../docker-compose-dev.yml" />
     <File Path="../FileService.Development.env" />
-    <File Path="../FileService.env" />
     <File Path="../nuget.config" />
     <File Path="../README.md" />
   </Folder>

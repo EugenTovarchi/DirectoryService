@@ -1,0 +1,58 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Web", "AuthService.Web\AuthService.Web.csproj", "{14EA7A18-282B-4D0D-8E01-DCD6241F98EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Contracts", "AuthService.Contracts\AuthService.Contracts.csproj", "{34F33DE4-1C6C-4209-8D78-755C29200EA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Core", "AuthService.Core\AuthService.Core.csproj", "{2489A9F0-E8DA-44AE-A682-D98CC8F2240B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Domain", "AuthService.Domain\AuthService.Domain.csproj", "{DBB0D186-8C3E-413A-894E-094BC4507D98}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Infrastructure.Postgres", "AuthService.Infrastructure.Postgres\AuthService.Infrastructure.Postgres.csproj", "{7C6EBD47-EA0D-441C-B966-4D6830BD5D7E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EF25879C-F224-4CC6-9BC8-0403CF4B5312}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.IntegrationTests", "tests\AuthService.IntegrationTests\AuthService.IntegrationTests.csproj", "{71FC72E8-32B3-4E47-9637-6C04D80D3B5A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.UnitTests", "tests\AuthService.UnitTests\AuthService.UnitTests.csproj", "{A459FCF5-3846-4E66-9275-D73D69588324}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{14EA7A18-282B-4D0D-8E01-DCD6241F98EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14EA7A18-282B-4D0D-8E01-DCD6241F98EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14EA7A18-282B-4D0D-8E01-DCD6241F98EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14EA7A18-282B-4D0D-8E01-DCD6241F98EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34F33DE4-1C6C-4209-8D78-755C29200EA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34F33DE4-1C6C-4209-8D78-755C29200EA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34F33DE4-1C6C-4209-8D78-755C29200EA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34F33DE4-1C6C-4209-8D78-755C29200EA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2489A9F0-E8DA-44AE-A682-D98CC8F2240B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2489A9F0-E8DA-44AE-A682-D98CC8F2240B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2489A9F0-E8DA-44AE-A682-D98CC8F2240B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2489A9F0-E8DA-44AE-A682-D98CC8F2240B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBB0D186-8C3E-413A-894E-094BC4507D98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBB0D186-8C3E-413A-894E-094BC4507D98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBB0D186-8C3E-413A-894E-094BC4507D98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBB0D186-8C3E-413A-894E-094BC4507D98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C6EBD47-EA0D-441C-B966-4D6830BD5D7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C6EBD47-EA0D-441C-B966-4D6830BD5D7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C6EBD47-EA0D-441C-B966-4D6830BD5D7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C6EBD47-EA0D-441C-B966-4D6830BD5D7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71FC72E8-32B3-4E47-9637-6C04D80D3B5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71FC72E8-32B3-4E47-9637-6C04D80D3B5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71FC72E8-32B3-4E47-9637-6C04D80D3B5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71FC72E8-32B3-4E47-9637-6C04D80D3B5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A459FCF5-3846-4E66-9275-D73D69588324}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A459FCF5-3846-4E66-9275-D73D69588324}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A459FCF5-3846-4E66-9275-D73D69588324}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A459FCF5-3846-4E66-9275-D73D69588324}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{71FC72E8-32B3-4E47-9637-6C04D80D3B5A} = {EF25879C-F224-4CC6-9BC8-0403CF4B5312}
+		{A459FCF5-3846-4E66-9275-D73D69588324} = {EF25879C-F224-4CC6-9BC8-0403CF4B5312}
+	EndGlobalSection
+EndGlobal

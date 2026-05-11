@@ -39,6 +39,7 @@ Detailed context:
 - `docker-compose-dev.yml` may build from local source.
 - Production compose should normally use built images, not local `build:` sections.
 - Keep ports configurable if they may conflict on developer machines.
+- Add short Russian comments to Docker Compose/config files for non-obvious local-dev behavior, storage paths, optional services, and secret usage. Keep comments concise.
 - For Dockerfile-only edits, validate syntax first:
 
 ```bash
