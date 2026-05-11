@@ -42,6 +42,7 @@ Do not use `localhost` inside containers for another service.
 - Compose build context is repository root (`..`).
 - Dockerfile `COPY` paths start with `backend/...`.
 - Do not mount service source over the runtime app directory unless intentionally using a dev/watch container.
+- Add short Russian comments to Docker Compose/config files when they clarify non-obvious local-dev behavior, storage paths, optional services, or secret usage. Keep comments brief and avoid restating obvious YAML keys.
 
 Related docs:
 

@@ -1,4 +1,5 @@
 services:
+  # Бэкенд-сервисы: прямые порты оставлены для разработки без Nginx.
   directory-service:
     container_name: directory-service
     build:
@@ -24,6 +25,7 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Общая инфраструктура для локального Docker-окружения.
   seq:
     container_name: directory-service-seq
     image: datalust/seq:latest
@@ -171,6 +173,7 @@ services:
     depends_on:
       - loki
 
+  # Опциональный reverse proxy: запускается отдельно и не стартует backend-сервисы.
   nginx:
     image: nginx:alpine
     container_name: backend-nginx
@@ -182,6 +185,7 @@ services:
 
 
 secrets:
+  # BuildKit secrets нужны только для NuGet restore во время сборки images.
   nuget_config:
     file: ./nuget.config
   nuget_username:
