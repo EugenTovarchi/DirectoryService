@@ -11,7 +11,7 @@ public static class DependencyInjectionExtensions
         IWebHostEnvironment webHostEnvironment)
         where TProgram : class
     {
-        configuration.AddJsonFile($"appsettings.{environment}.json", true, true)
+        configuration.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables();
 
         if (webHostEnvironment.IsDevelopment())

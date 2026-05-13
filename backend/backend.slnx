@@ -46,6 +46,11 @@
     <Project Path="FileService/tests/FileService.IntegrationTests/FileService.IntegrationTests.csproj" />
     <Project Path="FileService/tests/FileService.UnitTests/FileService.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/Infrastructure/observabillity/">
+    <File Path="infrastructure/observabillity/alloy/config.alloy" />
+    <File Path="infrastructure/observabillity/grafana/provisioning/datasources.yaml" />
+    <File Path="infrastructure/observabillity/loki/loki-config.yaml" />
+  </Folder>
   <Folder Name="/SolutionFolder/">
     <File Path="AGENTS.md" />
     <File Path="DS-FS.md" />
@@ -60,6 +65,7 @@
     <File Path=".codex/rules/backend-migrations.md" />
     <File Path=".codex/rules/backend-patterns.md" />
     <File Path=".codex/rules/docker-ci.md" />
+    <File Path=".codex/rules/docker-observability.md" />
     <File Path=".codex/rules/documentation-maintenance.md" />
     <File Path=".codex/rules/integration-tests.md" />
     <File Path=".codex/rules/security.md" />
