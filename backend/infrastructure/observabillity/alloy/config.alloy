@@ -40,20 +40,151 @@ loki.source.docker "containers" {
 loki.process "logs" {
   forward_to = [loki.write.local.receiver]
 
-  // Если приложение пишет JSON, level попадет в Loki label.
+  // Убираем ANSI-коды, чтобы regex и Grafana показывали читаемый текст.
+  stage.decolorize {}
+
+  // Разбираем Serilog console prefix и хвост с JSON-свойствами.
+  stage.regex {
+    expression = "^\\[\\s*(?P<log_time>[^\\]]*?)(?P<level>Trace|Debug|Information|Warning|Error|Fatal)\\]\\s+(?:(?P<source_context>[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+)\\s+)?(?P<message>.*?)(?:\\s+(?P<properties>\\{.*\\}))?$"
+  }
+
+  // Если строка уже JSON, берем поля напрямую.
   stage.json {
     expressions = {
-      level = "level",
+      json_level          = "level",
+      json_message        = "Message",
+      json_source_context = "SourceContext",
+      json_environment    = "EnvironmentName",
+      json_service_name   = "ServiceName",
+      json_event_id       = "EventId.Id",
+      json_trace_id       = "TraceId",
+      json_span_id        = "SpanId",
+      json_correlation_id = "CorrelationId",
+      json_request_path   = "RequestPath",
+      json_http_method    = "RequestMethod",
+      json_status_code    = "StatusCode",
+      json_exception_type = "Exception.Type",
     }
+  }
+
+  // Извлекаем безопасные поля из JSON-хвоста Serilog console.
+  stage.json {
+    source = "properties"
+
+    expressions = {
+      property_service_name   = "ServiceName",
+      property_environment    = "EnvironmentName",
+      property_event_id       = "EventId.Id",
+      property_trace_id       = "TraceId",
+      property_span_id        = "SpanId",
+      property_correlation_id = "CorrelationId",
+      property_request_path   = "RequestPath",
+      property_http_method    = "RequestMethod",
+      property_status_code    = "StatusCode",
+      property_exception_type = "ExceptionDetail.Type",
+    }
+  }
+
+  // Нормализуем level для LogQL; high-cardinality поля остаются metadata.
+  stage.template {
+    source   = "normalized_level"
+    template = "{{ if .level }}{{ ToLower .level }}{{ else if .json_level }}{{ ToLower .json_level }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "normalized_service_name"
+    template = "{{ if .property_service_name }}{{ .property_service_name }}{{ else if .json_service_name }}{{ .json_service_name }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "environment"
+    template = "{{ if .property_environment }}{{ .property_environment }}{{ else if .json_environment }}{{ .json_environment }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_source_context"
+    template = "{{ if .source_context }}{{ .source_context }}{{ else if .json_source_context }}{{ .json_source_context }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_event_id"
+    template = "{{ if .property_event_id }}{{ .property_event_id }}{{ else if .json_event_id }}{{ .json_event_id }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_trace_id"
+    template = "{{ if .property_trace_id }}{{ .property_trace_id }}{{ else if .json_trace_id }}{{ .json_trace_id }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_span_id"
+    template = "{{ if .property_span_id }}{{ .property_span_id }}{{ else if .json_span_id }}{{ .json_span_id }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_correlation_id"
+    template = "{{ if .property_correlation_id }}{{ .property_correlation_id }}{{ else if .json_correlation_id }}{{ .json_correlation_id }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_request_path"
+    template = "{{ if .property_request_path }}{{ .property_request_path }}{{ else if .json_request_path }}{{ .json_request_path }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_http_method"
+    template = "{{ if .property_http_method }}{{ .property_http_method }}{{ else if .json_http_method }}{{ .json_http_method }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_status_code"
+    template = "{{ if .property_status_code }}{{ .property_status_code }}{{ else if .json_status_code }}{{ .json_status_code }}{{ end }}"
+  }
+
+  stage.template {
+    source   = "metadata_exception_type"
+    template = "{{ if .property_exception_type }}{{ .property_exception_type }}{{ else if .json_exception_type }}{{ .json_exception_type }}{{ end }}"
   }
 
   stage.labels {
     values = {
-      level = "",
+      level        = "normalized_level",
+      service_name = "normalized_service_name",
+      environment  = "",
+    }
+  }
+
+  // Диагностические поля не индексируем как labels.
+  stage.structured_metadata {
+    values = {
+      source_context = "metadata_source_context",
+      container_id   = "",
+      event_id       = "metadata_event_id",
+      trace_id       = "metadata_trace_id",
+      span_id        = "metadata_span_id",
+      correlation_id = "metadata_correlation_id",
+      request_path   = "metadata_request_path",
+      http_method    = "metadata_http_method",
+      status_code    = "metadata_status_code",
+      exception_type = "metadata_exception_type",
+    }
+  }
+
+  stage.label_drop {
+    values = [ "container_id" ]
+  }
+
+  // Для ошибок сохраняем полную строку: exception/stacktrace не теряются.
+  stage.match {
+    selector = "{level!~\"error|fatal\"}"
+
+    stage.output {
+      source = "message"
     }
   }
 }
 
+// Отправляем обработанные логи в локальный Loki.
 loki.write "local" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
