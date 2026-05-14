@@ -5,6 +5,13 @@ globs: ["docker-compose*.yml", "backend/infrastructure/observabillity/**", "infr
 # Docker Observability Rules
 
 - Observability configs live under `backend/infrastructure/observabillity`.
+- OTel Collector configs live under `backend/infrastructure/observabillity/otel-collector`.
+- OTel Collector receives OTLP on ports `4317` and `4318`.
+- OTel Collector exposes the local Prometheus scrape endpoint on port `9464`.
+- Prometheus config lives under `backend/infrastructure/observabillity/prometheus`.
+- Prometheus scrapes OTel Collector at `otel-collector:9464`.
+- Prometheus persistent data lives under `D:/docker-data/backend/prometheus`.
+- Do not scrape backend services directly until they expose or send metrics intentionally.
 - Keep Alloy, Loki, and Grafana configs service-neutral for backend services and future frontend services.
 - In infrastructure config files, add short Russian comments only for important blocks or non-obvious settings.
 - Do not use `latest` or broad floating tags in Docker Compose files.
