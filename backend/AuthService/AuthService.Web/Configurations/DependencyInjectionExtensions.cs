@@ -1,4 +1,5 @@
 using SharedService.Framework.Logging;
+using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
 
 namespace AuthService.Web.Configurations;
@@ -11,7 +12,7 @@ public static class DependencyInjectionExtensions
         IWebHostEnvironment webHostEnvironment)
         where TProgram : class
     {
-        configuration.AddJsonFile($"appsettings.{environment}.json", true, true)
+        configuration.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables();
 
         if (webHostEnvironment.IsDevelopment())
@@ -28,6 +29,7 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "AuthService");
         services.AddOpenApiSpec("AuthService");
+        services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "AuthService");
 
         return services;
     }

@@ -1,0 +1,20 @@
+{
+  "uid": "directory-service-overview",
+  "title": "DirectoryService Overview",
+  "tags": ["backend", "DirectoryService"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "HTTP request rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (http_request_method, http_route) (rate(http_server_request_duration_seconds_count{exported_job=\"DirectoryService\"}[5m]))", "legendFormat": "{{http_request_method}} {{http_route}}"}]},
+    {"id": 2, "type": "timeseries", "title": "HTTP errors", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (http_response_status_code, http_route) (rate(http_server_request_duration_seconds_count{exported_job=\"DirectoryService\", http_response_status_code=~\"4..|5..\"}[5m]))", "legendFormat": "{{http_response_status_code}} {{http_route}}"}]},
+    {"id": 3, "type": "timeseries", "title": "HTTP p95 latency", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 0}, "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{exported_job=\"DirectoryService\"}[5m])))", "legendFormat": "{{http_route}}"}], "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}},
+    {"id": 4, "type": "timeseries", "title": "HttpClient request rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 7}, "targets": [{"refId": "A", "expr": "sum by (server_address, http_response_status_code) (rate(http_client_request_duration_seconds_count{exported_job=\"DirectoryService\"}[5m]))", "legendFormat": "DirectoryService -> {{server_address}} {{http_response_status_code}}"}]},
+    {"id": 5, "type": "timeseries", "title": "directory-service-db connections", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 7}, "targets": [{"refId": "A", "expr": "sum by (pool_name, state) (db_client_connections_usage{exported_job=\"DirectoryService\", pool_name=\"directory-service-db\"})", "legendFormat": "{{pool_name}} {{state}}"}, {"refId": "B", "expr": "max by (pool_name) (db_client_connections_max{exported_job=\"DirectoryService\", pool_name=\"directory-service-db\"})", "legendFormat": "{{pool_name}} max"}]},
+    {"id": 6, "type": "timeseries", "title": "EF Core metrics", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 7}, "targets": [{"refId": "A", "expr": "rate(microsoft_entityframeworkcore_queries_total{exported_job=\"DirectoryService\"}[5m])", "legendFormat": "queries"}, {"refId": "B", "expr": "rate(microsoft_entityframeworkcore_savechanges_total{exported_job=\"DirectoryService\"}[5m])", "legendFormat": "savechanges"}, {"refId": "C", "expr": "microsoft_entityframeworkcore_active_dbcontexts{exported_job=\"DirectoryService\"}", "legendFormat": "active dbcontexts"}]},
+    {"id": 7, "type": "timeseries", "title": "Runtime memory and CPU", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 12, "x": 0, "y": 14}, "targets": [{"refId": "A", "expr": "dotnet_process_memory_working_set_bytes{exported_job=\"DirectoryService\"}", "legendFormat": "memory"}, {"refId": "B", "expr": "sum(rate(dotnet_process_cpu_time_seconds_total{exported_job=\"DirectoryService\"}[5m]))", "legendFormat": "cpu"}]},
+    {"id": 8, "type": "logs", "title": "Recent DirectoryService errors", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 7, "w": 12, "x": 12, "y": 14}, "targets": [{"refId": "A", "expr": "{service_name=\"DirectoryService\", level=\"error\"}"}], "options": {"showTime": true, "showLabels": false, "wrapLogMessage": true}}
+  ]
+}

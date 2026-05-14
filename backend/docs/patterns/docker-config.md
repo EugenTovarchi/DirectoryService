@@ -10,6 +10,27 @@ Build-time secrets are only for NuGet restore:
 - `nuget_username`: BuildKit secret from environment variable `NUGET_USERNAME`.
 - `nuget_password`: BuildKit secret from environment variable `NUGET_PASSWORD`.
 
+Compose reads these build secrets from the host shell environment. Service `env_file`
+files are runtime container configuration and do not automatically provide build
+secrets.
+
+PowerShell example:
+
+```powershell
+$env:NUGET_USERNAME="your-github-username"
+$env:NUGET_PASSWORD="your-github-pat"
+docker compose -f docker-compose-dev.yml build file-service directory-service auth-service
+```
+
+GitHub PAT scopes:
+
+- `read:packages` for Docker builds that restore private packages.
+- `repo` when packages or repositories are private.
+- `write:packages` only when publishing packages.
+
+Do not commit real PAT values. Prefer ignored local env/script files when needed,
+and do not print token values in logs.
+
 Dockerfiles must not:
 
 - `COPY nuget.config`

@@ -1,0 +1,62 @@
+{
+  "uid": "backend-observability-stack",
+  "title": "Observability Stack Overview",
+  "tags": ["backend", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Prometheus scrape: otel-collector",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{"refId": "A", "expr": "up{job=\"otel-collector\"}", "legendFormat": "otel-collector"}],
+      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Backend services exporting metrics",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [{"refId": "A", "expr": "count(count by (exported_job) (target_info{exported_job=~\"FileService|DirectoryService|AuthService\"}))"}]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Backend log volume by service",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{"refId": "A", "expr": "sum by (service_name) (rate({service_name=~\"FileService|DirectoryService|AuthService\"}[5m]))", "legendFormat": "{{service_name}}"}]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Backend error logs by service",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{"refId": "A", "expr": "sum by (service_name) (count_over_time({service_name=~\"FileService|DirectoryService|AuthService\", level=\"error\"}[5m]))", "legendFormat": "{{service_name}}"}]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Backend HTTP request rate",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [{"refId": "A", "expr": "sum by (exported_job) (rate(http_server_request_duration_seconds_count{exported_job=~\"FileService|DirectoryService|AuthService\"}[5m]))", "legendFormat": "{{exported_job}}"}]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Backend memory working set",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [{"refId": "A", "expr": "avg by (exported_job) (dotnet_process_memory_working_set_bytes{exported_job=~\"FileService|DirectoryService|AuthService\"})", "legendFormat": "{{exported_job}}"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+    }
+  ]
+}

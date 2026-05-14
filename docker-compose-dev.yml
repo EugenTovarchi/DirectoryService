@@ -28,7 +28,7 @@ services:
   # Общая инфраструктура для локального Docker-окружения.
   seq:
     container_name: directory-service-seq
-    image: datalust/seq:latest
+    image: datalust/seq:2025.2
     environment:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
@@ -39,7 +39,7 @@ services:
 
   postgres:
     container_name: directory-service-postgres
-    image: postgres:15
+    image: postgres:15.15-alpine
     env_file:
       - DirectoryService.Development.env
     ports:
@@ -55,7 +55,7 @@ services:
 
   redis:
     container_name: redis
-    image: redis:alpine
+    image: redis:7.4.8-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -64,7 +64,7 @@ services:
 
   minio:
     container_name: file-service-minio
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     env_file:
       - FileService.Development.env
     ports:
@@ -143,7 +143,7 @@ services:
 
   rabbitmq:
     container_name: rabbitmq
-    image: rabbitmq:4-management-alpine
+    image: rabbitmq:4.3.0-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -159,23 +159,84 @@ services:
     restart: always
 
   loki:
-    image: grafana/loki:latest
     container_name: loki
+    image: grafana/loki:3.5.12
     ports:
       - "3100:3100"
+    volumes:
+      - ./backend/infrastructure/observabillity/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - D:/docker-data/backend/loki:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
     container_name: grafana
+    image: grafana/grafana:12.1.1
     ports:
       - "3000:3000"
+    env_file:
+      - Grafana.Development.env
+    volumes:
+      - ./backend/infrastructure/observabillity/grafana/provisioning/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./backend/infrastructure/observabillity/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - D:/docker-data/backend/grafana:/var/lib/grafana
+      # Dashboard JSON хранится в репозитории, данные Grafana остаются в D:/docker-data.
+      - ./backend/infrastructure/observabillity/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
+    restart: unless-stopped
+
+  alloy:
+    container_name: alloy
+    image: grafana/alloy:v1.10.2
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./backend/infrastructure/observabillity/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # Docker socket нужен Alloy для чтения stdout/stderr контейнеров в local dev.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - D:/docker-data/backend/alloy:/var/lib/alloy/data
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  otel-collector:
+    container_name: otel-collector
+    image: otel/opentelemetry-collector-contrib:0.151.0
+    command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "9464:9464"
+      - "13133:13133"
+    volumes:
+      - ./backend/infrastructure/observabillity/otel-collector/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
+    restart: unless-stopped
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.11.3
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - D:/Projects/DirectoryService/backend/infrastructure/observabillity/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - D:/docker-data/backend/prometheus:/prometheus
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
 
   # Опциональный reverse proxy: запускается отдельно и не стартует backend-сервисы.
   nginx:
-    image: nginx:alpine
+    image: nginx:1.29.4-alpine
     container_name: backend-nginx
     ports:
       - "8080:80"

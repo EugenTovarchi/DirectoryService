@@ -7,7 +7,7 @@ SharedService is the service-neutral foundation. It must stay generic.
 Observed projects:
 
 - `SharedService.Core`: command/query abstractions, pagination, handler helpers, validation helpers.
-- `SharedService.Framework`: controller/endpoint helpers and HTTP response envelope behavior.
+- `SharedService.Framework`: controller/endpoint helpers, HTTP response envelope behavior, and shared backend observability setup.
 - `SharedService.SharedKernel`: shared `Error`, `Failure`, `Errors`, `Envelope`, and related result/error types.
 
 Examples used by services:
@@ -29,11 +29,13 @@ Examples used by services:
 - Reuse `Error`/`Failure` result style for business validation.
 - Keep SharedService free of FileService/DirectoryService/AuthService business concepts.
 - Prefer additive SharedService changes; public package/API changes require checking all consumers.
+- For shared OpenTelemetry setup, package workflow, and service integration rules, see [../patterns/observability.md](../patterns/observability.md).
 
 Related docs:
 
 - [overview.md](overview.md)
 - [services.md](services.md)
 - [how-to-add-service.md](how-to-add-service.md)
+- [../patterns/observability.md](../patterns/observability.md)
 - [../rules/coding-style.md](../rules/coding-style.md)
 - [../rules/domain-rules.md](../rules/domain-rules.md)

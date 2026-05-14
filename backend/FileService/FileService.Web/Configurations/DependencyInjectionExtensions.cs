@@ -1,4 +1,5 @@
 using SharedService.Framework.Logging;
+using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
 
 namespace FileService.Web.Configurations;
@@ -9,6 +10,7 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "FileService");
         services.AddOpenApiSpec("FileService");
+        services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "FileService");
 
         return services;
     }

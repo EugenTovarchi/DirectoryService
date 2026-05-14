@@ -27,7 +27,7 @@ Do not cross service storage boundaries:
 - FileService must not write DirectoryService database.
 - Cross-service communication is by HTTP for direct checks/queries and RabbitMQ/Wolverine for async events.
 
-See [../patterns/configuration.md](../patterns/configuration.md) and [../patterns/docker-config.md](../patterns/docker-config.md) for runtime configuration and Docker rules.
+See [../patterns/configuration.md](../patterns/configuration.md), [../patterns/docker-config.md](../patterns/docker-config.md), and [../patterns/observability.md](../patterns/observability.md) for runtime configuration, Docker rules, and backend metrics setup.
 
 ## Implementation Style
 

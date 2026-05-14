@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using SharedService.Core.Abstractions;
 using TransactionManager = DirectoryService.Infrastructure.Postgres.Database.TransactionManager;
 
@@ -29,17 +30,31 @@ public static class InfrastructureDependencyInjection
 
     private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContextPool<DirectoryServiceDbContext>((sp, options) =>
+        services.AddSingleton<NpgsqlDataSource>(sp =>
         {
             string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
-            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
-            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-            options.UseNpgsql(connectionString);
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
             }
+
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString)
+            {
+                Name = "directory-service-db",
+            };
+
+            dataSourceBuilder.UseLoggerFactory(sp.GetRequiredService<ILoggerFactory>());
+
+            return dataSourceBuilder.Build();
+        });
+
+        services.AddDbContextPool<DirectoryServiceDbContext>((sp, options) =>
+        {
+            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
+            var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
+
+            options.UseNpgsql(dataSource);
 
             options.LogTo(message =>
             {

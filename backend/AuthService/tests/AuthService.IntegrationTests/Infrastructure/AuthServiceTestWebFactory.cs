@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Respawn;
 using Testcontainers.PostgreSql;
@@ -55,13 +56,25 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<AuthServiceDbContext>();
+            services.RemoveAll<NpgsqlDataSource>();
             services.RemoveAll<INpgsqlConnectionFactory>();
 
             services.AddDbContext<AuthServiceDbContext>(_ =>
                 AuthServiceDbContext.Create(_dbContainer.GetConnectionString()));
 
-            services.AddScoped<INpgsqlConnectionFactory>(_ =>
-                new NpgsqlConnectionFactory(_dbContainer.GetConnectionString()));
+            services.AddSingleton(sp =>
+            {
+                var dataSourceBuilder = new NpgsqlDataSourceBuilder(_dbContainer.GetConnectionString())
+                {
+                    Name = "auth-service-db"
+                };
+
+                dataSourceBuilder.UseLoggerFactory(sp.GetRequiredService<ILoggerFactory>());
+
+                return dataSourceBuilder.Build();
+            });
+
+            services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
         });
 
         base.ConfigureWebHost(builder);

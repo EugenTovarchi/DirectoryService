@@ -6,7 +6,7 @@
     <!-- Internal packages -->
     <PackageVersion Include="istreddev.core" Version="0.0.1" />
     <PackageVersion Include="istreddev.fileservice.contracts" Version="0.0.4" />
-    <PackageVersion Include="istreddev.framework" Version="0.0.11" />
+    <PackageVersion Include="istreddev.framework" Version="0.0.13" />
     <PackageVersion Include="istreddev.sharedkernel" Version="0.0.4" />
     <PackageVersion Include="IstredDev.IntegrationEvents.Core" Version="0.0.1" />
 
