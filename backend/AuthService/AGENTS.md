@@ -4,6 +4,7 @@ Use this after root [../AGENTS.md](../AGENTS.md).
 
 ## Read First
 
+- [../docs/services/auth-service.md](../docs/services/auth-service.md)
 - [../docs/architecture/overview.md](../docs/architecture/overview.md)
 - [../docs/architecture/shared-kernel.md](../docs/architecture/shared-kernel.md)
 - [../docs/rules/coding-style.md](../docs/rules/coding-style.md)
@@ -12,11 +13,15 @@ Use this after root [../AGENTS.md](../AGENTS.md).
 
 ## Service Rules
 
-- AuthService owns authentication user data.
+- AuthService owns identity, ASP.NET Core Identity users/roles, access token issuing, refresh token rotation, invites, and auth audit events.
+- AuthService does not own company hierarchy, cameras, files, videos, or detailed business access rules.
+- Use `CurrentCompanyId` on `ApplicationUser` for MVP; keep multi-company membership for post-MVP.
+- Use `AuthService.Contracts` for externally consumed DTOs/contracts.
 - Follow the existing `IEndpoint` + handler pattern from FileService.
 - Keep `AuthService.Contracts` DTOs stable once consumed externally.
 - Do not log passwords, password hashes, JWTs, refresh tokens, or other credentials.
 - Do not store real secrets in appsettings or committed config.
+- Keep auth documentation updated in [../docs/services/auth-service.md](../docs/services/auth-service.md) when changing AuthService boundaries, token lifecycle, roles, permissions, invites, or sessions.
 
 ## Verification
 
