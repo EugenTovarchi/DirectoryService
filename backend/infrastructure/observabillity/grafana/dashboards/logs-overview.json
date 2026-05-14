@@ -1,0 +1,30 @@
+{
+  "uid": "backend-logs-overview",
+  "title": "Logs Overview",
+  "tags": ["backend", "logs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {"list": [
+    {
+      "name": "service_name",
+      "type": "query",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "query": {"label": "service_name", "refId": "LokiVariableQuery", "stream": "{service_name=~\"FileService|DirectoryService|AuthService\"}", "type": 1},
+      "includeAll": true,
+      "multi": true,
+      "allValue": "FileService|DirectoryService|AuthService",
+      "refresh": 1,
+      "current": {"selected": true, "text": "All", "value": "$__all"}
+    }
+  ]},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "Log volume by service", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (service_name) (rate({service_name=~\"${service_name:regex}\"}[5m]))"}]},
+    {"id": 2, "type": "timeseries", "title": "Warnings and errors by service", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (service_name, level) (count_over_time({service_name=~\"${service_name:regex}\", level=~\"warning|error\"}[5m]))"}]},
+    {"id": 3, "type": "logs", "title": "Recent error logs", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}, "targets": [{"refId": "A", "expr": "{service_name=~\"${service_name:regex}\", level=\"error\"}"}], "options": {"showTime": true, "showLabels": false, "wrapLogMessage": true}},
+    {"id": 4, "type": "logs", "title": "Recent warning logs", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}, "targets": [{"refId": "A", "expr": "{service_name=~\"${service_name:regex}\", level=\"warning\"}"}], "options": {"showTime": true, "showLabels": false, "wrapLogMessage": true}},
+    {"id": 5, "type": "timeseries", "title": "Docker environment backend logs", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 7, "w": 24, "x": 0, "y": 17}, "targets": [{"refId": "A", "expr": "sum by (service_name, environment) (rate({service_name=~\"${service_name:regex}\", environment=\"Docker\"}[5m]))"}]}
+  ]
+}

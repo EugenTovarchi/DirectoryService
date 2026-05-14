@@ -178,7 +178,10 @@ services:
       - Grafana.Development.env
     volumes:
       - ./backend/infrastructure/observabillity/grafana/provisioning/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./backend/infrastructure/observabillity/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - D:/docker-data/backend/grafana:/var/lib/grafana
+      # Dashboard JSON хранится в репозитории, данные Grafana остаются в D:/docker-data.
+      - ./backend/infrastructure/observabillity/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
     restart: unless-stopped

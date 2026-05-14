@@ -48,6 +48,12 @@
   </Folder>
   <Folder Name="/Infrastructure/observabillity/">
     <File Path="infrastructure/observabillity/alloy/config.alloy" />
+    <File Path="infrastructure/observabillity/grafana/dashboards/backend-services-overview.json" />
+    <File Path="infrastructure/observabillity/grafana/dashboards/directory-service-overview.json" />
+    <File Path="infrastructure/observabillity/grafana/dashboards/file-service-overview.json" />
+    <File Path="infrastructure/observabillity/grafana/dashboards/logs-overview.json" />
+    <File Path="infrastructure/observabillity/grafana/dashboards/observability-stack-overview.json" />
+    <File Path="infrastructure/observabillity/grafana/provisioning/dashboards/dashboards.yaml" />
     <File Path="infrastructure/observabillity/grafana/provisioning/datasources.yaml" />
     <File Path="infrastructure/observabillity/loki/loki-config.yaml" />
     <File Path="infrastructure/observabillity/otel-collector/otel-collector-config.yaml" />

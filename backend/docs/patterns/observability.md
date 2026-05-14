@@ -111,6 +111,16 @@ Datasource name нужен, чтобы DB metrics были читаемыми в
 Не используйте connection string, host, username, password или URL как имя
 datasource.
 
+## Grafana Dashboards
+
+Grafana dashboard provisioning lives under `infrastructure/observabillity/grafana/provisioning/dashboards`.
+Dashboard JSON files live under `infrastructure/observabillity/grafana/dashboards` and are mounted read-only into
+`/var/lib/grafana/dashboards`.
+
+Dashboards should use existing low-cardinality labels. For backend metrics use `exported_job`; for app logs use
+`service_name`, `level`, and `environment`. DB panels should use stable `pool_name` values such as `file-service-db`,
+`directory-service-db`, and `auth-service-db`, not connection-string-like labels.
+
 ## Healthcheck Filtering
 
 Healthcheck paths подготовлены для trace filtering:
@@ -134,7 +144,6 @@ processor или sampler при добавлении Tempo.
 - Tracing в Docker.
 - EF Core tracing instrumentation.
 - `Npgsql.OpenTelemetry` tracing package.
-- Dashboards.
 - Custom business metrics.
 
 ## SharedService Package Workflow

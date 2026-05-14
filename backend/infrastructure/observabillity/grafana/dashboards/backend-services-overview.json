@@ -1,0 +1,38 @@
+{
+  "uid": "backend-services-overview",
+  "title": "Backend Services Overview",
+  "tags": ["backend", "services"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {"list": [
+    {
+      "name": "service",
+      "type": "query",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "query": "label_values(target_info{exported_job=~\"FileService|DirectoryService|AuthService\"}, exported_job)",
+      "definition": "label_values(target_info{exported_job=~\"FileService|DirectoryService|AuthService\"}, exported_job)",
+      "includeAll": true,
+      "multi": true,
+      "allValue": "FileService|DirectoryService|AuthService",
+      "refresh": 1,
+      "current": {"selected": true, "text": "All", "value": "$__all"}
+    }
+  ]},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "HTTP request rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (exported_job) (rate(http_server_request_duration_seconds_count{exported_job=~\"${service:regex}\"}[5m]))"}]},
+    {"id": 2, "type": "timeseries", "title": "HTTP error rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 0}, "targets": [{"refId": "A", "expr": "sum by (exported_job, http_response_status_code) (rate(http_server_request_duration_seconds_count{exported_job=~\"${service:regex}\", http_response_status_code=~\"5..\"}[5m]))"}]},
+    {"id": 3, "type": "timeseries", "title": "HTTP p95 latency", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 0}, "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (le, exported_job) (rate(http_server_request_duration_seconds_bucket{exported_job=~\"${service:regex}\"}[5m])))"}], "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}},
+    {"id": 4, "type": "timeseries", "title": "HTTP status codes", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 7}, "targets": [{"refId": "A", "expr": "sum by (exported_job, http_response_status_code) (rate(http_server_request_duration_seconds_count{exported_job=~\"${service:regex}\"}[5m]))"}]},
+    {"id": 5, "type": "timeseries", "title": "Memory working set", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 7}, "targets": [{"refId": "A", "expr": "dotnet_process_memory_working_set_bytes{exported_job=~\"${service:regex}\"}"}], "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}},
+    {"id": 6, "type": "timeseries", "title": "CPU time rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 7}, "targets": [{"refId": "A", "expr": "sum by (exported_job) (rate(dotnet_process_cpu_time_seconds_total{exported_job=~\"${service:regex}\"}[5m]))"}]},
+    {"id": 7, "type": "timeseries", "title": "GC collections", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 14}, "targets": [{"refId": "A", "expr": "sum by (exported_job, gc_heap_generation) (rate(dotnet_gc_collections_total{exported_job=~\"${service:regex}\"}[5m]))"}]},
+    {"id": 8, "type": "timeseries", "title": "HttpClient request rate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 14}, "targets": [{"refId": "A", "expr": "sum by (exported_job, server_address) (rate(http_client_request_duration_seconds_count{exported_job=~\"${service:regex}\"}[5m]))"}]},
+    {"id": 9, "type": "timeseries", "title": "HttpClient p95 latency", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 14}, "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (le, exported_job, server_address) (rate(http_client_request_duration_seconds_bucket{exported_job=~\"${service:regex}\"}[5m])))"}], "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}},
+    {"id": 10, "type": "timeseries", "title": "DB connection usage", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 0, "y": 21}, "targets": [{"refId": "A", "expr": "sum by (exported_job, pool_name, state) (db_client_connections_usage{exported_job=~\"${service:regex}\", pool_name=~\"file-service-db|directory-service-db|auth-service-db\"})"}]},
+    {"id": 11, "type": "timeseries", "title": "EF Core queries and SaveChanges", "datasource": {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"h": 7, "w": 8, "x": 8, "y": 21}, "targets": [{"refId": "A", "expr": "sum by (exported_job) (rate(microsoft_entityframeworkcore_queries_total{exported_job=~\"${service:regex}\"}[5m]))", "legendFormat": "{{exported_job}} queries"}, {"refId": "B", "expr": "sum by (exported_job) (rate(microsoft_entityframeworkcore_savechanges_total{exported_job=~\"${service:regex}\"}[5m]))", "legendFormat": "{{exported_job}} savechanges"}]},
+    {"id": 12, "type": "logs", "title": "Recent errors", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 7, "w": 8, "x": 16, "y": 21}, "targets": [{"refId": "A", "expr": "{service_name=~\"${service:regex}\", level=\"error\"}"}], "options": {"showTime": true, "showLabels": false, "wrapLogMessage": true}}
+  ]
+}
