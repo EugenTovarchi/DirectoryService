@@ -20,6 +20,7 @@ Follow the current service split unless the new service has a clear reason not t
 - For endpoint class + handler style, mirror [FileService](../services/file-service.md).
 - For command/query/result style, reuse [shared-kernel.md](shared-kernel.md).
 - For Docker/config, follow [../patterns/docker-config.md](../patterns/docker-config.md) and [../patterns/configuration.md](../patterns/configuration.md).
+- For metrics and OpenTelemetry setup, follow [../patterns/observability.md](../patterns/observability.md).
 
 ## Configuration
 
@@ -28,6 +29,7 @@ Follow the current service split unless the new service has a clear reason not t
 - Use User Secrets only in `Development`.
 - Use service-specific `*.Development.env` files through Docker Compose `env_file`.
 - Use BuildKit secrets only for build-time NuGet credentials.
+- Add service-specific OpenTelemetry env values and keep tracing disabled in Docker until Tempo is configured.
 
 ## Docker
 
@@ -47,4 +49,5 @@ Related docs:
 - [overview.md](overview.md)
 - [services.md](services.md)
 - [shared-kernel.md](shared-kernel.md)
+- [../patterns/observability.md](../patterns/observability.md)
 - [../rules/naming-conventions.md](../rules/naming-conventions.md)
