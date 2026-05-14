@@ -1,4 +1,5 @@
 using SharedService.Framework.Logging;
+using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
 
 namespace DirectoryService.Web.Configurations;
@@ -9,6 +10,7 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "DirectoryService");
         services.AddOpenApiSpec("DirectoryService");
+        services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "DirectoryService");
 
         return services;
     }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using SharedService.Core.Abstractions;
 
 namespace FileService.Infrastructure.Postgres;
@@ -22,18 +23,30 @@ public static class PostgresDependancyInjection
 
     private static void AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<FileServiceDbContext>((sp, options) =>
+        services.AddSingleton<NpgsqlDataSource>(_ =>
         {
             string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
-            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
-            sp.GetRequiredService<ILoggerFactory>();
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
             }
 
-            options.UseNpgsql(connectionString);
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString)
+            {
+                Name = "file-service-db",
+            };
+
+            return dataSourceBuilder.Build();
+        });
+
+        services.AddDbContext<FileServiceDbContext>((sp, options) =>
+        {
+            var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
+            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
+            sp.GetRequiredService<ILoggerFactory>();
+
+            options.UseNpgsql(dataSource);
 
             options.LogTo(message =>
             {

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using SharedService.Core.Abstractions;
 
 namespace AuthService.Infrastructure.Postgres;
@@ -28,17 +29,31 @@ public static class PostgresDependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<AuthServiceDbContext>((sp, options) =>
+        services.AddSingleton<NpgsqlDataSource>(sp =>
         {
             string? connectionString = configuration.GetConnectionString(Constants.DEFAULT_CONNECTION);
-            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Connection string 'DefaultConnection' is missing or empty");
             }
 
-            options.UseNpgsql(connectionString);
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString)
+            {
+                Name = "auth-service-db",
+            };
+
+            dataSourceBuilder.UseLoggerFactory(sp.GetRequiredService<ILoggerFactory>());
+
+            return dataSourceBuilder.Build();
+        });
+
+        services.AddDbContext<AuthServiceDbContext>((sp, options) =>
+        {
+            var hostEnvironment = sp.GetRequiredService<IHostEnvironment>();
+            var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
+
+            options.UseNpgsql(dataSource);
 
             options.LogTo(message =>
             {

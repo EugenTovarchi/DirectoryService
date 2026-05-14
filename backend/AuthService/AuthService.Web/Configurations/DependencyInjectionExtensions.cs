@@ -1,4 +1,5 @@
 using SharedService.Framework.Logging;
+using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
 
 namespace AuthService.Web.Configurations;
@@ -28,6 +29,7 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "AuthService");
         services.AddOpenApiSpec("AuthService");
+        services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "AuthService");
 
         return services;
     }

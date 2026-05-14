@@ -1,50 +1,23 @@
 using System.Data;
 using DirectoryService.Application.Database;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Npgsql;
-using SharedService.Core.Abstractions;
 
 namespace DirectoryService.Infrastructure.Postgres.Database;
 
 /// <summary>
 /// Фабрика открывает соединение с БД.
 /// </summary>
-public class NpgsqlConnectionFactory :IDisposable, IAsyncDisposable, INpgsqlConnectionFactory
+public class NpgsqlConnectionFactory : INpgsqlConnectionFactory
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    public NpgsqlConnectionFactory(IConfiguration configuration)
+    public NpgsqlConnectionFactory(NpgsqlDataSource dataSource)
     {
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString(Constants.DEFAULT_CONNECTION));
-        dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
-
-        _dataSource = dataSourceBuilder.Build();
-    }
-
-    public NpgsqlConnectionFactory(string connectionString)
-    {
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-        dataSourceBuilder.UseLoggerFactory(CreateLoggerFactory());
-        _dataSource = dataSourceBuilder.Build();
+        _dataSource = dataSource;
     }
 
     public async Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)
     {
         return await _dataSource.OpenConnectionAsync(cancellationToken);
     }
-
-    public void Dispose()
-    {
-        _dataSource.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _dataSource.DisposeAsync();
-    }
-
-    private ILoggerFactory CreateLoggerFactory() =>
-        LoggerFactory.Create(builder => { builder.AddConsole(); });
-
 }
