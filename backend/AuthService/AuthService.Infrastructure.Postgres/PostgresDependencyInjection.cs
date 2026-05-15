@@ -1,7 +1,9 @@
 using AuthService.Core.Abstractions;
 using AuthService.Core.Database;
+using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Database;
 using AuthService.Infrastructure.Postgres.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,7 @@ public static class PostgresDependencyInjection
     {
         services
             .AddDatabase(configuration)
+            .AddIdentityStores()
             .AddRepositories();
 
         return services;
@@ -80,6 +83,26 @@ public static class PostgresDependencyInjection
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IAuthUserRepository, AuthUserRepository>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddIdentityStores(this IServiceCollection services)
+    {
+        services
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                // MVP: public registration закрыт, но пароль все равно проверяет Identity.
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+            })
+            .AddRoles<ApplicationRole>()
+            .AddEntityFrameworkStores<AuthServiceDbContext>()
+            .AddDefaultTokenProviders();
 
         return services;
     }
