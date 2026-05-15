@@ -11,6 +11,7 @@ Use this with [domain-rules.md](domain-rules.md) and [naming-conventions.md](nam
 - Pass `CancellationToken` through async calls.
 - Use structured logging placeholders, not string interpolation.
 - Do not throw for expected business validation failures.
+- Prefer explicit type names for simple and readable types such as `string`, `int`, `Guid`, `bool`, `DateTime`, short class names, and short interface names. Use `var` when the explicit type is long/noisy, obvious from object creation, or the expression returns an anonymous type.
 
 ## Result/Error Style
 
