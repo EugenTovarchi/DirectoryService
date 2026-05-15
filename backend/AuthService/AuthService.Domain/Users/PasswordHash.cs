@@ -20,7 +20,7 @@ public sealed record PasswordHash
         if (string.IsNullOrWhiteSpace(value))
             return Errors.General.ValueIsEmptyOrWhiteSpace("passwordHash");
 
-        var trimmed = value.Trim();
+        string trimmed = value.Trim();
 
         if (trimmed.Length < MIN_LENGTH || trimmed.Length > MAX_LENGTH)
             return Errors.General.ValueIsInvalid("passwordHash");

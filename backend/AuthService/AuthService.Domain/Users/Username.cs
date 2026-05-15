@@ -20,7 +20,7 @@ public sealed record Username
         if (string.IsNullOrWhiteSpace(value))
             return Errors.General.ValueIsEmptyOrWhiteSpace("username");
 
-        var normalized = value.Trim();
+        string normalized = value.Trim();
 
         if (normalized.Length < MIN_LENGTH || normalized.Length > MAX_LENGTH)
             return Errors.General.ValueIsInvalid("username");
