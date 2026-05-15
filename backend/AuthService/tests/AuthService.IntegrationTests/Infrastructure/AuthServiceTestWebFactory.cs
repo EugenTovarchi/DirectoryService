@@ -47,7 +47,12 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
         {
             var settings = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
-                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString()
+                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
+                ["Jwt:Issuer"] = "24eye.auth.tests",
+                ["Jwt:Audience"] = "24eye.backend.tests",
+                ["Jwt:SigningKey"] = "test-auth-service-signing-key-with-enough-length",
+                ["Jwt:AccessTokenLifetimeMinutes"] = "15",
+                ["Jwt:RefreshTokenLifetimeDays"] = "30"
             };
 
             config.AddInMemoryCollection(settings);

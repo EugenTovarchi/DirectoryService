@@ -2,6 +2,7 @@ using AuthService.Core.Abstractions;
 using AuthService.Core.Database;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Database;
+using AuthService.Infrastructure.Postgres.Queries;
 using AuthService.Infrastructure.Postgres.Repositories;
 using AuthService.Infrastructure.Postgres.Seeding;
 using Microsoft.AspNetCore.Identity;
@@ -85,6 +86,8 @@ public static class PostgresDependencyInjection
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IAuthUserRepository, AuthUserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IRolePermissionReader, RolePermissionReader>();
 
         return services;
     }

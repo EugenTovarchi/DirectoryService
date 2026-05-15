@@ -1,3 +1,5 @@
+using AuthService.Core.Abstractions;
+using AuthService.Core.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.Core.Abstractions;
@@ -12,6 +14,7 @@ public static class CoreDependencyInjection
         services
             .AddEndpoints()
             .AddHandlers()
+            .AddServices()
             .AddValidatorsFromAssembly(typeof(CoreDependencyInjection).Assembly);
 
         return services;
@@ -35,5 +38,12 @@ public static class CoreDependencyInjection
                 .AssignableToAny(typeof(ICommandHandler<,>), typeof(IQueryHandler<,>)))
             .AsSelfWithInterfaces()
             .WithScopedLifetime());
+    }
+
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<ITokenService, TokenService>();
+
+        return services;
     }
 }
