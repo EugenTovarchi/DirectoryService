@@ -3,6 +3,7 @@ using AuthService.Core.Database;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Database;
 using AuthService.Infrastructure.Postgres.Repositories;
+using AuthService.Infrastructure.Postgres.Seeding;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -75,6 +76,7 @@ public static class PostgresDependencyInjection
 
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
+        services.AddScoped<AuthIdentitySeeder>();
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         return services;
