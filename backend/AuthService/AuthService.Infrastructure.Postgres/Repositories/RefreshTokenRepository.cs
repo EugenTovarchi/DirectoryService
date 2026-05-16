@@ -47,6 +47,20 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<RefreshToken?> GetActiveSessionForUserAsync(
+        Guid sessionId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.RefreshTokens
+            .FirstOrDefaultAsync(
+                token => token.Id == sessionId
+                         && token.UserId == userId
+                         && token.RevokedAt == null
+                         && token.ExpiresAt > DateTime.UtcNow,
+                cancellationToken);
+    }
+
     public async Task RevokeActiveTokensForUserAsync(
         Guid userId,
         string? revokedByIp,
