@@ -31,6 +31,10 @@ Examples used by services:
 - Prefer additive SharedService changes; public package/API changes require checking all consumers.
 - For shared OpenTelemetry setup, package workflow, and service integration rules, see [../patterns/observability.md](../patterns/observability.md).
 
+## Backlog
+
+- Investigate and document clean JSON stdout behavior in SharedService tooling/HTTP helpers. Keep machine-readable JSON output free from extra logs, banners, diagnostics, or human-readable text when a consumer expects JSON only.
+
 Related docs:
 
 - [overview.md](overview.md)
