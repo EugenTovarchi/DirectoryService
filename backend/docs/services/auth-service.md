@@ -113,6 +113,13 @@ AuthService -> PostgreSQL: отзывает refresh token
 Client: удаляет local token state
 ```
 
+Logout implementation rules:
+
+- `POST /api/auth/logout` accepts raw `refreshToken` and revokes the matching refresh token session when it is still active.
+- Logout is idempotent for unknown, expired, or already revoked refresh tokens and returns `200 OK` without exposing token/session state.
+- Logout revokes one refresh token session; revoke-all and session management endpoints are separate flows.
+- The endpoint is named for the user-facing scenario (`LogoutEndpoint`), while the domain operation remains refresh token revocation.
+
 ## Access Token Claims
 
 Начальные claims для access token:
@@ -230,10 +237,10 @@ Public endpoints:
 
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 
 Authenticated endpoints:
 
-- `POST /api/auth/logout`
 - `GET /api/auth/me`
 - `POST /api/auth/revoke-session`
 - `GET /api/auth/sessions`
@@ -553,7 +560,6 @@ Refresh token хранится server-side, потому что он предс�
 
 Ближайшие implementation tasks:
 
-- Добавить `POST /api/auth/logout`, который отзывает одну refresh token session.
 - Добавить `GET /api/auth/me`, чтобы клиент мог проверить текущего пользователя, roles, permissions и company context.
 - Добавить endpoint просмотра active sessions текущего пользователя.
 - Добавить revoke session и revoke all sessions.

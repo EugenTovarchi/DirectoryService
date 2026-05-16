@@ -33,7 +33,7 @@ public sealed class LoginEndpoint : IEndpoint
             {
                 string? ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
                 string? userAgent = httpContext.Request.Headers.UserAgent.FirstOrDefault();
-                var command = new LoginCommand(request, ipAddress, userAgent);
+                LoginCommand command = new(request, ipAddress, userAgent);
                 return await handler.Handle(command, cancellationToken);
             });
     }
@@ -94,7 +94,7 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
             return validationResult.ToErrors();
 
         string normalizedEmail = command.Request.Email.Trim();
-        var user = await _userManager.FindByEmailAsync(normalizedEmail);
+        ApplicationUser? user = await _userManager.FindByEmailAsync(normalizedEmail);
 
         if (user is null)
             return InvalidCredentials();
@@ -109,22 +109,22 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
         IReadOnlyCollection<string> permissions = await _rolePermissionReader.GetPermissionCodesAsync(roles, cancellationToken);
 
-        var accessToken = _tokenService.CreateAccessToken(user, roles, permissions);
-        var refreshToken = _tokenService.CreateRefreshToken();
+        AccessTokenResult accessToken = _tokenService.CreateAccessToken(user, roles, permissions);
+        RefreshTokenResult refreshToken = _tokenService.CreateRefreshToken();
         DateTime refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenLifetimeDays);
 
-        var session = new RefreshToken(
+        RefreshToken session = new(
             user.Id,
             refreshToken.TokenHash,
             refreshTokenExpiresAt,
             command.IpAddress,
             command.UserAgent);
 
-        var addResult = _refreshTokenRepository.Add(session);
+        UnitResult<Error> addResult = _refreshTokenRepository.Add(session);
         if (addResult.IsFailure)
             return addResult.Error.ToFailure();
 
-        var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+        UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
 

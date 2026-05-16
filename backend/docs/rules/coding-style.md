@@ -12,6 +12,7 @@ Use this with [domain-rules.md](domain-rules.md) and [naming-conventions.md](nam
 - Use structured logging placeholders, not string interpolation.
 - Do not throw for expected business validation failures.
 - Prefer explicit type names for simple and readable types such as `string`, `int`, `Guid`, `bool`, `DateTime`, arrays/collections like `string[]` and `IReadOnlyCollection<string>`, short class names, and short interface names. Use `var` when the explicit type is long/noisy, obvious from object creation, an anonymous type, or framework-heavy results such as FluentValidation validation results.
+- Name endpoint, handler, command, and validator classes after the concrete operation they perform, not only after the resource. Prefer names like `RotateRefreshTokenHandler`, `RevokeRefreshTokenHandler`, or `CreateSessionHandler` over generic names like `RefreshTokenHandler` when several operations can exist for the same resource.
 
 ## Result/Error Style
 
