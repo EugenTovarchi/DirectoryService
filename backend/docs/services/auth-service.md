@@ -120,6 +120,14 @@ Logout implementation rules:
 - Logout revokes one refresh token session; revoke-all and session management endpoints are separate flows.
 - The endpoint is named for the user-facing scenario (`LogoutEndpoint`), while the domain operation remains refresh token revocation.
 
+Revoke all sessions implementation rules:
+
+- `POST /api/auth/revoke-all-sessions` is authenticated and reads the current user id from the access token `sub` claim.
+- The request has no body; clients cannot pass an arbitrary `userId`.
+- The endpoint revokes every active refresh token session for the current user, including the session that issued the access token used for the request.
+- Other users' refresh token sessions are not affected.
+- The endpoint returns `200 OK` when the command succeeds. After this call the user must login again to get a usable refresh token.
+
 ## Access Token Claims
 
 Начальные claims для access token:
@@ -562,7 +570,7 @@ Refresh token хранится server-side, потому что он предс�
 
 - Добавить `GET /api/auth/me`, чтобы клиент мог проверить текущего пользователя, roles, permissions и company context.
 - Добавить endpoint просмотра active sessions текущего пользователя.
-- Добавить revoke session и revoke all sessions.
+- Добавить revoke session.
 - После стабилизации login/refresh/logout/session flows пересмотреть повторяющиеся auth errors: вынести AuthService-local helpers/errors или аккуратно расширить `SharedService`, если ошибка service-neutral.
 - После стабилизации refresh/invite/session domain заменить прямое создание security-sensitive entities на фабричные методы, где это даст явные инварианты (`RefreshToken.Create(...)`, invite token/session factories).
 - Перенести legacy `/auth/users` registration slice на admin-created/invite flow или удалить после появления нового user management API.
