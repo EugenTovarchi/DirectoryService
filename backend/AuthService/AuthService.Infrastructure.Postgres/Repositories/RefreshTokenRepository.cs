@@ -34,6 +34,19 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
             .FirstOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<RefreshToken>> GetActiveSessionsForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.RefreshTokens
+            .AsNoTracking()
+            .Where(token => token.UserId == userId
+                            && token.RevokedAt == null
+                            && token.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(token => token.LastUsedAt ?? token.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task RevokeActiveTokensForUserAsync(
         Guid userId,
         string? revokedByIp,

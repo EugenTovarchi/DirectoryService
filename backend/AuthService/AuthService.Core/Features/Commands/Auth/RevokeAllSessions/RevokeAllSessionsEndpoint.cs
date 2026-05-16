@@ -1,6 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using AuthService.Core.Abstractions;
+using AuthService.Core.Extensions;
 using CSharpFunctionalExtensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -26,21 +25,13 @@ public sealed class RevokeAllSessionsEndpoint : IEndpoint
                 [FromServices] RevokeAllSessionsHandler handler,
                 CancellationToken cancellationToken) =>
             {
-                Guid userId = GetUserId(httpContext.User);
+                Guid userId = httpContext.User.GetUserId();
                 string? ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
                 RevokeAllSessionsCommand command = new(userId, ipAddress);
 
                 return await handler.Handle(command, cancellationToken);
             })
             .RequireAuthorization();
-    }
-
-    private static Guid GetUserId(ClaimsPrincipal user)
-    {
-        string? userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return Guid.TryParse(userId, out Guid parsedUserId)
-            ? parsedUserId
-            : Guid.Empty;
     }
 }
 

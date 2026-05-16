@@ -12,6 +12,10 @@ public interface IRefreshTokenRepository
         string tokenHash,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<RefreshToken>> GetActiveSessionsForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task RevokeActiveTokensForUserAsync(
         Guid userId,
         string? revokedByIp,
