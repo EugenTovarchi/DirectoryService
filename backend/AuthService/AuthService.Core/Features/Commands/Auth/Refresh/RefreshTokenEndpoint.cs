@@ -17,63 +17,62 @@ using SharedService.Core.Validation;
 using SharedService.Framework.EndpointSettings;
 using SharedService.SharedKernel;
 
-namespace AuthService.Core.Features.Commands.Auth.Login;
+namespace AuthService.Core.Features.Commands.Auth.Refresh;
 
-public sealed class LoginEndpoint : IEndpoint
+public sealed class RefreshTokenEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost(
-            "/api/auth/login",
+            "/api/auth/refresh",
             async Task<EndpointResult<TokenResponse>> (
-                [FromBody] LoginRequest request,
+                [FromBody] RefreshTokenRequest request,
                 HttpContext httpContext,
-                [FromServices] LoginHandler handler,
+                [FromServices] RefreshTokenHandler handler,
                 CancellationToken cancellationToken) =>
             {
                 string? ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
                 string? userAgent = httpContext.Request.Headers.UserAgent.FirstOrDefault();
-                var command = new LoginCommand(request, ipAddress, userAgent);
+                var command = new RefreshTokenCommand(request, ipAddress, userAgent);
                 return await handler.Handle(command, cancellationToken);
             });
     }
 }
 
-public sealed record LoginCommand(LoginRequest Request, string? IpAddress, string? UserAgent) : ICommand;
+public sealed record RefreshTokenCommand(
+    RefreshTokenRequest Request,
+    string? IpAddress,
+    string? UserAgent) : ICommand;
 
-public sealed class LoginValidator : AbstractValidator<LoginCommand>
+public sealed class RefreshTokenValidator : AbstractValidator<RefreshTokenCommand>
 {
-    public LoginValidator()
+    public RefreshTokenValidator()
     {
-        RuleFor(command => command.Request.Email)
-            .NotEmpty()
-            .EmailAddress();
-
-        RuleFor(command => command.Request.Password)
+        RuleFor(command => command.Request.RefreshToken)
             .NotEmpty();
     }
 }
 
-public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
+public sealed class RefreshTokenHandler : ICommandHandler<TokenResponse, RefreshTokenCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IRolePermissionReader _rolePermissionReader;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly ITokenService _tokenService;
-    private readonly IValidator<LoginCommand> _validator;
+    private readonly IValidator<RefreshTokenCommand> _validator;
     private readonly JwtOptions _jwtOptions;
-    private readonly ILogger<LoginHandler> _logger;
+    private readonly ILogger<RefreshTokenHandler> _logger;
 
-    public LoginHandler(
+    public RefreshTokenHandler(
         UserManager<ApplicationUser> userManager,
         IRolePermissionReader rolePermissionReader,
         IRefreshTokenRepository refreshTokenRepository,
         ITransactionManager transactionManager,
         ITokenService tokenService,
-        IValidator<LoginCommand> validator,
+        IValidator<RefreshTokenCommand> validator,
         IOptions<JwtOptions> jwtOptions,
-        ILogger<LoginHandler> logger)
+        ILogger<RefreshTokenHandler> logger)
     {
         _userManager = userManager;
         _rolePermissionReader = rolePermissionReader;
@@ -86,25 +85,39 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
     }
 
     public async Task<Result<TokenResponse, Failure>> Handle(
-        LoginCommand command,
+        RefreshTokenCommand command,
         CancellationToken cancellationToken)
     {
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
             return validationResult.ToErrors();
 
-        string normalizedEmail = command.Request.Email.Trim();
-        var user = await _userManager.FindByEmailAsync(normalizedEmail);
+        string tokenHash = _tokenService.HashRefreshToken(command.Request.RefreshToken);
+        var currentToken = await _refreshTokenRepository.GetByHashAsync(tokenHash, cancellationToken);
+        if (currentToken is null)
+            return InvalidRefreshToken();
 
-        if (user is null)
-            return InvalidCredentials();
+        if (currentToken.RevokedAt is not null)
+        {
+            await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+                currentToken.UserId,
+                command.IpAddress,
+                cancellationToken);
 
+            var reuseSaveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+            if (reuseSaveResult.IsFailure)
+                return reuseSaveResult.Error.ToFailure();
+
+            _logger.LogWarning("Refresh token reuse detected for user {UserId}", currentToken.UserId);
+            return InvalidRefreshToken();
+        }
+
+        if (!currentToken.IsActive)
+            return InvalidRefreshToken();
+
+        var user = currentToken.User;
         if (!user.IsActive)
-            return InvalidCredentials();
-
-        bool passwordIsValid = await _userManager.CheckPasswordAsync(user, command.Request.Password);
-        if (!passwordIsValid)
-            return InvalidCredentials();
+            return InvalidRefreshToken();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
         IReadOnlyCollection<string> permissions = await _rolePermissionReader.GetPermissionCodesAsync(roles, cancellationToken);
@@ -113,16 +126,19 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         var refreshToken = _tokenService.CreateRefreshToken();
         DateTime refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenLifetimeDays);
 
-        var session = new RefreshToken(
+        var replacementToken = new RefreshToken(
             user.Id,
             refreshToken.TokenHash,
             refreshTokenExpiresAt,
             command.IpAddress,
             command.UserAgent);
 
-        var addResult = _refreshTokenRepository.Add(session);
+        var addResult = _refreshTokenRepository.Add(replacementToken);
         if (addResult.IsFailure)
             return addResult.Error.ToFailure();
+
+        currentToken.MarkUsed();
+        currentToken.Revoke(command.IpAddress, replacementToken.Id);
 
         var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
@@ -130,7 +146,7 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("User {UserId} logged in", user.Id);
+            _logger.LogInformation("Refresh token rotated for user {UserId}", user.Id);
         }
 
         return new TokenResponse(
@@ -140,7 +156,7 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
             refreshTokenExpiresAt);
     }
 
-    private static Result<TokenResponse, Failure> InvalidCredentials()
+    private static Result<TokenResponse, Failure> InvalidRefreshToken()
     {
         return Errors.User.InvalidCredentials().ToFailure();
     }
