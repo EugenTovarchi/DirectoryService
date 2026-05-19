@@ -8,6 +8,9 @@ namespace FileService.Domain;
 /// </summary>
 public sealed record FileName
 {
+    public const int NAME_MAX_LENGTH = 500;
+    public const int EXTENSION_MAX_LENGTH = 10;
+    public const int VALUE_MAX_LENGTH = 500;
 
     public string Name { get; }
     public string Extension { get; }

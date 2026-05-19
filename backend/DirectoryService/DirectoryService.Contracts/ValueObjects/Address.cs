@@ -6,7 +6,11 @@ namespace DirectoryService.Contracts.ValueObjects;
 
 public record Address
 {
-    private const int MAX_LENGTH = 50;
+    public const int COUNTRY_MAX_LENGTH = 100;
+    public const int CITY_MAX_LENGTH = 100;
+    public const int STREET_MAX_LENGTH = 200;
+    public const int HOUSE_MAX_LENGTH = 20;
+
     public string Country { get; }
     public string City { get; }
     public string Street { get; }
@@ -22,7 +26,7 @@ public record Address
         House = house.Trim();
         Flat = flat;
     }
-    
+
     // Для EF Core
     private Address()
     {
@@ -50,16 +54,16 @@ public record Address
         if (string.IsNullOrWhiteSpace(house))
             return Errors.General.ValueIsEmptyOrWhiteSpace("house");
 
-        if (country.Length > MAX_LENGTH)
+        if (country.Length > COUNTRY_MAX_LENGTH)
             return Errors.General.ValueIsRequired("country");
 
-        if (city.Length > MAX_LENGTH)
+        if (city.Length > CITY_MAX_LENGTH)
             return Errors.General.ValueIsRequired("city");
 
-        if (street.Length > MAX_LENGTH)
+        if (street.Length > STREET_MAX_LENGTH)
             return Errors.General.ValueIsRequired("street");
 
-        if (house.Length > MAX_LENGTH)
+        if (house.Length > HOUSE_MAX_LENGTH)
             return Errors.General.ValueIsRequired("house");
 
         return new Address(

@@ -27,6 +27,10 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
                 .HasColumnName("name")
                 .HasMaxLength(Name.MAX_LENGTH)
                 .IsRequired();
+
+            name.HasIndex(n => n.Value)
+                .IsUnique()
+                .HasDatabaseName("ix_position_name");
         });
 
         builder.OwnsOne(p => p.Description, desc =>

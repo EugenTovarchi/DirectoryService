@@ -168,7 +168,7 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
     {
         return await ExecuteInDb(async dbContext =>
         {
-            var address = Address.CreateWithFlat("RF", "moscow", "testStreet", "12", 3).Value;
+            var address = Address.CreateWithFlat("RF", "moscow", $"{name}Street", "12", 3).Value;
             var location = Location.Create(
                 Name.Create(name).Value,
                 TimeZone.Create("Europe/Moscow").Value,

@@ -8,6 +8,8 @@ namespace FileService.Domain;
 /// </summary>
 public sealed record ContentType
 {
+    public const int VALUE_MAX_LENGTH = 100;
+
     public string Value { get; }
     public MediaType MediaType { get; }
 
