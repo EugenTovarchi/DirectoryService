@@ -125,7 +125,6 @@ public class CreateDepartmentTests : DirectoryBaseTests
         var locationId2 = await CreateLocation("location2");
 
         List<Guid> locations = [locationId1, locationId2];
-        List<LocationId> locationsForCheck = [locationId1, locationId2];
 
         var request = new CreateDepartmentRequest("testName", "testIdentifier", locations, null);
         var command = new CreateDepartmentCommand(request);

@@ -215,10 +215,10 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public UnitResult<Error> AddLocation(LocationId locationId)
     {
-        if (locationId == null || locationId.Equals(LocationId.EmptyLocationId()))
+        if (locationId == null || locationId == LocationId.EmptyLocationId())
             return Errors.General.ValueIsInvalid("locationId");
 
-        if (_departmentLocations.Any(dl => dl.LocationId.Equals(locationId)))
+        if (_departmentLocations.Any(dl => dl.LocationId == locationId))
             return Errors.General.Duplicate("locationId");
 
         var departmentLocationResult = DepartmentLocation.Create(locationId, Id);
@@ -245,10 +245,10 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public UnitResult<Error> RemoveLocation(LocationId locationId)
     {
-        if (locationId == null || locationId.Equals(LocationId.EmptyLocationId()))
+        if (locationId == null || locationId == LocationId.EmptyLocationId())
             return Errors.General.ValueIsInvalid("locationId");
 
-        var departmentLocation = _departmentLocations.FirstOrDefault(dl => dl.LocationId.Equals(locationId));
+        var departmentLocation = _departmentLocations.FirstOrDefault(dl => dl.LocationId == locationId);
         if (departmentLocation == null)
             return Errors.General.NotFound(locationId);
 
@@ -260,10 +260,10 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public UnitResult<Error> AddPosition(PositionId positionId, DepartmentId departmentId)
     {
-        if (positionId == null || positionId.Equals(PositionId.EmptyPositionId()))
+        if (positionId == null || positionId == PositionId.EmptyPositionId())
             return Errors.General.ValueIsInvalid("locationId");
 
-        if (_departmentPositions.Any(dl => dl.PositionId.Equals(positionId)))
+        if (_departmentPositions.Any(dl => dl.PositionId == positionId))
             return Errors.General.Duplicate("positionId");
 
         var departmentPositionResult = DepartmentPosition.Create(positionId, departmentId);
@@ -278,10 +278,10 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
 
     public UnitResult<Error> RemovePosition(PositionId positionId)
     {
-        if (positionId == null || positionId.Equals(PositionId.EmptyPositionId()))
+        if (positionId == null || positionId == PositionId.EmptyPositionId())
             return Errors.General.ValueIsInvalid("positionId");
 
-        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.PositionId.Equals(positionId));
+        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.PositionId == positionId);
         if (departmentPosition == null)
             return Errors.General.NotFound(positionId.Value);
 

@@ -95,10 +95,10 @@ public sealed class Position : SoftDeletableEntity<PositionId>
 
     public UnitResult<Error> AddDepartmentPosition(DepartmentId departmentId)
     {
-        if (departmentId == null || departmentId.Equals(DepartmentId.EmptyDepartmentId()))
+        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
             return Errors.General.ValueIsInvalid("locationId");
 
-        if (_departmentPositions.Any(dl => dl.DepartmentId.Equals(departmentId)))
+        if (_departmentPositions.Any(dl => dl.DepartmentId == departmentId))
             return Errors.General.Duplicate("departmentId");
 
         var departmentPositionResult = DepartmentPosition.Create(Id, departmentId);
@@ -113,10 +113,10 @@ public sealed class Position : SoftDeletableEntity<PositionId>
 
     public UnitResult<Error> RemoveDepartmentPosition(DepartmentId departmentId)
     {
-        if (departmentId == null || departmentId.Equals(DepartmentId.EmptyDepartmentId()))
+        if (departmentId == null || departmentId == DepartmentId.EmptyDepartmentId())
             return Errors.General.ValueIsInvalid("departmentId");
 
-        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.DepartmentId.Equals(departmentId));
+        var departmentPosition = _departmentPositions.FirstOrDefault(dl => dl.DepartmentId == departmentId);
         if (departmentPosition == null)
             return Errors.General.NotFound(departmentId.Value);
 

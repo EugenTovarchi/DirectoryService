@@ -7,13 +7,13 @@ namespace DirectoryService.Application.Messaging.EventHandles.Departments;
 
 public class DepartmentFileDeletedHandler
 {
-    private readonly ILogger<DepartmentFileUploadedHandler> _logger;
+    private readonly ILogger<DepartmentFileDeletedHandler> _logger;
     private readonly ITransactionManager _transactionManager;
     private readonly IDepartmentRepository _departmentRepository;
 
     public DepartmentFileDeletedHandler(
         ITransactionManager transactionManager,
-        ILogger<DepartmentFileUploadedHandler> logger,
+        ILogger<DepartmentFileDeletedHandler> logger,
         IDepartmentRepository departmentRepository)
     {
         _transactionManager = transactionManager;
@@ -38,8 +38,8 @@ public class DepartmentFileDeletedHandler
         var departmentResult = await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
         if (departmentResult.IsFailure)
         {
-            _logger.LogWarning("Department {departmentId} not found for FileDeleted event." +
-                               "FileId  = {message.AssetId}", message.TargetEntityId, message.AssetId);
+            _logger.LogWarning("Department {DepartmentId} not found for FileDeleted event." +
+                               "FileId = {AssetId}", message.TargetEntityId, message.AssetId);
             return;
         }
 

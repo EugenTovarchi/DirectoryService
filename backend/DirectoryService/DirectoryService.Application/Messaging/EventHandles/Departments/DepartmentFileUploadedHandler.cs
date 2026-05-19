@@ -32,14 +32,14 @@ public class DepartmentFileUploadedHandler
             return;
         }
 
-        _logger.LogInformation("Received FileUploaded event for department: {departmentId}" +
-                               " with video: {videoId}", message.TargetEntityId, message.AssetId);
+        _logger.LogInformation("Received FileUploaded event for department: {DepartmentId}" +
+                               " with video: {VideoId}", message.TargetEntityId, message.AssetId);
 
         var departmentResult = await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
         if (departmentResult.IsFailure)
         {
-            _logger.LogWarning("Department {departmentId} not found for FileUploaded event." +
-                               "FileId  = {message.AssetId}", message.TargetEntityId, message.AssetId);
+            _logger.LogWarning("Department {DepartmentId} not found for FileUploaded event." +
+                               "FileId = {AssetId}", message.TargetEntityId, message.AssetId);
             return;
         }
 

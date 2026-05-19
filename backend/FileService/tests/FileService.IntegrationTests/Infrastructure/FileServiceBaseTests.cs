@@ -32,10 +32,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
 
     public Task InitializeAsync() => Task.CompletedTask;
 
-    public async Task DisposeAsync()
-    {
-        await _resetDatabase();
-    }
+    public Task DisposeAsync() => _resetDatabase();
 
     protected async Task<T> ExecuteInDb<T>(Func<FileServiceDbContext, Task<T>> action)
     {
@@ -81,6 +78,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         }
         catch (AmazonS3Exception ex) when (ex.ErrorCode is "BucketAlreadyOwnedByYou" or "BucketAlreadyExists")
         {
+            // Tests can share the same bucket name across cases.
         }
 
         return bucketName;
