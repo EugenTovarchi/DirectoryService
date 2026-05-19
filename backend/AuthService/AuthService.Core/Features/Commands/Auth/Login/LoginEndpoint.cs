@@ -114,14 +114,16 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         RefreshTokenResult refreshToken = _tokenService.CreateRefreshToken();
         DateTime refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenLifetimeDays);
 
-        RefreshToken session = new(
+        Result<RefreshToken, Error> sessionResult = RefreshToken.Create(
             user.Id,
             refreshToken.TokenHash,
             refreshTokenExpiresAt,
             command.IpAddress,
             command.UserAgent);
+        if (sessionResult.IsFailure)
+            return sessionResult.Error.ToFailure();
 
-        UnitResult<Error> addResult = _refreshTokenRepository.Add(session);
+        UnitResult<Error> addResult = _refreshTokenRepository.Add(sessionResult.Value);
         if (addResult.IsFailure)
             return addResult.Error.ToFailure();
 

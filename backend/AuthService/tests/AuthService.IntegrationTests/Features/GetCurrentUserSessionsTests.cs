@@ -43,7 +43,7 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
         await LoginAsync("sessions-viewer@example.com", "SessionsTest/2.0");
         TokenResponse revokedLogin = await LoginAsync("sessions-viewer@example.com", "SessionsTest/Revoked");
         await LoginAsync("sessions-other@example.com", "SessionsTest/Other");
-        await AddExpiredSessionAsync(currentUser.Id);
+        await AddInactiveSessionAsync(currentUser.Id);
 
         HttpResponseMessage logoutResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/logout",
@@ -104,19 +104,20 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task AddExpiredSessionAsync(Guid userId)
+    private async Task AddInactiveSessionAsync(Guid userId)
     {
         await using AsyncServiceScope scope = Services.CreateAsyncScope();
 
         AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        RefreshToken expiredToken = new(
+        RefreshToken inactiveToken = RefreshToken.Create(
             userId,
             new string('a', 64),
-            DateTime.UtcNow.AddDays(-1),
+            DateTime.UtcNow.AddDays(1),
             "127.0.0.1",
-            "SessionsTest/Expired");
+            "SessionsTest/Inactive").Value;
+        inactiveToken.Revoke("127.0.0.1");
 
-        dbContext.RefreshTokens.Add(expiredToken);
+        dbContext.RefreshTokens.Add(inactiveToken);
         await dbContext.SaveChangesAsync();
     }
 

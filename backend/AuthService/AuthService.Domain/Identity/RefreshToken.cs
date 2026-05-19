@@ -1,3 +1,6 @@
+using CSharpFunctionalExtensions;
+using SharedService.SharedKernel;
+
 namespace AuthService.Domain.Identity;
 
 /// <summary>
@@ -5,11 +8,13 @@ namespace AuthService.Domain.Identity;
 /// </summary>
 public sealed class RefreshToken
 {
+    public const int TOKEN_HASH_LENGTH = 64;
+
     private RefreshToken()
     {
     }
 
-    public RefreshToken(
+    private RefreshToken(
         Guid userId,
         string tokenHash,
         DateTime expiresAt,
@@ -40,6 +45,34 @@ public sealed class RefreshToken
     public RefreshToken? ReplacedByToken { get; }
 
     public bool IsActive => RevokedAt is null && DateTime.UtcNow < ExpiresAt;
+
+    public static Result<RefreshToken, Error> Create(
+        Guid userId,
+        string tokenHash,
+        DateTime expiresAt,
+        string? createdByIp,
+        string? userAgent)
+    {
+        if (userId == Guid.Empty)
+            return Errors.General.EmptyId(userId);
+
+        if (string.IsNullOrWhiteSpace(tokenHash))
+            return Errors.General.ValueIsEmptyOrWhiteSpace("tokenHash");
+
+        string normalizedTokenHash = tokenHash.Trim();
+        if (normalizedTokenHash.Length != TOKEN_HASH_LENGTH)
+            return Errors.General.ValueIsInvalid("tokenHash");
+
+        if (expiresAt <= DateTime.UtcNow)
+            return Errors.General.ValueIsInvalid("expiresAt");
+
+        return new RefreshToken(
+            userId,
+            normalizedTokenHash,
+            expiresAt,
+            createdByIp,
+            userAgent);
+    }
 
     public void MarkUsed()
     {

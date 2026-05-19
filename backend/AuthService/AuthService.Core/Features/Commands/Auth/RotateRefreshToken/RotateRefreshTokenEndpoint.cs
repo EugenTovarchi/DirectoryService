@@ -127,12 +127,16 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
         RefreshTokenResult refreshToken = _tokenService.CreateRefreshToken();
         DateTime refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenLifetimeDays);
 
-        RefreshToken replacementToken = new(
+        Result<RefreshToken, Error> replacementTokenResult = RefreshToken.Create(
             user.Id,
             refreshToken.TokenHash,
             refreshTokenExpiresAt,
             command.IpAddress,
             command.UserAgent);
+        if (replacementTokenResult.IsFailure)
+            return replacementTokenResult.Error.ToFailure();
+
+        RefreshToken replacementToken = replacementTokenResult.Value;
 
         UnitResult<Error> addResult = _refreshTokenRepository.Add(replacementToken);
         if (addResult.IsFailure)
