@@ -1,6 +1,7 @@
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Extensions;
+using AuthService.Core.Failures;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -76,7 +77,7 @@ public sealed class GetCurrentUserHandler : IQueryHandler<Result<CurrentUserResp
             return Errors.General.NotFoundEntity("user").ToFailure();
 
         if (!user.IsActive)
-            return Errors.User.InvalidCredentials().ToFailure();
+            return AuthFailures.InvalidAuthenticatedUser();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
         IReadOnlyCollection<string> permissions = await _rolePermissionReader.GetPermissionCodesAsync(

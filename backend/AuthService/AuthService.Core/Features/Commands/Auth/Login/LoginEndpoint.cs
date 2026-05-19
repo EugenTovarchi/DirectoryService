@@ -1,6 +1,7 @@
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
+using AuthService.Core.Failures;
 using AuthService.Core.Options;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
@@ -97,14 +98,14 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         ApplicationUser? user = await _userManager.FindByEmailAsync(normalizedEmail);
 
         if (user is null)
-            return InvalidCredentials();
+            return AuthFailures.InvalidCredentials();
 
         if (!user.IsActive)
-            return InvalidCredentials();
+            return AuthFailures.InvalidCredentials();
 
         bool passwordIsValid = await _userManager.CheckPasswordAsync(user, command.Request.Password);
         if (!passwordIsValid)
-            return InvalidCredentials();
+            return AuthFailures.InvalidCredentials();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
         IReadOnlyCollection<string> permissions = await _rolePermissionReader.GetPermissionCodesAsync(roles, cancellationToken);
@@ -138,10 +139,5 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
             accessToken.ExpiresAt,
             refreshToken.RawToken,
             refreshTokenExpiresAt);
-    }
-
-    private static Result<TokenResponse, Failure> InvalidCredentials()
-    {
-        return Errors.User.InvalidCredentials().ToFailure();
     }
 }

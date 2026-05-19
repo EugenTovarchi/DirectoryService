@@ -1,6 +1,7 @@
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
+using AuthService.Core.Failures;
 using AuthService.Core.Options;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
@@ -95,7 +96,7 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
         string tokenHash = _tokenService.HashRefreshToken(command.Request.RefreshToken);
         RefreshToken? currentToken = await _refreshTokenRepository.GetByHashAsync(tokenHash, cancellationToken);
         if (currentToken is null)
-            return InvalidRefreshToken();
+            return AuthFailures.InvalidRefreshToken();
 
         if (currentToken.RevokedAt is not null)
         {
@@ -109,15 +110,15 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
                 return reuseSaveResult.Error.ToFailure();
 
             _logger.LogWarning("Refresh token reuse detected for user {UserId}", currentToken.UserId);
-            return InvalidRefreshToken();
+            return AuthFailures.InvalidRefreshToken();
         }
 
         if (!currentToken.IsActive)
-            return InvalidRefreshToken();
+            return AuthFailures.InvalidRefreshToken();
 
         ApplicationUser user = currentToken.User;
         if (!user.IsActive)
-            return InvalidRefreshToken();
+            return AuthFailures.InvalidRefreshToken();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
         IReadOnlyCollection<string> permissions = await _rolePermissionReader.GetPermissionCodesAsync(roles, cancellationToken);
@@ -154,10 +155,5 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
             accessToken.ExpiresAt,
             refreshToken.RawToken,
             refreshTokenExpiresAt);
-    }
-
-    private static Result<TokenResponse, Failure> InvalidRefreshToken()
-    {
-        return Errors.User.InvalidCredentials().ToFailure();
     }
 }

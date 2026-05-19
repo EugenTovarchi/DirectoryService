@@ -23,6 +23,25 @@ Use this after root [../AGENTS.md](../AGENTS.md).
 - Do not store real secrets in appsettings or committed config.
 - Keep auth documentation updated in [../docs/services/auth-service.md](../docs/services/auth-service.md) when changing AuthService boundaries, token lifecycle, roles, permissions, invites, or sessions.
 
+## Error Rules
+
+- Keep the shared `Error`/`Failure`/`Envelope` response model in SharedService.
+- Keep AuthService-specific auth failure semantics in AuthService-local helpers such as `AuthFailures`.
+- Handlers may return local `Failure` helpers directly when the method returns `Result<T, Failure>`.
+- Do not add AuthService-specific errors to SharedService unless the error is truly service-neutral and useful to other services.
+- If a flow needs a new custom auth error, add it in AuthService first, document the public shape, and keep security-sensitive cases intentionally indistinguishable when needed.
+
+## Pre-Commit Documentation Gate
+
+Run this gate only when the final diff is ready and before creating an AuthService commit.
+
+- Review the final staged/unstaged AuthService diff.
+- Update [../docs/services/auth-service.md](../docs/services/auth-service.md) as the main development documentation when behavior, contracts, endpoints, flows, configuration, verification, or backlog changed.
+- Update the existing learning notes section in [../docs/services/auth-service.md](../docs/services/auth-service.md) when the change adds learning context. Keep it short: plan, what was done, and how the result affects AuthService.
+- Do not add commit hashes, commit names, branch names, or long changelog entries to service documentation.
+- If no documentation update is needed, state why before committing.
+- Do not create the commit until this gate is complete.
+
 ## Verification
 
 Start with:
