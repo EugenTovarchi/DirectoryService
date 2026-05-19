@@ -164,9 +164,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         });
     }
 
-    private async Task<Guid> CreateLocation(string name)
+    private Task<Guid> CreateLocation(string name)
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
             var address = Address.CreateWithFlat("RF", "moscow", $"{name}Street", "12", 3).Value;
             var location = Location.Create(
@@ -181,9 +181,9 @@ public class UpdateDepartmentLocationsTests : DirectoryBaseTests
         });
     }
 
-    private async Task<Guid> CreateTestDepartment()
+    private Task<Guid> CreateTestDepartment()
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
             var departmentName = Name.Create("Отдел продаж");
             var identifier = Identifier.Create("sales");

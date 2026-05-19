@@ -111,9 +111,9 @@ public class MoveDepartmentTests : DirectoryBaseTests
         });
     }
 
-    private async Task<Guid> CreateRootTestDepartment(string name, string depIdentifier)
+    private Task<Guid> CreateRootTestDepartment(string name, string depIdentifier)
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
             var departmentName = Name.Create(name);
 
@@ -128,9 +128,9 @@ public class MoveDepartmentTests : DirectoryBaseTests
         });
     }
 
-    private async Task<Guid> CreateChildTestDepartment(Guid parentId, string name, string depIdentifier)
+    private Task<Guid> CreateChildTestDepartment(Guid parentId, string name, string depIdentifier)
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
             var departmentName = Name.Create(name);
 

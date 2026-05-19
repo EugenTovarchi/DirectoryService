@@ -178,9 +178,9 @@ public class CreateDepartmentTests : DirectoryBaseTests
         });
     }
 
-    private async Task<LocationId> CreateLocation(string name)
+    private Task<LocationId> CreateLocation(string name)
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
             var address = Address.CreateWithFlat("RF", "Moscow", $"{name}Street", "12", 3).Value;
             var location = Location.Create(
