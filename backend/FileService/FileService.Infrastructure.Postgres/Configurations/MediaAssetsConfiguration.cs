@@ -20,17 +20,17 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
             {
                 fileName.Property(f => f.Value)
                     .HasColumnName("file_full_name")
-                    .HasMaxLength(500)
+                    .HasMaxLength(FileName.VALUE_MAX_LENGTH)
                     .IsRequired();
 
                 fileName.Property(f => f.Name)
                     .HasColumnName("file_name")
-                    .HasMaxLength(500)
+                    .HasMaxLength(FileName.NAME_MAX_LENGTH)
                     .IsRequired();
 
                 fileName.Property(f => f.Extension)
                     .HasColumnName("file_extension")
-                    .HasMaxLength(10)
+                    .HasMaxLength(FileName.EXTENSION_MAX_LENGTH)
                     .IsRequired();
             });
 
@@ -38,7 +38,7 @@ public class MediaAssetsConfiguration : IEntityTypeConfiguration<MediaAsset>
             {
                 contentType.Property(ct => ct.Value)
                     .HasColumnName("content_type")
-                    .HasMaxLength(100)
+                    .HasMaxLength(ContentType.VALUE_MAX_LENGTH)
                     .IsRequired();
 
                 contentType.Property(ct => ct.MediaType)

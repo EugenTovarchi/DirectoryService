@@ -77,10 +77,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
         });
     }
 
-    public async Task ResetDatabaseAsync()
-    {
-        await _respawner.ResetAsync(_dbConnection);
-    }
+    public Task ResetDatabaseAsync() => _respawner.ResetAsync(_dbConnection);
 
     public new async Task DisposeAsync()
     {

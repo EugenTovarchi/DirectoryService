@@ -42,8 +42,8 @@ public class GetDownloadUrlTests : FileServiceBaseTests
         Assert.True(getResult.IsSuccess);
         Assert.NotNull(getResult.Value);
         string? downloadUrl = getResult.Value;
-        Assert.StartsWith("http", downloadUrl);
-        Assert.Contains(mediaAsset.Id.ToString(), downloadUrl);
+        Assert.StartsWith("http", downloadUrl, StringComparison.Ordinal);
+        Assert.Contains(mediaAsset.Id.ToString(), downloadUrl, StringComparison.Ordinal);
     }
 
     [Fact]

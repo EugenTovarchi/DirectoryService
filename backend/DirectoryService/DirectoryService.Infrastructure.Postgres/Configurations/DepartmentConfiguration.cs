@@ -27,6 +27,10 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
            .HasColumnName("name")
            .HasMaxLength(Name.MAX_LENGTH)
            .IsRequired();
+
+            name.HasIndex(name => name.Value)
+                .IsUnique()
+                .HasDatabaseName("ix_department_name");
         });
 
         builder.OwnsOne(d => d.Identifier, ident =>

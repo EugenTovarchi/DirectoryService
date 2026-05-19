@@ -66,7 +66,8 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
             metaData.Property(md => md.Height).HasColumnName("height");
         });
 
-        builder.HasIndex(ps => new { ps.CreatedAt }).HasDatabaseName("ix_processes_created_at");
-        builder.HasIndex(ps => new { ps.Status }).HasDatabaseName("ix_processes_steps_step_status");
+        builder.HasIndex(ps => ps.CreatedAt).HasDatabaseName("ix_processes_created_at");
+        builder.HasIndex(ps => ps.Status).HasDatabaseName("ix_video_processes_status");
+        builder.HasIndex(ps => ps.VideoAssetId).HasDatabaseName("ix_video_processes_video_asset_id");
     }
 }

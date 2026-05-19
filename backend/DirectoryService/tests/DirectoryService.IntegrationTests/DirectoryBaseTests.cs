@@ -15,10 +15,8 @@ public abstract class DirectoryBaseTests : IClassFixture<DirectoryTestWebFactory
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
-    public async Task DisposeAsync()
-    {
-        await _resetDatabase();
-    }
+
+    public Task DisposeAsync() => _resetDatabase();
 
     protected async Task<T> ExecuteInDb<T>(Func<DirectoryServiceDbContext, Task<T>> action)
     {

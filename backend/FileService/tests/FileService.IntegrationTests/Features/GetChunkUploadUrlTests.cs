@@ -138,7 +138,7 @@ public class GetChunkUploadUrlTests : FileServiceBaseTests
     public async Task<StartMultipartUploadResponse> StartMultipartUpload(FileInfo fileInfo,
         CancellationToken cancellationToken)
     {
-        string bucketName = await CreateTestBucketAsync(VideoAsset.LOCATION);
+        await CreateTestBucketAsync(VideoAsset.LOCATION);
 
         var request = new StartMultipartUploadRequest(
             fileInfo.Name,

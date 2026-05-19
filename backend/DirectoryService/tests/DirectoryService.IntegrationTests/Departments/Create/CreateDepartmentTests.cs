@@ -125,7 +125,6 @@ public class CreateDepartmentTests : DirectoryBaseTests
         var locationId2 = await CreateLocation("location2");
 
         List<Guid> locations = [locationId1, locationId2];
-        List<LocationId> locationsForCheck = [locationId1, locationId2];
 
         var request = new CreateDepartmentRequest("testName", "testIdentifier", locations, null);
         var command = new CreateDepartmentCommand(request);
@@ -179,11 +178,11 @@ public class CreateDepartmentTests : DirectoryBaseTests
         });
     }
 
-    private async Task<LocationId> CreateLocation(string name)
+    private Task<LocationId> CreateLocation(string name)
     {
-        return await ExecuteInDb(async dbContext =>
+        return ExecuteInDb(async dbContext =>
         {
-            var address = Address.CreateWithFlat("RF", "Moscow", "testStreet", "12", 3).Value;
+            var address = Address.CreateWithFlat("RF", "Moscow", $"{name}Street", "12", 3).Value;
             var location = Location.Create(
                Name.Create(name).Value,
                TimeZone.Create("test/Moscow").Value,

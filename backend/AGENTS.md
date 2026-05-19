@@ -60,3 +60,12 @@ For adding future services, see [docs/architecture/how-to-add-service.md](docs/a
 ## Reporting
 
 For completed work report: plan executed, changed files, verification run, risks/manual checks.
+
+## Communication Budget
+
+- Default to concise progress notes and final summaries. Include only what changed, why it matters, verification run, and remaining risks.
+- Give long theory, beginner-level explanations, or detailed tradeoff writeups only when the user asks for them.
+- For build/test commands, summarize the result instead of pasting full logs. Include counts such as `0 warnings / 0 errors`, passed/failed test totals, and only the important failure lines when something breaks.
+- When analyzing warnings, aggregate by warning code and severity first. Avoid dumping repeated warning output unless it is needed to fix the issue.
+- For implementation tasks, prioritize reading focused files, making scoped edits, running relevant verification, and reporting the outcome. Avoid broad codebase scans unless the task requires them.
+- Keep intermediate updates short. Do not repeat the same status information after every command unless there is new information.

@@ -58,7 +58,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, config) =>
         {
-            var settings = new Dictionary<string, string?>
+            var settings = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 ["S3Options:AccessKey"] = "minioadmin",
                 ["S3Options:SecretKey"] = "minioadmin",
@@ -144,10 +144,7 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             });
     }
 
-    public async Task ResetDatabaseAsync()
-    {
-        await _respawner.ResetAsync(_dbConnection);
-    }
+    public Task ResetDatabaseAsync() => _respawner.ResetAsync(_dbConnection);
 
     public new async Task DisposeAsync()
     {

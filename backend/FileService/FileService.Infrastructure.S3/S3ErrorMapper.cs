@@ -25,7 +25,7 @@ public static class S3ErrorMapper
 
         AmazonS3Exception { ErrorCode: "NoSuchUpload" } => FileErrors.UploadNotFound(),
 
-        AmazonS3Exception argumentException => FileErrors.ValidationFailed(),
+        AmazonS3Exception => FileErrors.ValidationFailed(),
 
         HttpRequestException => FileErrors.NetworkIssue(),
 

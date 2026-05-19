@@ -41,6 +41,7 @@ Observed style:
 - Use Dapper/query connections for read models where current code already does.
 - Use transactions through service-local transaction abstractions.
 - Use `AsNoTracking` for read-only EF queries when appropriate.
+- In EF Core entity configurations, do not hard-code `HasMaxLength(...)` values. Reference named constants from the owning domain/value object when available; if no suitable constant exists, add one near the owning type or a focused service-local configuration constants class before using it.
 
 Related docs:
 

@@ -8,11 +8,6 @@ using TimeZone = DirectoryService.Contracts.ValueObjects.TimeZone;
 
 namespace DirectoryService.Infrastructure.Postgres.Configurations;
 
-public static class LocationConstants
-{
-    public const int MAX_LENGTH = 50;
-}
-
 public class LocationConfiguration : IEntityTypeConfiguration<Location>
 {
     public void Configure(EntityTypeBuilder<Location> builder)
@@ -33,33 +28,45 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
                 .HasColumnName("name")
                 .HasMaxLength(Name.MAX_LENGTH)
                 .IsRequired();
+
+            name.HasIndex(n => n.Value)
+                .IsUnique()
+                .HasDatabaseName("ix_location_name");
         });
 
         builder.OwnsOne(l => l.Address, address =>
         {
             address.Property(a => a.Country)
                 .HasColumnName("country")
-                .HasMaxLength(100)
+                .HasMaxLength(Address.COUNTRY_MAX_LENGTH)
                 .IsRequired();
 
             address.Property(a => a.City)
                 .HasColumnName("city")
-                .HasMaxLength(100)
+                .HasMaxLength(Address.CITY_MAX_LENGTH)
                 .IsRequired();
 
             address.Property(a => a.Street)
                 .HasColumnName("street")
-                .HasMaxLength(200)
+                .HasMaxLength(Address.STREET_MAX_LENGTH)
                 .IsRequired();
 
             address.Property(a => a.House)
                 .HasColumnName("house")
-                .HasMaxLength(20)
+                .HasMaxLength(Address.HOUSE_MAX_LENGTH)
                 .IsRequired();
 
             address.Property(a => a.Flat)
                 .HasColumnName("flat")
                 .IsRequired(false);
+
+            address.HasIndex(a => new { a.Country, a.City, a.Street, a.House, a.Flat })
+                .HasFilter("flat IS NOT NULL")
+                .HasDatabaseName("ix_location_with_flat");
+
+            address.HasIndex(a => new { a.Country, a.City, a.Street, a.House })
+                .HasFilter("flat IS NULL")
+                .HasDatabaseName("ix_location_without_flat");
         });
 
         builder.OwnsOne(l => l.TimeZone, timeZone =>
