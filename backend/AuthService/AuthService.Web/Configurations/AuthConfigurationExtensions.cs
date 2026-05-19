@@ -1,5 +1,7 @@
 using System.Text;
+using AuthService.Core.Authorization;
 using AuthService.Core.Options;
+using AuthService.Domain.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -35,7 +37,12 @@ public static class AuthConfigurationExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                AuthPolicies.USERS_MANAGE,
+                policy => policy.RequireClaim(AuthClaimTypes.PERMISSION, AuthPermissions.USERS_MANAGE));
+        });
 
         return services;
     }
