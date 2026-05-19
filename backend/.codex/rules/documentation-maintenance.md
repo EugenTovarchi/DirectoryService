@@ -18,12 +18,12 @@ When modifying domain entities, value objects, messaging configuration, cross-se
 
 This applies after implementation, not during exploratory reading.
 
-## AuthService Pre-Commit Gate
+## Service Pre-Commit Gate
 
-For commits that include `AuthService/**`, run the documentation check only when the final diff is ready and before creating the commit.
+For commits that include service changes, run the documentation check only when the final diff is ready and before creating the commit.
 
-- Review the final AuthService diff.
-- Update `docs/services/auth-service.md` as the main development documentation when behavior, contracts, endpoints, flows, configuration, verification, or backlog changed.
-- Update the existing `## Учебные Заметки` section in `docs/services/auth-service.md` when the change adds learning context. Keep the note short: plan, what was done, and how the result affects AuthService.
+- Review the final service diff.
+- Update the affected `docs/services/*` document as the main development documentation when behavior, contracts, endpoints, flows, configuration, verification, or backlog changed.
+- Update the existing service learning notes section when the change adds learning context. Keep the note short: plan, what was done, and how the result affects the service.
 - Do not add commit hashes, commit names, branch names, or long changelog entries to service documentation.
 - If no documentation update is needed, report why before committing.
