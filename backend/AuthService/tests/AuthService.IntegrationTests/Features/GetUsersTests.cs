@@ -9,6 +9,7 @@ using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using SharedService.Core.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -52,14 +53,18 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
 
         TokenResponse login = await LoginAsync("list-company-admin@example.com");
-        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users");
+        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        IReadOnlyList<UserSummaryResponse> users = await ReadUsersAsync(response);
+        PagedList<CompanyUserResponse> usersPage = await ReadUsersAsync(response);
+        IReadOnlyCollection<CompanyUserResponse> users = usersPage.Items;
+        usersPage.Page.Should().Be(1);
+        usersPage.PageSize.Should().Be(20);
+        usersPage.TotalCount.Should().Be(3);
         users.Select(user => user.Email).Should().BeEquivalentTo(
             "list-company-admin@example.com",
             "list-operator@example.com",
@@ -96,14 +101,16 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
 
         TokenResponse login = await LoginAsync("list-system-admin@example.com");
-        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users");
+        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        IReadOnlyList<UserSummaryResponse> users = await ReadUsersAsync(response);
+        PagedList<CompanyUserResponse> usersPage = await ReadUsersAsync(response);
+        IReadOnlyCollection<CompanyUserResponse> users = usersPage.Items;
+        usersPage.TotalCount.Should().Be(3);
         users.Select(user => user.Email).Should().BeEquivalentTo(
             "list-system-admin@example.com",
             "list-first-company@example.com",
@@ -116,7 +123,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
     [Fact]
     public async Task GetUsers_Without_Access_Token_Should_Return_Unauthorized()
     {
-        HttpResponseMessage response = await AppHttpClient.GetAsync("/api/users");
+        HttpResponseMessage response = await AppHttpClient.GetAsync("/api/users?page=1&pageSize=20");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -133,7 +140,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
 
         TokenResponse login = await LoginAsync("list-viewer@example.com");
-        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users");
+        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
@@ -141,10 +148,50 @@ public sealed class GetUsersTests : AuthServiceBaseTests
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    private static async Task<IReadOnlyList<UserSummaryResponse>> ReadUsersAsync(HttpResponseMessage response)
+    [Fact]
+    public async Task GetUsers_With_Second_Page_Should_Return_Paged_Company_Users()
     {
-        Envelope<IReadOnlyList<UserSummaryResponse>>? envelope =
-            await response.Content.ReadFromJsonAsync<Envelope<IReadOnlyList<UserSummaryResponse>>>();
+        Guid companyId = Guid.NewGuid();
+        await CreateIdentityUserAsync(
+            "list-page-admin@example.com",
+            "listpageadmin",
+            "List Page Admin",
+            companyId,
+            AuthRoles.COMPANY_ADMIN);
+        await CreateIdentityUserAsync(
+            "list-page-operator@example.com",
+            "listpageoperator",
+            "List Page Operator",
+            companyId,
+            AuthRoles.OPERATOR);
+        await CreateIdentityUserAsync(
+            "list-page-viewer@example.com",
+            "listpageviewer",
+            "List Page Viewer",
+            companyId,
+            AuthRoles.VIEWER);
+
+        TokenResponse login = await LoginAsync("list-page-admin@example.com");
+        using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=2&pageSize=2");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        PagedList<CompanyUserResponse> usersPage = await ReadUsersAsync(response);
+        usersPage.Page.Should().Be(2);
+        usersPage.PageSize.Should().Be(2);
+        usersPage.TotalCount.Should().Be(3);
+        usersPage.Items.Should().ContainSingle();
+        usersPage.HasPreviousPage.Should().BeTrue();
+        usersPage.HasNextpage.Should().BeFalse();
+    }
+
+    private static async Task<PagedList<CompanyUserResponse>> ReadUsersAsync(HttpResponseMessage response)
+    {
+        Envelope<PagedList<CompanyUserResponse>>? envelope =
+            await response.Content.ReadFromJsonAsync<Envelope<PagedList<CompanyUserResponse>>>();
 
         envelope.Should().NotBeNull();
         envelope!.Result.Should().NotBeNull();

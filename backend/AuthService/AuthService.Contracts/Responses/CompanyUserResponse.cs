@@ -1,6 +1,6 @@
 namespace AuthService.Contracts.Responses;
 
-public sealed record UserSummaryResponse(
+public sealed record CompanyUserResponse(
     Guid UserId,
     string Email,
     string Username,
