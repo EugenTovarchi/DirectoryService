@@ -61,14 +61,12 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
                 .IsRequired(false);
 
             address.HasIndex(a => new { a.Country, a.City, a.Street, a.House, a.Flat })
-                .IsUnique()
                 .HasFilter("flat IS NOT NULL")
-                .HasDatabaseName("ix_location_with_flat_unique");
+                .HasDatabaseName("ix_location_with_flat");
 
             address.HasIndex(a => new { a.Country, a.City, a.Street, a.House })
-                .IsUnique()
                 .HasFilter("flat IS NULL")
-                .HasDatabaseName("ix_location_without_flat_unique");
+                .HasDatabaseName("ix_location_without_flat");
         });
 
         builder.OwnsOne(l => l.TimeZone, timeZone =>

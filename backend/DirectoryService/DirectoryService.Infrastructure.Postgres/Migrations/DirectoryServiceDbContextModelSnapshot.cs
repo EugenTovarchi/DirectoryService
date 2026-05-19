@@ -312,13 +312,11 @@ namespace DirectoryService.Infrastructure.Postgres.Migrations
                             b1.HasKey("LocationId");
 
                             b1.HasIndex("Country", "City", "Street", "House")
-                                .IsUnique()
-                                .HasDatabaseName("ix_location_without_flat_unique")
+                                .HasDatabaseName("ix_location_without_flat")
                                 .HasFilter("flat IS NULL");
 
                             b1.HasIndex("Country", "City", "Street", "House", "Flat")
-                                .IsUnique()
-                                .HasDatabaseName("ix_location_with_flat_unique")
+                                .HasDatabaseName("ix_location_with_flat")
                                 .HasFilter("flat IS NOT NULL");
 
                             b1.ToTable("locations");
