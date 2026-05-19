@@ -11,6 +11,13 @@ public static class UserManagementFailures
             "User cannot invite users to another company").ToFailure();
     }
 
+    public static Failure InvalidCompanyContextForList()
+    {
+        return Error.Validation(
+            "company.context.is.invalid",
+            "User list requires a valid company context").ToFailure();
+    }
+
     public static Failure InvalidRole()
     {
         return Error.Validation(

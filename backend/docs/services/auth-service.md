@@ -262,10 +262,10 @@ Authenticated endpoints:
 - `GET /api/auth/sessions`
 - `POST /api/auth/revoke-all-sessions`
 - `POST /api/users/invite`
+- `GET /api/users`
 
 Administrative endpoints:
 
-- `GET /api/users`
 - `GET /api/users/{userId}`
 - `POST /api/users`
 - `PATCH /api/users/{userId}/roles`
@@ -290,6 +290,16 @@ Current `POST /api/users/invite` MVP behavior:
 - User-management validation failures use explicit AuthService-local error codes such as `company.context.is.invalid`, `role.is.invalid`, `user.creation.failed`, and `role.assignment.failed`.
 
 Legacy `/auth/users` registration/read endpoints are removed from the current AuthService surface. New user creation must go through Identity-based user management, starting with `POST /api/users/invite`. The legacy `auth_users` table is dropped by the `DropLegacyAuthUsers` EF migration.
+
+Current `GET /api/users` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Returns a flat admin user directory, not a DirectoryService `ltree` hierarchy.
+- `SystemAdmin` sees Identity users from all companies.
+- `CompanyAdmin` sees only Identity users from their own `CurrentCompanyId`.
+- Response contains safe user summary fields: id, email, username, display name, company id, active status, and roles.
+- Does not return password hashes, refresh tokens, session metadata, or directory/tree access rules.
+- User hierarchy, department placement, camera/directory access tree, and `ltree` logic remain DirectoryService responsibilities.
 
 ## Current User Endpoint
 
@@ -599,6 +609,8 @@ Refresh token session теперь создается через `RefreshToken.C
 
 Legacy `/auth/users` slice удален после появления Identity-based `POST /api/users/invite`. План блока: убрать старый учебный user API и модель `AuthUser`, чтобы в сервисе остался один актуальный путь создания пользователей. Сделано: удалены registration/read endpoints, legacy contracts, repository, domain model, тесты старого slice, а EF migration удаляет таблицу `auth_users`. Влияние: AuthService больше не поддерживает параллельную пользовательскую модель рядом с ASP.NET Core Identity, поэтому дальнейшее развитие user management идет через Identity users, roles, permissions и invite lifecycle.
 
+`GET /api/users` добавлен как плоский admin user directory. План блока: дать администратору способ увидеть пользователей после `POST /api/users/invite`, не смешивая AuthService с DirectoryService hierarchy/`ltree`. Сделано: endpoint требует `users.manage`, `SystemAdmin` видит все компании, `CompanyAdmin` только свою company, response возвращает безопасную user summary с roles и active status. Влияние: user-management MVP стал пригоден для первого UI списка пользователей, а доступы к дереву компании остаются отдельной задачей DirectoryService.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -675,6 +687,7 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - Session management: current user sessions list и revoke-session.
 - Current user flow: `GET /api/auth/me` возвращает текущего пользователя, roles, permissions и company context.
 - User management MVP: `POST /api/users/invite` создает Identity user с role/company context через `users.manage`, пока без email invite token lifecycle.
+- User directory MVP: `GET /api/users` возвращает плоский список пользователей для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -686,13 +699,14 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~InviteUserTests" --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~LoginTests|FullyQualifiedName~RefreshTokenTests|FullyQualifiedName~GetCurrentUserSessionsTests" --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~GetCurrentUserTests" --verbosity minimal`
+- `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~GetUsersTests" --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~LoginTests|FullyQualifiedName~RefreshTokenTests|FullyQualifiedName~GetCurrentUserTests" --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, unit `6/6`, integration `24/24`.
+Последние проверки проходили: build `0 warnings / 0 errors`, GetUsers integration `4/4`, unit `6/6`, integration `28/28`.
 
-Следующий ближайший AuthService блок: развивать user management после удаления legacy slice. Ближайшие кандидаты: `GET /api/users` для администраторского списка пользователей компании или invite token lifecycle без `InitialPassword`.
+Следующий ближайший AuthService блок: развивать user management после плоского user directory. Ближайшие кандидаты: `GET /api/users/{userId}` для детальной карточки пользователя, role/status management или invite token lifecycle без `InitialPassword`.
 
 ## Post-MVP Backlog
 
