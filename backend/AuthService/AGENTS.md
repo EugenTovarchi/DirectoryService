@@ -37,6 +37,16 @@ Follow the shared service pre-commit documentation gate in [../.codex/rules/docu
 - Update [../docs/services/auth-service.md](../docs/services/auth-service.md) as the main development documentation when behavior, contracts, endpoints, flows, configuration, verification, or backlog changed.
 - Update the existing learning notes section in [../docs/services/auth-service.md](../docs/services/auth-service.md) when the change adds learning context. Keep it short: plan, what was done, and how the result affects AuthService.
 
+## Post-Commit Summary
+
+After every AuthService commit, provide the user a short feature-oriented summary for personal notes:
+
+- What AuthService feature/capability changed.
+- Why it exists.
+- How it affects AuthService or the backend product.
+
+Keep this separate from technical verification output. Do not make errors or implementation minutiae the main focus unless the commit is specifically a bug fix.
+
 ## Verification
 
 Start with:

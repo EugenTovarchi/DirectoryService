@@ -289,6 +289,8 @@ Current `POST /api/users/invite` MVP behavior:
 - Does not send email, create raw invite token/link, or implement accept-invite flow yet.
 - User-management validation failures use explicit AuthService-local error codes such as `company.context.is.invalid`, `role.is.invalid`, `user.creation.failed`, and `role.assignment.failed`.
 
+Legacy `/auth/users` registration/read endpoints are removed from the current AuthService surface. New user creation must go through Identity-based user management, starting with `POST /api/users/invite`. The legacy `auth_users` table is dropped by the `DropLegacyAuthUsers` EF migration.
+
 ## Current User Endpoint
 
 `GET /api/auth/me` - authenticated endpoint для текущего пользователя. Endpoint читает user id из `sub` claim через `ClaimsPrincipalExtensions.GetUserId()`, требует `.RequireAuthorization()` и не принимает `userId` от клиента.
@@ -595,6 +597,8 @@ Refresh token session теперь создается через `RefreshToken.C
 
 Первый `/api/users/invite` slice выбран как route для будущего invite lifecycle, но реализован как admin-created Identity user без email delivery. План блока: дать CompanyAdmin/SystemAdmin управляемый способ создавать пользователей вместо legacy `/auth/users`. Сделано: endpoint требует policy `users.manage`, создает `ApplicationUser`, назначает роль и company context, временно принимает `InitialPassword`, а user-management failures получили явные AuthService-local codes. Влияние: AuthService получил первый Identity-based user management flow, после которого legacy учебный slice можно удалять отдельным блоком.
 
+Legacy `/auth/users` slice удален после появления Identity-based `POST /api/users/invite`. План блока: убрать старый учебный user API и модель `AuthUser`, чтобы в сервисе остался один актуальный путь создания пользователей. Сделано: удалены registration/read endpoints, legacy contracts, repository, domain model, тесты старого slice, а EF migration удаляет таблицу `auth_users`. Влияние: AuthService больше не поддерживает параллельную пользовательскую модель рядом с ASP.NET Core Identity, поэтому дальнейшее развитие user management идет через Identity users, roles, permissions и invite lifecycle.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -637,13 +641,11 @@ Refresh token session теперь создается через `RefreshToken.C
 - Какие exact endpoints в текущих FileService и DirectoryService будут первыми защищены permissions?
 - Какой минимальный seed нужен для первого `SystemAdmin`, company и первого `CompanyAdmin`?
 - Когда переводим JWT signing с symmetric key на private/public key?
-- Когда удаляем legacy `AuthUser` учебный slice (`/auth/users`, `auth_users`) после перехода на Identity endpoints?
 
 ## Рабочий Backlog
 
 Ближайшие implementation tasks:
 
-- Удалить legacy `/auth/users` registration/read slice и legacy `auth_users` model after verifying no tests or clients still depend on it.
 - После появления invite flow создавать invite token/session entities через фабрики с явными инвариантами.
 - Добавить первый защищенный downstream flow в FileService/DirectoryService через permission policies.
 - Подготовить private/public key JWT signing как отдельный security-hardening блок.
@@ -673,6 +675,7 @@ Refresh token session теперь создается через `RefreshToken.C
 - Session management: current user sessions list и revoke-session.
 - Current user flow: `GET /api/auth/me` возвращает текущего пользователя, roles, permissions и company context.
 - User management MVP: `POST /api/users/invite` создает Identity user с role/company context через `users.manage`, пока без email invite token lifecycle.
+- Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
 - Build clean: AuthService build проходит без `NU1608`.
@@ -687,9 +690,9 @@ Refresh token session теперь создается через `RefreshToken.C
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, invite integration `5/5`, unit `7/7`, integration `28/28`.
+Последние проверки проходили: build `0 warnings / 0 errors`, unit `6/6`, integration `24/24`.
 
-Следующий ближайший AuthService блок: удалить legacy `/auth/users` registration/read slice и legacy `auth_users` model.
+Следующий ближайший AuthService блок: развивать user management после удаления legacy slice. Ближайшие кандидаты: `GET /api/users` для администраторского списка пользователей компании или invite token lifecycle без `InitialPassword`.
 
 ## Post-MVP Backlog
 

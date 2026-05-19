@@ -1,5 +1,4 @@
 using AuthService.Domain.Identity;
-using AuthService.Domain.Users;
 using AuthService.Infrastructure.Postgres.Configurations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -23,7 +22,6 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
         return new AuthServiceDbContext(optionsBuilder.Options);
     }
 
-    public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -34,7 +32,6 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
 
         ConfigureIdentityTableNames(builder);
 
-        builder.ApplyConfiguration(new AuthUserConfiguration());
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
         builder.ApplyConfiguration(new ApplicationRoleConfiguration());
         builder.ApplyConfiguration(new PermissionConfiguration());
