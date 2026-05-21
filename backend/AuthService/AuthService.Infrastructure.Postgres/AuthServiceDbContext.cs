@@ -25,6 +25,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserInviteToken> UserInviteTokens => Set<UserInviteToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,6 +38,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.ApplyConfiguration(new PermissionConfiguration());
         builder.ApplyConfiguration(new RolePermissionConfiguration());
         builder.ApplyConfiguration(new RefreshTokenConfiguration());
+        builder.ApplyConfiguration(new UserInviteTokenConfiguration());
     }
 
     private static void ConfigureIdentityTableNames(ModelBuilder builder)

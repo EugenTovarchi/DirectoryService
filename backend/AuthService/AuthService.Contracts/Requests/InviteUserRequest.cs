@@ -5,5 +5,4 @@ public sealed record InviteUserRequest(
     string Username,
     string? DisplayName,
     Guid CompanyId,
-    string Role,
-    string InitialPassword);
+    string Role);

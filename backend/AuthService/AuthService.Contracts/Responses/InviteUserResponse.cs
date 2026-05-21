@@ -6,4 +6,6 @@ public sealed record InviteUserResponse(
     string Username,
     string? DisplayName,
     Guid CompanyId,
-    IReadOnlyCollection<string> Roles);
+    IReadOnlyCollection<string> Roles,
+    string InviteToken,
+    DateTime InviteTokenExpiresAt);

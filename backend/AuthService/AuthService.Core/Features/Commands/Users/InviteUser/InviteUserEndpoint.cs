@@ -1,5 +1,6 @@
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
+using AuthService.Core.Abstractions;
 using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
 using AuthService.Core.Failures;
@@ -66,27 +67,35 @@ public sealed class InviteUserValidator : AbstractValidator<InviteUserCommand>
 
         RuleFor(command => command.Request.Role)
             .NotEmpty();
-
-        RuleFor(command => command.Request.InitialPassword)
-            .NotEmpty();
     }
 }
 
 public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, InviteUserCommand>
 {
+    private const int INVITE_TOKEN_LIFETIME_DAYS = 3;
+
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly IUserInviteTokenRepository _inviteTokenRepository;
+    private readonly ITokenService _tokenService;
+    private readonly ITransactionManager _transactionManager;
     private readonly IValidator<InviteUserCommand> _validator;
     private readonly ILogger<InviteUserHandler> _logger;
 
     public InviteUserHandler(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
+        IUserInviteTokenRepository inviteTokenRepository,
+        ITokenService tokenService,
+        ITransactionManager transactionManager,
         IValidator<InviteUserCommand> validator,
         ILogger<InviteUserHandler> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _inviteTokenRepository = inviteTokenRepository;
+        _tokenService = tokenService;
+        _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
@@ -123,8 +132,9 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
             username,
             displayName,
             command.Request.CompanyId);
+        invitedUser.Deactivate();
 
-        IdentityResult createResult = await _userManager.CreateAsync(invitedUser, command.Request.InitialPassword);
+        IdentityResult createResult = await _userManager.CreateAsync(invitedUser);
         if (!createResult.Succeeded)
             return UserManagementFailures.UserCreationFailed();
 
@@ -134,6 +144,32 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
             await _userManager.DeleteAsync(invitedUser);
             return UserManagementFailures.RoleAssignmentFailed();
         }
+
+        await _inviteTokenRepository.RevokeActiveTokensForUserAsync(invitedUser.Id, cancellationToken);
+
+        RefreshTokenResult inviteToken = _tokenService.CreateRefreshToken();
+        DateTime inviteTokenExpiresAt = DateTime.UtcNow.AddDays(INVITE_TOKEN_LIFETIME_DAYS);
+        Result<UserInviteToken, Error> inviteTokenResult = UserInviteToken.Create(
+            invitedUser.Id,
+            command.InvitedByUserId,
+            inviteToken.TokenHash,
+            inviteTokenExpiresAt);
+        if (inviteTokenResult.IsFailure)
+        {
+            await _userManager.DeleteAsync(invitedUser);
+            return inviteTokenResult.Error.ToFailure();
+        }
+
+        UnitResult<Error> addInviteTokenResult = _inviteTokenRepository.Add(inviteTokenResult.Value);
+        if (addInviteTokenResult.IsFailure)
+        {
+            await _userManager.DeleteAsync(invitedUser);
+            return UserManagementFailures.InviteTokenCreationFailed();
+        }
+
+        UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+        if (saveResult.IsFailure)
+            return saveResult.Error.ToFailure();
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -150,6 +186,8 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
             invitedUser.UserName!,
             invitedUser.DisplayName?.Value,
             command.Request.CompanyId,
-            [role]);
+            [role],
+            inviteToken.RawToken,
+            inviteTokenExpiresAt);
     }
 }

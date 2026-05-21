@@ -25,6 +25,13 @@ public static class UserManagementFailures
             "Role is invalid").ToFailure();
     }
 
+    public static Failure InvalidInviteToken()
+    {
+        return Error.Validation(
+            "invite.token.is.invalid",
+            "Invite token is invalid").ToFailure();
+    }
+
     public static Failure UserCreationFailed()
     {
         return Error.Validation(
@@ -33,12 +40,27 @@ public static class UserManagementFailures
             "user").ToFailure();
     }
 
+    public static Failure PasswordAssignmentFailed()
+    {
+        return Error.Validation(
+            "password.assignment.failed",
+            "Password assignment failed",
+            "password").ToFailure();
+    }
+
     public static Failure RoleAssignmentFailed()
     {
         return Error.Validation(
             "role.assignment.failed",
             "Role assignment failed",
             "role").ToFailure();
+    }
+
+    public static Failure InviteTokenCreationFailed()
+    {
+        return Error.Validation(
+            "invite.token.creation.failed",
+            "Invite token creation failed").ToFailure();
     }
 
     public static Failure RoleChangeFailed()
