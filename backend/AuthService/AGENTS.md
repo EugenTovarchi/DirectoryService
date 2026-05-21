@@ -37,6 +37,18 @@ Follow the shared service pre-commit documentation gate in [../.codex/rules/docu
 - Update [../docs/services/auth-service.md](../docs/services/auth-service.md) as the main development documentation when behavior, contracts, endpoints, flows, configuration, verification, or backlog changed.
 - Update the existing learning notes section in [../docs/services/auth-service.md](../docs/services/auth-service.md) when the change adds learning context. Keep it short: plan, what was done, and how the result affects AuthService.
 
+## Commit Approval Gate
+
+For AuthService work, do not create commits without explicit user approval.
+
+Before asking to commit:
+
+- Show the final changes/diff scope.
+- Provide a short summary of what changed and which verification commands passed or failed.
+- Ask the user whether to commit.
+
+Only run `git add` and `git commit` after the user explicitly confirms.
+
 ## Post-Commit Summary
 
 After every AuthService commit, provide the user a short feature-oriented summary for personal notes:
