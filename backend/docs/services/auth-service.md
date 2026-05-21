@@ -265,11 +265,11 @@ Authenticated endpoints:
 - `GET /api/users`
 - `GET /api/users/{userId}`
 - `PATCH /api/users/{userId}/change-status`
+- `PATCH /api/users/{userId}/change-role`
 
 Administrative endpoints:
 
 - `POST /api/users`
-- `PATCH /api/users/{userId}/roles`
 - `GET /api/users/{userId}/sessions`
 - `POST /api/users/{userId}/revoke-sessions`
 
@@ -323,6 +323,19 @@ Current `PATCH /api/users/{userId}/change-status` MVP behavior:
 - Rejects self-deactivation with `400 Bad Request` and AuthService-local `self.deactivation.is.invalid`, so an admin cannot disable the account that is currently authorizing the request.
 - Returns `CompanyUserDetailsResponse` after the status change.
 - Command-side implementation uses Identity/EF Core through `UserManager<ApplicationUser>`; Dapper remains for read-heavy query endpoints.
+- Does not expose password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
+
+Current `PATCH /api/users/{userId}/change-role` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Accepts `ChangeUserRoleRequest` with `role`.
+- Replaces the user's current role set with one existing role.
+- Uses the same company boundary as user details: `SystemAdmin` can change any Identity user role, while `CompanyAdmin` can change only users from their own `CurrentCompanyId`.
+- Returns `404 Not Found` for unknown users and for users outside a `CompanyAdmin` company boundary.
+- Rejects self-role-change with `400 Bad Request` and AuthService-local `self.role.change.is.invalid`, so an admin cannot accidentally remove their own management permissions.
+- Rejects `SystemAdmin` assignment by `CompanyAdmin` with `400 Bad Request` and AuthService-local `system.admin.role.assignment.is.invalid`; only `SystemAdmin` can assign the `SystemAdmin` role.
+- Returns `CompanyUserDetailsResponse` after the role change.
+- Command-side implementation uses Identity/EF Core through `UserManager<ApplicationUser>` and `RoleManager<ApplicationRole>`.
 - Does not expose password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
 
 ## Current User Endpoint
@@ -639,6 +652,8 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 `PATCH /api/users/{userId}/change-status` добавлен как command-side status management. План блока: дать администратору возможность activate/deactivate пользователя из карточки, не добавляя role management. Сделано: endpoint требует `users.manage`, принимает `ChangeUserStatusRequest`, применяет company boundary как user details, запрещает self-deactivation, меняет `ApplicationUser` через Identity/EF Core и возвращает `CompanyUserDetailsResponse`. Влияние: admin UI может включать и отключать учетные записи, а AuthService не раскрывает чужих пользователей через статусные операции.
 
+`PATCH /api/users/{userId}/change-role` добавлен как command-side role management. План блока: дать администратору возможность менять роль пользователя из карточки без изменения статуса и сессий. Сделано: endpoint требует `users.manage`, принимает `ChangeUserRoleRequest`, применяет company boundary как user details, запрещает self-role-change, не позволяет `CompanyAdmin` назначать `SystemAdmin`, заменяет текущий набор ролей на одну существующую роль через Identity/EF Core и возвращает `CompanyUserDetailsResponse`. Влияние: admin UI может повышать или понижать пользователя между MVP roles, не смешивая это с deactivate/fire сценариями.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -718,6 +733,7 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
+- User role management MVP: `PATCH /api/users/{userId}/change-role` заменяет текущую роль Identity user на одну существующую роль; `CompanyAdmin` ограничен своей company и не может назначать `SystemAdmin`, self-role-change запрещен.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -734,9 +750,9 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, ChangeUserStatus integration `8/8`, unit `6/6`, integration `43/43`.
+Последние проверки проходили: build `0 warnings / 0 errors`, ChangeUserRole integration `9/9`, unit `6/6`, integration `52/52`.
 
-Следующий ближайший AuthService блок: развивать user management после status management. Ближайшие кандидаты: role management или invite token lifecycle без `InitialPassword`.
+Следующий ближайший AuthService блок: развивать user management после role/status management. Ближайшие кандидаты: admin revoke user sessions или invite token lifecycle без `InitialPassword`.
 
 ## Post-MVP Backlog
 

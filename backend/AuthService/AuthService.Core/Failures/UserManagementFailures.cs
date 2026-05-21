@@ -41,6 +41,14 @@ public static class UserManagementFailures
             "role").ToFailure();
     }
 
+    public static Failure RoleChangeFailed()
+    {
+        return Error.Validation(
+            "role.change.failed",
+            "Role change failed",
+            "role").ToFailure();
+    }
+
     public static Failure SelfDeactivationIsInvalid()
     {
         return Error.Validation(
@@ -54,5 +62,20 @@ public static class UserManagementFailures
             "user.status.change.failed",
             "User status change failed",
             "isActive").ToFailure();
+    }
+
+    public static Failure SelfRoleChangeIsInvalid()
+    {
+        return Error.Validation(
+            "self.role.change.is.invalid",
+            "User cannot change their own role").ToFailure();
+    }
+
+    public static Failure SystemAdminRoleAssignmentIsInvalid()
+    {
+        return Error.Validation(
+            "system.admin.role.assignment.is.invalid",
+            "Only system administrators can assign the SystemAdmin role",
+            "role").ToFailure();
     }
 }
