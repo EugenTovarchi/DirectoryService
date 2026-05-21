@@ -37,6 +37,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             "Status Operator",
             companyId,
             AuthRoles.OPERATOR);
+        TokenResponse targetLogin = await LoginAsync("status-operator@example.com");
 
         TokenResponse login = await LoginAsync("status-company-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
@@ -58,6 +59,16 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             .Select(user => user.IsActive)
             .SingleAsync());
         savedUserIsActive.Should().BeFalse();
+
+        List<RefreshToken> targetTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens
+            .Where(token => token.UserId == targetUser.Id)
+            .ToListAsync());
+        targetTokens.Should().OnlyContain(token => token.RevokedAt != null);
+
+        HttpResponseMessage refreshResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(targetLogin.RefreshToken));
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -77,6 +88,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             "Status Other Company",
             anotherCompanyId,
             AuthRoles.VIEWER);
+        await LoginAsync("status-other-company@example.com");
 
         TokenResponse login = await LoginAsync("status-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
@@ -93,6 +105,11 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             .Select(user => user.IsActive)
             .SingleAsync());
         savedUserIsActive.Should().BeTrue();
+
+        List<RefreshToken> targetTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens
+            .Where(token => token.UserId == targetUser.Id)
+            .ToListAsync());
+        targetTokens.Should().OnlyContain(token => token.RevokedAt == null);
     }
 
     [Fact]

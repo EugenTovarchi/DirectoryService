@@ -78,4 +78,11 @@ public static class UserManagementFailures
             "Only system administrators can assign the SystemAdmin role",
             "role").ToFailure();
     }
+
+    public static Failure SelfSessionRevocationIsInvalid()
+    {
+        return Error.Validation(
+            "self.session.revocation.is.invalid",
+            "User cannot revoke their own sessions through the admin endpoint").ToFailure();
+    }
 }

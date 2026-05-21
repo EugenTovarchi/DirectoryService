@@ -1,5 +1,3 @@
-using AuthService.Contracts.Requests;
-using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
@@ -18,23 +16,23 @@ using SharedService.Core.Validation;
 using SharedService.Framework.EndpointSettings;
 using SharedService.SharedKernel;
 
-namespace AuthService.Core.Features.Commands.Users.ChangeUserStatus;
+namespace AuthService.Core.Features.Commands.Users.RevokeUserSessions;
 
-public sealed class ChangeUserStatusEndpoint : IEndpoint
+public sealed class RevokeUserSessionsEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPatch(
-            "/api/users/{userId:guid}/change-status",
-            async Task<EndpointResult<CompanyUserDetailsResponse>> (
+        app.MapPost(
+            "/api/users/{userId:guid}/revoke-sessions",
+            async Task<EndpointResult> (
                 Guid userId,
-                [FromBody] ChangeUserStatusRequest request,
                 HttpContext httpContext,
-                [FromServices] ChangeUserStatusHandler handler,
+                [FromServices] RevokeUserSessionsHandler handler,
                 CancellationToken cancellationToken) =>
             {
                 Guid requestedByUserId = httpContext.User.GetUserId();
-                ChangeUserStatusCommand command = new(requestedByUserId, userId, request);
+                string? ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+                RevokeUserSessionsCommand command = new(requestedByUserId, userId, ipAddress);
 
                 return await handler.Handle(command, cancellationToken);
             })
@@ -42,14 +40,14 @@ public sealed class ChangeUserStatusEndpoint : IEndpoint
     }
 }
 
-public sealed record ChangeUserStatusCommand(
+public sealed record RevokeUserSessionsCommand(
     Guid RequestedByUserId,
     Guid UserId,
-    ChangeUserStatusRequest Request) : ICommand;
+    string? RevokedByIp) : ICommand;
 
-public sealed class ChangeUserStatusValidator : AbstractValidator<ChangeUserStatusCommand>
+public sealed class RevokeUserSessionsValidator : AbstractValidator<RevokeUserSessionsCommand>
 {
-    public ChangeUserStatusValidator()
+    public RevokeUserSessionsValidator()
     {
         RuleFor(command => command.RequestedByUserId)
             .NotEmpty();
@@ -59,20 +57,20 @@ public sealed class ChangeUserStatusValidator : AbstractValidator<ChangeUserStat
     }
 }
 
-public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetailsResponse, ChangeUserStatusCommand>
+public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessionsCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITransactionManager _transactionManager;
-    private readonly IValidator<ChangeUserStatusCommand> _validator;
-    private readonly ILogger<ChangeUserStatusHandler> _logger;
+    private readonly IValidator<RevokeUserSessionsCommand> _validator;
+    private readonly ILogger<RevokeUserSessionsHandler> _logger;
 
-    public ChangeUserStatusHandler(
+    public RevokeUserSessionsHandler(
         UserManager<ApplicationUser> userManager,
         IRefreshTokenRepository refreshTokenRepository,
         ITransactionManager transactionManager,
-        IValidator<ChangeUserStatusCommand> validator,
-        ILogger<ChangeUserStatusHandler> logger)
+        IValidator<RevokeUserSessionsCommand> validator,
+        ILogger<RevokeUserSessionsHandler> logger)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
@@ -81,8 +79,8 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         _logger = logger;
     }
 
-    public async Task<Result<CompanyUserDetailsResponse, Failure>> Handle(
-        ChangeUserStatusCommand command,
+    public async Task<UnitResult<Failure>> Handle(
+        RevokeUserSessionsCommand command,
         CancellationToken cancellationToken)
     {
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
@@ -93,8 +91,8 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         if (requestedByUser is null || !requestedByUser.IsActive)
             return AuthFailures.InvalidAuthenticatedUser();
 
-        if (command.RequestedByUserId == command.UserId && !command.Request.IsActive)
-            return UserManagementFailures.SelfDeactivationIsInvalid();
+        if (command.RequestedByUserId == command.UserId)
+            return UserManagementFailures.SelfSessionRevocationIsInvalid();
 
         bool requestedBySystemAdmin = await _userManager.IsInRoleAsync(requestedByUser, AuthRoles.SYSTEM_ADMIN);
         if (!requestedBySystemAdmin && requestedByUser.CurrentCompanyId is null)
@@ -107,47 +105,23 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         if (!requestedBySystemAdmin && targetUser.CurrentCompanyId != requestedByUser.CurrentCompanyId)
             return Errors.General.NotFoundEntity("user").ToFailure();
 
-        if (command.Request.IsActive)
-        {
-            targetUser.Activate();
-        }
-        else
-        {
-            targetUser.Deactivate();
-            await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
-                targetUser.Id,
-                revokedByIp: null,
-                cancellationToken);
-        }
-
-        IdentityResult updateResult = await _userManager.UpdateAsync(targetUser);
-        if (!updateResult.Succeeded)
-            return UserManagementFailures.UserStatusChangeFailed();
+        await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+            targetUser.Id,
+            command.RevokedByIp,
+            cancellationToken);
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
 
-        string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
-
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "User {UserId} status changed to {IsActive} by {RequestedByUserId}",
+                "All sessions revoked for user {UserId} by {RequestedByUserId}",
                 targetUser.Id,
-                targetUser.IsActive,
                 command.RequestedByUserId);
         }
 
-        return new CompanyUserDetailsResponse(
-            targetUser.Id,
-            targetUser.Email!,
-            targetUser.UserName!,
-            targetUser.DisplayName?.Value,
-            targetUser.CurrentCompanyId,
-            targetUser.IsActive,
-            roles,
-            targetUser.CreatedAt,
-            targetUser.UpdatedAt);
+        return UnitResult.Success<Failure>();
     }
 }
