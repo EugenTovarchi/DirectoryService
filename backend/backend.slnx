@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/AuthService/">
+    <File Path="AuthService/AUTH_SERVICE_ROADMAP.md" />
     <File Path="AuthService/AGENTS.md" />
   </Folder>
   <Folder Name="/AuthService/src/">
