@@ -40,4 +40,19 @@ public static class UserManagementFailures
             "Role assignment failed",
             "role").ToFailure();
     }
+
+    public static Failure SelfDeactivationIsInvalid()
+    {
+        return Error.Validation(
+            "self.deactivation.is.invalid",
+            "User cannot deactivate themselves").ToFailure();
+    }
+
+    public static Failure UserStatusChangeFailed()
+    {
+        return Error.Validation(
+            "user.status.change.failed",
+            "User status change failed",
+            "isActive").ToFailure();
+    }
 }

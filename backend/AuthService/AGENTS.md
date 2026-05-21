@@ -19,6 +19,7 @@ Use this after root [../AGENTS.md](../AGENTS.md).
 - Use `AuthService.Contracts` for externally consumed DTOs/contracts.
 - Follow the existing `IEndpoint` + handler pattern from FileService.
 - Keep `AuthService.Contracts` DTOs stable once consumed externally.
+- Prefer explicit types in AuthService code, but `var` is allowed for FluentValidation validation results and other framework-heavy result types when the explicit type is noisy.
 - Do not log passwords, password hashes, JWTs, refresh tokens, or other credentials.
 - Do not store real secrets in appsettings or committed config.
 - Keep auth documentation updated in [../docs/services/auth-service.md](../docs/services/auth-service.md) when changing AuthService boundaries, token lifecycle, roles, permissions, invites, or sessions.

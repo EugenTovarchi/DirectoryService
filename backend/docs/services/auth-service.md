@@ -263,13 +263,13 @@ Authenticated endpoints:
 - `POST /api/auth/revoke-all-sessions`
 - `POST /api/users/invite`
 - `GET /api/users`
+- `GET /api/users/{userId}`
+- `PATCH /api/users/{userId}/change-status`
 
 Administrative endpoints:
 
-- `GET /api/users/{userId}`
 - `POST /api/users`
 - `PATCH /api/users/{userId}/roles`
-- `PATCH /api/users/{userId}/status`
 - `GET /api/users/{userId}/sessions`
 - `POST /api/users/{userId}/revoke-sessions`
 
@@ -312,6 +312,18 @@ Current `GET /api/users/{userId}` MVP behavior:
 - Response contains safe user detail fields: id, email, username, display name, company id, active status, roles, createdAt, and updatedAt.
 - Read-side implementation uses Dapper with `INpgsqlConnectionFactory`.
 - Does not return password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
+
+Current `PATCH /api/users/{userId}/change-status` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Accepts `ChangeUserStatusRequest` with `isActive`.
+- Activates or deactivates an ASP.NET Core Identity `ApplicationUser`.
+- Uses the same company boundary as user details: `SystemAdmin` can change any Identity user status, while `CompanyAdmin` can change only users from their own `CurrentCompanyId`.
+- Returns `404 Not Found` for unknown users and for users outside a `CompanyAdmin` company boundary.
+- Rejects self-deactivation with `400 Bad Request` and AuthService-local `self.deactivation.is.invalid`, so an admin cannot disable the account that is currently authorizing the request.
+- Returns `CompanyUserDetailsResponse` after the status change.
+- Command-side implementation uses Identity/EF Core through `UserManager<ApplicationUser>`; Dapper remains for read-heavy query endpoints.
+- Does not expose password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
 
 ## Current User Endpoint
 
@@ -625,6 +637,8 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 `GET /api/users/{userId}` добавлен как read-only admin user details. План блока: дать UI карточку пользователя после плоского `GET /api/users`, не затрагивая write-actions. Сделано: endpoint требует `users.manage`, применяет тот же company boundary, `SystemAdmin` видит любого user, `CompanyAdmin` только свою company, response возвращает `CompanyUserDetailsResponse` с roles и timestamps, а read-side реализован через Dapper. Влияние: admin UI может открывать детальную карточку без exposure password/security/session data.
 
+`PATCH /api/users/{userId}/change-status` добавлен как command-side status management. План блока: дать администратору возможность activate/deactivate пользователя из карточки, не добавляя role management. Сделано: endpoint требует `users.manage`, принимает `ChangeUserStatusRequest`, применяет company boundary как user details, запрещает self-deactivation, меняет `ApplicationUser` через Identity/EF Core и возвращает `CompanyUserDetailsResponse`. Влияние: admin UI может включать и отключать учетные записи, а AuthService не раскрывает чужих пользователей через статусные операции.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -703,6 +717,7 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - User management MVP: `POST /api/users/invite` создает Identity user с role/company context через `users.manage`, пока без email invite token lifecycle.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
+- User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -719,9 +734,9 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, GetUserDetails integration `6/6`, unit `6/6`, integration `35/35`.
+Последние проверки проходили: build `0 warnings / 0 errors`, ChangeUserStatus integration `8/8`, unit `6/6`, integration `43/43`.
 
-Следующий ближайший AuthService блок: развивать user management после read-only user details. Ближайшие кандидаты: role/status management или invite token lifecycle без `InitialPassword`.
+Следующий ближайший AuthService блок: развивать user management после status management. Ближайшие кандидаты: role management или invite token lifecycle без `InitialPassword`.
 
 ## Post-MVP Backlog
 
