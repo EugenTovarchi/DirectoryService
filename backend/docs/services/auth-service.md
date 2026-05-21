@@ -303,6 +303,16 @@ Current `GET /api/users` MVP behavior:
 - Does not return password hashes, refresh tokens, session metadata, or directory/tree access rules.
 - User hierarchy, department placement, camera/directory access tree, and `ltree` logic remain DirectoryService responsibilities.
 
+Current `GET /api/users/{userId}` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Returns one `CompanyUserDetailsResponse` for admin UI user details.
+- Uses the same company boundary as `GET /api/users`: `SystemAdmin` can read any Identity user, while `CompanyAdmin` can read only users from their own `CurrentCompanyId`.
+- Returns `404 Not Found` for unknown users and for users outside a `CompanyAdmin` company boundary.
+- Response contains safe user detail fields: id, email, username, display name, company id, active status, roles, createdAt, and updatedAt.
+- Read-side implementation uses Dapper with `INpgsqlConnectionFactory`.
+- Does not return password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
+
 ## Current User Endpoint
 
 `GET /api/auth/me` - authenticated endpoint для текущего пользователя. Endpoint читает user id из `sub` claim через `ClaimsPrincipalExtensions.GetUserId()`, требует `.RequireAuthorization()` и не принимает `userId` от клиента.
@@ -613,6 +623,8 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 `GET /api/users` добавлен как плоский admin user directory. План блока: дать администратору способ увидеть пользователей после `POST /api/users/invite`, не смешивая AuthService с DirectoryService hierarchy/`ltree`. Сделано: endpoint требует `users.manage`, `SystemAdmin` видит все компании, `CompanyAdmin` только свою company, response возвращает paged `CompanyUserResponse` с roles и active status, а read-side реализован через Dapper. Влияние: user-management MVP стал пригоден для первого UI списка пользователей, а доступы к дереву компании остаются отдельной задачей DirectoryService.
 
+`GET /api/users/{userId}` добавлен как read-only admin user details. План блока: дать UI карточку пользователя после плоского `GET /api/users`, не затрагивая write-actions. Сделано: endpoint требует `users.manage`, применяет тот же company boundary, `SystemAdmin` видит любого user, `CompanyAdmin` только свою company, response возвращает `CompanyUserDetailsResponse` с roles и timestamps, а read-side реализован через Dapper. Влияние: admin UI может открывать детальную карточку без exposure password/security/session data.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -690,6 +702,7 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - Current user flow: `GET /api/auth/me` возвращает текущего пользователя, roles, permissions и company context.
 - User management MVP: `POST /api/users/invite` создает Identity user с role/company context через `users.manage`, пока без email invite token lifecycle.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
+- User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -706,9 +719,9 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, GetUsers integration `5/5`, unit `6/6`, integration `29/29`.
+Последние проверки проходили: build `0 warnings / 0 errors`, GetUserDetails integration `6/6`, unit `6/6`, integration `35/35`.
 
-Следующий ближайший AuthService блок: развивать user management после плоского user directory. Ближайшие кандидаты: `GET /api/users/{userId}` для детальной карточки пользователя, role/status management или invite token lifecycle без `InitialPassword`.
+Следующий ближайший AuthService блок: развивать user management после read-only user details. Ближайшие кандидаты: role/status management или invite token lifecycle без `InitialPassword`.
 
 ## Post-MVP Backlog
 
