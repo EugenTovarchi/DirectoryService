@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace AuthService.Domain.Identity;
 
 /// <summary>
 /// Связь role-permission для расчета итоговых разрешений пользователя.
 /// </summary>
-[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Domain term from AuthService documentation.")]
 public sealed class RolePermission
 {
     private RolePermission()

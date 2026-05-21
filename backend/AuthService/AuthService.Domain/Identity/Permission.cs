@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace AuthService.Domain.Identity;
 
 /// <summary>
 /// Разрешение верхнего уровня, которое можно положить в JWT и проверять через policies.
 /// </summary>
-[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Domain term from AuthService documentation.")]
 public sealed class Permission
 {
     private Permission()
