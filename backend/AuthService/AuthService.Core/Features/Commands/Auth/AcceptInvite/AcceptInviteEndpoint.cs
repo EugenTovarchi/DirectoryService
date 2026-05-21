@@ -83,6 +83,13 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
         if (!validationResult.IsValid)
             return validationResult.ToErrors();
 
+        Result<ITransactionScope, Error> transactionScopeResult =
+            await _transactionManager.BeginTransactionAsync(cancellationToken);
+        if (transactionScopeResult.IsFailure)
+            return transactionScopeResult.Error.ToFailure();
+
+        using ITransactionScope transactionScope = transactionScopeResult.Value;
+
         string tokenHash = _tokenService.HashRefreshToken(command.Request.InviteToken);
         UserInviteToken? inviteToken = await _inviteTokenRepository.GetByHashAsync(
             tokenHash,
@@ -112,6 +119,10 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
+
+        UnitResult<Error> commitResult = transactionScope.Commit();
+        if (commitResult.IsFailure)
+            return commitResult.Error.ToFailure();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
 

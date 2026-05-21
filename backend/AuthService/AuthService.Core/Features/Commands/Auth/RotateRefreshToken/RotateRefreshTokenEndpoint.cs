@@ -100,6 +100,13 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
 
         if (currentToken.RevokedAt is not null)
         {
+            Result<ITransactionScope, Error> transactionScopeResult =
+                await _transactionManager.BeginTransactionAsync(cancellationToken);
+            if (transactionScopeResult.IsFailure)
+                return transactionScopeResult.Error.ToFailure();
+
+            using ITransactionScope transactionScope = transactionScopeResult.Value;
+
             await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
                 currentToken.UserId,
                 command.IpAddress,
@@ -108,6 +115,10 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
             UnitResult<Error> reuseSaveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
             if (reuseSaveResult.IsFailure)
                 return reuseSaveResult.Error.ToFailure();
+
+            UnitResult<Error> reuseCommitResult = transactionScope.Commit();
+            if (reuseCommitResult.IsFailure)
+                return reuseCommitResult.Error.ToFailure();
 
             _logger.LogWarning("Refresh token reuse detected for user {UserId}", currentToken.UserId);
             return AuthFailures.InvalidRefreshToken();
@@ -145,9 +156,20 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
         currentToken.MarkUsed();
         currentToken.Revoke(command.IpAddress, replacementToken.Id);
 
+        Result<ITransactionScope, Error> rotationTransactionScopeResult =
+            await _transactionManager.BeginTransactionAsync(cancellationToken);
+        if (rotationTransactionScopeResult.IsFailure)
+            return rotationTransactionScopeResult.Error.ToFailure();
+
+        using ITransactionScope rotationTransactionScope = rotationTransactionScopeResult.Value;
+
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
+
+        UnitResult<Error> commitResult = rotationTransactionScope.Commit();
+        if (commitResult.IsFailure)
+            return commitResult.Error.ToFailure();
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

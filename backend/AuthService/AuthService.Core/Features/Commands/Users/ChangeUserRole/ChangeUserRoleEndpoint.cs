@@ -1,5 +1,6 @@
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
+using AuthService.Core.Abstractions;
 using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
 using AuthService.Core.Failures;
@@ -65,17 +66,20 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserRoleCommand> _validator;
     private readonly ILogger<ChangeUserRoleHandler> _logger;
 
     public ChangeUserRoleHandler(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
+        ITransactionManager transactionManager,
         IValidator<ChangeUserRoleCommand> validator,
         ILogger<ChangeUserRoleHandler> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
@@ -114,6 +118,13 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
         if (!requestedBySystemAdmin && targetUser.CurrentCompanyId != requestedByUser.CurrentCompanyId)
             return Errors.General.NotFoundEntity("user").ToFailure();
 
+        Result<ITransactionScope, Error> transactionScopeResult =
+            await _transactionManager.BeginTransactionAsync(cancellationToken);
+        if (transactionScopeResult.IsFailure)
+            return transactionScopeResult.Error.ToFailure();
+
+        using ITransactionScope transactionScope = transactionScopeResult.Value;
+
         IList<string> currentRoles = await _userManager.GetRolesAsync(targetUser);
         if (!currentRoles.Contains(role, StringComparer.Ordinal))
         {
@@ -132,6 +143,14 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
             if (!removeResult.Succeeded)
                 return UserManagementFailures.RoleChangeFailed();
         }
+
+        UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+        if (saveResult.IsFailure)
+            return saveResult.Error.ToFailure();
+
+        UnitResult<Error> commitResult = transactionScope.Commit();
+        if (commitResult.IsFailure)
+            return commitResult.Error.ToFailure();
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 

@@ -696,6 +696,8 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 Invite token lifecycle заменил временный `InitialPassword` flow. План блока: сделать создание пользователя безопаснее для admin UI и подготовить email invite без хранения raw tokens. Сделано: `POST /api/users/invite` создает inactive user без password, генерирует one-time invite token на 3 дня, хранит только hash, возвращает raw token один раз, а `POST /api/auth/accept-invite` принимает token/password, активирует пользователя и помечает token accepted. Влияние: администратор больше не задает пароль за пользователя, pending user не может login до принятия invite, а expired/unknown/reused invite возвращает одинаковую security-safe ошибку.
 
+Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -782,6 +784,7 @@ Invite token lifecycle заменил временный `InitialPassword` flow.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
+- Security-sensitive commands используют явный `ITransactionScope` через `ITransactionManager.BeginTransactionAsync(...)`, как в FileService/DirectoryService.
 - Build clean: AuthService build проходит без `NU1608`.
 
 Проверки для последнего блока:

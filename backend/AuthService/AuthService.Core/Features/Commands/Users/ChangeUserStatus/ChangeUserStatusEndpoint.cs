@@ -107,6 +107,13 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         if (!requestedBySystemAdmin && targetUser.CurrentCompanyId != requestedByUser.CurrentCompanyId)
             return Errors.General.NotFoundEntity("user").ToFailure();
 
+        Result<ITransactionScope, Error> transactionScopeResult =
+            await _transactionManager.BeginTransactionAsync(cancellationToken);
+        if (transactionScopeResult.IsFailure)
+            return transactionScopeResult.Error.ToFailure();
+
+        using ITransactionScope transactionScope = transactionScopeResult.Value;
+
         if (command.Request.IsActive)
         {
             targetUser.Activate();
@@ -127,6 +134,10 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
+
+        UnitResult<Error> commitResult = transactionScope.Commit();
+        if (commitResult.IsFailure)
+            return commitResult.Error.ToFailure();
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 

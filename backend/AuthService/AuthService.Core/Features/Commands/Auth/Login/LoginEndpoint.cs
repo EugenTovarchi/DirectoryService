@@ -127,9 +127,20 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         if (addResult.IsFailure)
             return addResult.Error.ToFailure();
 
+        Result<ITransactionScope, Error> transactionScopeResult =
+            await _transactionManager.BeginTransactionAsync(cancellationToken);
+        if (transactionScopeResult.IsFailure)
+            return transactionScopeResult.Error.ToFailure();
+
+        using ITransactionScope transactionScope = transactionScopeResult.Value;
+
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
+
+        UnitResult<Error> commitResult = transactionScope.Commit();
+        if (commitResult.IsFailure)
+            return commitResult.Error.ToFailure();
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
