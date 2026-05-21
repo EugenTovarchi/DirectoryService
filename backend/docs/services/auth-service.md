@@ -266,12 +266,12 @@ Authenticated endpoints:
 - `GET /api/users/{userId}`
 - `PATCH /api/users/{userId}/change-status`
 - `PATCH /api/users/{userId}/change-role`
+- `GET /api/users/{userId}/sessions`
 - `POST /api/users/{userId}/revoke-sessions`
 
 Administrative endpoints:
 
 - `POST /api/users`
-- `GET /api/users/{userId}/sessions`
 
 Self-registration для MVP не используем. Пользователи появляются через invite или создаются администратором компании.
 Administrative endpoints можно добавить после того, как заработает core token lifecycle.
@@ -350,6 +350,16 @@ Current `POST /api/users/{userId}/revoke-sessions` MVP behavior:
 - Returns `200 OK` when the target user has no active sessions, so the admin action is idempotent.
 - Works for inactive target users too, because offboarding can happen after deactivation.
 - Does not return refresh tokens, token hashes, or session metadata.
+
+Current `GET /api/users/{userId}/sessions` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Returns active refresh token sessions for the target Identity user as `IReadOnlyList<AuthSessionResponse>`.
+- Uses the same company boundary as user details: `SystemAdmin` can read sessions for any Identity user, while `CompanyAdmin` can read sessions only for users from their own `CurrentCompanyId`.
+- Returns `404 Not Found` for unknown users and for users outside a `CompanyAdmin` company boundary.
+- Rejects self-session-read with `400 Bad Request` and AuthService-local `self.session.read.is.invalid`; users should use `GET /api/auth/sessions` for their own sessions.
+- Returns an empty list when the target user has no active sessions.
+- Does not return refresh tokens or token hashes.
 
 ## Current User Endpoint
 
@@ -669,6 +679,8 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 `POST /api/users/{userId}/revoke-sessions` добавлен как ручная admin-команда для отзыва sessions без изменения статуса пользователя. План блока: закрыть security/offboarding сценарии, где нужно выбить пользователя со всех устройств отдельно от role/status changes. Сделано: endpoint требует `users.manage`, применяет company boundary как user details, запрещает self-revoke через admin route, idempotent для пользователя без active sessions и отзывает active refresh tokens через repository. Влияние: администратор может принудительно завершить сессии пользователя при потере устройства или подозрительной активности.
 
+`GET /api/users/{userId}/sessions` добавлен как admin user sessions list. План блока: дать администратору безопасный список active sessions перед ручным revoke, не раскрывая raw refresh tokens или hashes. Сделано: endpoint требует `users.manage`, применяет company boundary как user details, запрещает self-read через admin route, возвращает `AuthSessionResponse` и empty list для пользователя без active sessions. Влияние: admin UI может показать устройства/браузеры пользователя и затем вызвать revoke-sessions при необходимости.
+
 ### Конспект По Сегодняшним AuthService Шагам
 
 Сегодня мы закрывали базовый session lifecycle поверх refresh token records. В MVP одна активная запись в `refresh_tokens` равна одной активной пользовательской session. API при этом говорит языком продукта: `sessions`, а не `refresh_tokens`, потому что клиенту важно управлять входами с разных устройств, а не знать внутреннюю модель хранения токенов.
@@ -750,6 +762,7 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
 - User role management MVP: `PATCH /api/users/{userId}/change-role` заменяет текущую роль Identity user на одну существующую роль; `CompanyAdmin` ограничен своей company и не может назначать `SystemAdmin`, self-role-change запрещен.
 - Admin session management MVP: `POST /api/users/{userId}/revoke-sessions` отзывает active refresh sessions другого пользователя через `users.manage`; self-flow остается на `/api/auth/revoke-all-sessions`.
+- Admin user sessions list MVP: `GET /api/users/{userId}/sessions` возвращает active sessions другого пользователя через `users.manage`; self-flow остается на `/api/auth/sessions`.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -766,9 +779,9 @@ Legacy `/auth/users` slice удален после появления Identity-b
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, ChangeUserStatus/RevokeUserSessions integration `16/16`, unit `6/6`, integration `60/60`.
+Последние проверки проходили: build `0 warnings / 0 errors`, GetUserSessions integration `8/8`, unit `6/6`, integration `68/68`.
 
-Следующий ближайший AuthService блок: развивать user management после role/status/session management. Ближайшие кандидаты: invite token lifecycle без `InitialPassword` или admin user sessions list.
+Следующий ближайший AuthService блок: развивать user management после role/status/session management. Ближайшие кандидаты: invite token lifecycle без `InitialPassword` или user profile edit.
 
 ## Post-MVP Backlog
 

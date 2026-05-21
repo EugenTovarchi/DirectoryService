@@ -85,4 +85,11 @@ public static class UserManagementFailures
             "self.session.revocation.is.invalid",
             "User cannot revoke their own sessions through the admin endpoint").ToFailure();
     }
+
+    public static Failure SelfSessionReadIsInvalid()
+    {
+        return Error.Validation(
+            "self.session.read.is.invalid",
+            "User cannot read their own sessions through the admin endpoint").ToFailure();
+    }
 }
