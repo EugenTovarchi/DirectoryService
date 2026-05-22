@@ -48,6 +48,28 @@ public static class UserManagementFailures
             "password").ToFailure();
     }
 
+    public static Failure InvalidPasswordResetToken()
+    {
+        return Error.Validation(
+            "password.reset.token.is.invalid",
+            "Password reset token is invalid").ToFailure();
+    }
+
+    public static Failure PasswordResetTokenCreationFailed()
+    {
+        return Error.Validation(
+            "password.reset.token.creation.failed",
+            "Password reset token creation failed").ToFailure();
+    }
+
+    public static Failure PasswordResetFailed()
+    {
+        return Error.Validation(
+            "password.reset.failed",
+            "Password reset failed",
+            "password").ToFailure();
+    }
+
     public static Failure RoleAssignmentFailed()
     {
         return Error.Validation(

@@ -65,6 +65,7 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<NpgsqlDataSource>();
             services.RemoveAll<INpgsqlConnectionFactory>();
             services.RemoveAll<IInviteEmailSender>();
+            services.RemoveAll<IPasswordResetEmailSender>();
 
             services.AddDbContext<AuthServiceDbContext>(_ =>
                 AuthServiceDbContext.Create(_dbContainer.GetConnectionString()));
@@ -84,6 +85,8 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
             services.AddSingleton<TestInviteEmailSender>();
             services.AddSingleton<IInviteEmailSender>(sp => sp.GetRequiredService<TestInviteEmailSender>());
+            services.AddSingleton<TestPasswordResetEmailSender>();
+            services.AddSingleton<IPasswordResetEmailSender>(sp => sp.GetRequiredService<TestPasswordResetEmailSender>());
         });
 
         base.ConfigureWebHost(builder);

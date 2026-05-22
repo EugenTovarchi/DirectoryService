@@ -13,4 +13,5 @@ public sealed class EmailOptions
     public string FromEmail { get; init; } = string.Empty;
     public string FromName { get; init; } = "24Eye";
     public string InviteBaseUrl { get; init; } = string.Empty;
+    public string PasswordResetBaseUrl { get; init; } = string.Empty;
 }

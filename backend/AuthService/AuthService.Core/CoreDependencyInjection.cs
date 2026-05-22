@@ -44,7 +44,9 @@ public static class CoreDependencyInjection
     {
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<InviteLinkFactory>();
+        services.AddScoped<PasswordResetLinkFactory>();
         services.AddScoped<IInviteEmailSender, SmtpInviteEmailSender>();
+        services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
 
         return services;
     }

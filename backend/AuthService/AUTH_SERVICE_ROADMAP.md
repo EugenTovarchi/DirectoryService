@@ -310,30 +310,45 @@
 
 </details>
 
+<details>
+<summary>21. Password reset flow</summary>
+
+**Зачем:** дать пользователю восстановить доступ без помощи администратора и без раскрытия существования email.
+
+**Сделано:**
+- `POST /api/auth/request-password-reset`.
+- `POST /api/auth/reset-password`.
+- Отдельная `PasswordResetToken` entity/table.
+- Raw reset token не хранится, в БД только hash.
+- Reset token живет 1 час.
+- Unknown email/inactive/no-password request возвращает тот же `200 OK`.
+- Unknown/expired/revoked/used token возвращает `password.reset.token.is.invalid`.
+- Успешный reset меняет Identity password, помечает token used и отзывает active refresh sessions.
+
+**Что дало:** AuthService получил public password recovery flow без переиспользования invite tokens и без token/user enumeration.
+
+</details>
+
 ## Ближайший План
 
-1. Password reset:
-   - отдельный token lifecycle;
-   - одинаковые public failure shapes;
-   - rate limiting до public stage.
-
-2. User profile edit:
+1. User profile edit:
    - редактировать safe поля пользователя;
    - не смешивать с role/status/password flows.
 
-3. Audit history:
+2. Audit history:
    - invite created/accepted/revoked;
+   - password reset requested/completed;
    - role/status changes;
    - session revocation.
 
-4. Downstream permission integration:
+3. Downstream permission integration:
    - первые protected flows в FileService и DirectoryService;
    - проверить `401/403`, policies и Swagger auth.
 
-5. Invite email outbox/retry hardening:
-   - записывать email delivery job в той же transaction, что и invite/resend token;
+4. Invite/password reset email outbox/retry hardening:
+   - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
-   - не хранить raw invite token отдельно от delivery payload дольше нужного срока;
+   - не хранить raw invite/reset token отдельно от delivery payload дольше нужного срока;
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
 

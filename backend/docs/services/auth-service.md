@@ -312,6 +312,18 @@ Current `POST /api/users/{userId}/resend-invite` MVP behavior:
 - Stores only invite token hash in `user_invite_tokens`; raw invite token is sent only as part of the invite link.
 - Sends invite email through configured SMTP and does not log raw invite token.
 
+Current password reset MVP behavior:
+
+- `POST /api/auth/request-password-reset` is public and accepts `RequestPasswordResetRequest` with `email`.
+- Unknown email, inactive user, and user without password return the same `200 OK` response as a valid request, without sending email.
+- Valid active password-protected user gets a one-time password reset token that expires after 1 hour.
+- Stores only password reset token hash in `password_reset_tokens`; raw reset token is sent only as part of the reset link.
+- New reset request revokes previous active reset tokens for the same user.
+- `POST /api/auth/reset-password` is public and accepts `ResetPasswordRequest` with `token` and `password`.
+- Unknown, expired, revoked, used, inactive-user, and no-password-user reset attempts return the same `password.reset.token.is.invalid` failure.
+- Successful reset replaces the Identity password, marks reset token used, revokes remaining active password reset tokens, and revokes active refresh sessions for the user.
+- Does not issue access/refresh tokens; after reset the user signs in through `POST /api/auth/login`.
+
 Legacy `/auth/users` registration/read endpoints are removed from the current AuthService surface. New user creation must go through Identity-based user management, starting with `POST /api/users/invite`. The legacy `auth_users` table is dropped by the `DropLegacyAuthUsers` EF migration.
 
 Current `GET /api/users` MVP behavior:
@@ -544,6 +556,49 @@ Rules:
 - В logs/audit raw invite token не пишется.
 - Если invite истек, пользователь должен запросить новое приглашение у администратора.
 
+## Password Reset Link
+
+Password reset link должен вести на frontend page, где пользователь задает новый пароль.
+
+Local dev:
+
+```text
+http://localhost:3000/24eye/reset-password?token=<password_reset_token>
+```
+
+Production draft:
+
+```text
+https://app.24eye.example/reset-password?token=<password_reset_token>
+```
+
+Rules:
+
+- URL хранится в configuration, а не hard-coded в коде.
+- Backend генерирует cryptographically secure password reset token.
+- В БД хранится только hash password reset token.
+- В email отправляется raw password reset token только как часть reset link.
+- В logs/audit raw password reset token не пишется.
+- `request-password-reset` не раскрывает, существует ли email.
+
+## Password Reset Lifecycle
+
+Password reset statuses:
+
+- `Pending`: token создан и еще не использован.
+- `Used`: пароль успешно заменен.
+- `Revoked`: token отозван новым request или cleanup/security flow.
+- `Expired`: token истек.
+
+Rules:
+
+- Password reset token действует 1 час.
+- Raw password reset token не храним в БД и не логируем.
+- В БД храним только hash password reset token.
+- Новый password reset request не продлевает старый token.
+- Новый password reset request отзывает старые pending reset tokens и создает новый pending token.
+- Успешный reset отзывает active refresh sessions пользователя.
+
 ## Invite Lifecycle
 
 Invite statuses:
@@ -708,6 +763,8 @@ Invite token lifecycle заменил временный `InitialPassword` flow.
 
 Email delivery для invite/resend добавлен через SMTP abstraction. План блока: убрать raw invite token из API responses и доставлять secret только ссылкой. Сделано: `InviteUser` и `ResendInvite` после commit отправляют invite email, Docker local-dev получил Mailpit (`localhost:8025` UI, `mailpit:1025` SMTP), а integration tests используют fake sender и достают token из invite link. Влияние: raw invite token больше не возвращается standalone полем и не логируется; следующий production-hardening шаг - outbox/retry для email delivery.
 
+Password reset flow добавлен отдельным lifecycle. План блока: дать пользователю восстановление доступа без раскрытия существования email и без переиспользования invite tokens. Сделано: `POST /api/auth/request-password-reset` создает hash-only reset token на 1 час и отправляет reset link, `POST /api/auth/reset-password` заменяет Identity password, помечает token used и отзывает active refresh sessions. Влияние: AuthService получил public password recovery flow с одинаковыми failure shapes для unknown/expired/reused token и без хранения raw reset token.
+
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 
 ### Конспект По Сегодняшним AuthService Шагам
@@ -788,6 +845,7 @@ Security-sensitive command handlers используют явные EF transacti
 - User management MVP: `POST /api/users/invite` создает inactive Identity user без password, назначает role/company context через `users.manage`, создает one-time invite token на 3 дня и отправляет invite link через email.
 - Invite acceptance MVP: `POST /api/auth/accept-invite` принимает invite token и password, проверяет hash stored token, активирует пользователя и помечает invite accepted; unknown/expired/revoked/reused invite возвращает `invite.token.is.invalid`.
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
+- Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
@@ -811,9 +869,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, InviteUser integration `11/11`, unit `6/6`, integration `74/74`.
+Последние проверки проходили: build `0 warnings / 0 errors`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `80/80`.
 
-Следующий ближайший AuthService блок: password reset flow с отдельным token lifecycle и одинаковыми public failure shapes. Invite email outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: user profile edit или audit history. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 

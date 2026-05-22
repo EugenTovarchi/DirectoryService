@@ -55,6 +55,9 @@ public static class DependencyInjectionExtensions
             .Validate(
                 options => !options.Enabled || !string.IsNullOrWhiteSpace(options.InviteBaseUrl),
                 "Email:InviteBaseUrl is required when Email:Enabled is true")
+            .Validate(
+                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.PasswordResetBaseUrl),
+                "Email:PasswordResetBaseUrl is required when Email:Enabled is true")
             .ValidateOnStart();
 
         return services;

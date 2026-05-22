@@ -87,6 +87,7 @@ public static class PostgresDependencyInjection
     {
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUserInviteTokenRepository, UserInviteTokenRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRolePermissionReader, RolePermissionReader>();
 
         return services;
