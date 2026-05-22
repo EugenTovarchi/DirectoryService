@@ -20,6 +20,15 @@ Detailed context:
 - Use structured logging.
 - Do not use string interpolation in logs.
 
+## Error Boundaries
+
+- Keep shared response primitives such as `Error`, `Failure`, `Envelope`, and result-to-HTTP mapping in SharedService.
+- Keep service-specific error semantics in the service that owns the behavior.
+- Add local service helpers for repeated service-specific failures instead of duplicating ad hoc private methods in each handler.
+- Handlers may return local `Failure` helpers directly when the method returns `Result<T, Failure>`.
+- Do not add service-specific errors to SharedService unless the error is truly service-neutral and useful to multiple services.
+- If a service-specific flow needs a new public error shape, document it in the affected service docs and keep security-sensitive cases intentionally indistinguishable when required.
+
 ## Naming
 
 - Async methods end with `Async`.

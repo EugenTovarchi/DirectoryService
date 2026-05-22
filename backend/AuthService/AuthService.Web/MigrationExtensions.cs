@@ -1,4 +1,5 @@
 using AuthService.Infrastructure.Postgres;
+using AuthService.Infrastructure.Postgres.Seeding;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Web;
@@ -19,6 +20,9 @@ public static class MigrationExtensions
 
         var dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
         await dbContext.Database.MigrateAsync();
+
+        var seeder = scope.ServiceProvider.GetRequiredService<AuthIdentitySeeder>();
+        await seeder.SeedAsync();
 
         app.Logger.LogInformation("All migrations applied successfully");
     }

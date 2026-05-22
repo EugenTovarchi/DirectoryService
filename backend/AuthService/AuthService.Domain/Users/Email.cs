@@ -19,7 +19,7 @@ public sealed record Email
         if (string.IsNullOrWhiteSpace(value))
             return Errors.General.ValueIsEmptyOrWhiteSpace("email");
 
-        var normalized = value.Trim().ToLowerInvariant();
+        string normalized = value.Trim().ToLowerInvariant();
 
         if (normalized.Length > MAX_LENGTH || !normalized.Contains('@', StringComparison.Ordinal))
             return Errors.General.ValueIsInvalid("email");

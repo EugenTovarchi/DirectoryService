@@ -1,3 +1,5 @@
+using AuthService.Core.Abstractions;
+using AuthService.Core.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.Core.Abstractions;
@@ -12,6 +14,7 @@ public static class CoreDependencyInjection
         services
             .AddEndpoints()
             .AddHandlers()
+            .AddServices()
             .AddValidatorsFromAssembly(typeof(CoreDependencyInjection).Assembly);
 
         return services;
@@ -32,8 +35,19 @@ public static class CoreDependencyInjection
         return services.Scan(scan => scan
             .FromAssemblies(typeof(CoreDependencyInjection).Assembly)
             .AddClasses(classes => classes
-                .AssignableToAny(typeof(ICommandHandler<,>), typeof(IQueryHandler<,>)))
+                .AssignableToAny(typeof(ICommandHandler<,>), typeof(ICommandHandler<>), typeof(IQueryHandler<,>)))
             .AsSelfWithInterfaces()
             .WithScopedLifetime());
+    }
+
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<InviteLinkFactory>();
+        services.AddScoped<PasswordResetLinkFactory>();
+        services.AddScoped<IInviteEmailSender, SmtpInviteEmailSender>();
+        services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+
+        return services;
     }
 }

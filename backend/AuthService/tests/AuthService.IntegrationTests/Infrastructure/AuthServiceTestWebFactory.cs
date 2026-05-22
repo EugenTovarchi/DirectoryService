@@ -1,4 +1,5 @@
 using System.Data.Common;
+using AuthService.Core.Abstractions;
 using AuthService.Core.Database;
 using AuthService.Infrastructure.Postgres;
 using AuthService.Infrastructure.Postgres.Database;
@@ -47,7 +48,12 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
         {
             var settings = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
-                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString()
+                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
+                ["Jwt:Issuer"] = "24eye.auth.tests",
+                ["Jwt:Audience"] = "24eye.backend.tests",
+                ["Jwt:SigningKey"] = "test-auth-service-signing-key-with-enough-length",
+                ["Jwt:AccessTokenLifetimeMinutes"] = "15",
+                ["Jwt:RefreshTokenLifetimeDays"] = "30"
             };
 
             config.AddInMemoryCollection(settings);
@@ -58,6 +64,8 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<AuthServiceDbContext>();
             services.RemoveAll<NpgsqlDataSource>();
             services.RemoveAll<INpgsqlConnectionFactory>();
+            services.RemoveAll<IInviteEmailSender>();
+            services.RemoveAll<IPasswordResetEmailSender>();
 
             services.AddDbContext<AuthServiceDbContext>(_ =>
                 AuthServiceDbContext.Create(_dbContainer.GetConnectionString()));
@@ -75,6 +83,10 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             });
 
             services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
+            services.AddSingleton<TestInviteEmailSender>();
+            services.AddSingleton<IInviteEmailSender>(sp => sp.GetRequiredService<TestInviteEmailSender>());
+            services.AddSingleton<TestPasswordResetEmailSender>();
+            services.AddSingleton<IPasswordResetEmailSender>(sp => sp.GetRequiredService<TestPasswordResetEmailSender>());
         });
 
         base.ConfigureWebHost(builder);

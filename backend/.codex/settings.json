@@ -12,6 +12,7 @@
       "PowerShell(git diff*)",
       "PowerShell(git log*)",
       "PowerShell(git status*)",
+      "PowerShell(npx.cmd -y @upstash/context7-mcp*)",
       "PowerShell(rg*)",
       "PowerShell(Get-Content*)",
       "PowerShell(Get-ChildItem*)",
@@ -27,6 +28,7 @@
       "Bash(git log*)",
       "Bash(git checkout*)",
       "Bash(grep*)",
+      "Bash(npx -y @upstash/context7-mcp*)",
       "Bash(rg*)",
       "Bash(git status*)"
     ]

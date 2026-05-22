@@ -27,7 +27,10 @@ public partial class Program
 
             builder.Services.AddConfiguration(builder.Configuration);
 
-            builder.Services.AddAuthorization();
+            // Identity создает служебные токены через Data Protection: reset password, email confirmation и похожие flows.
+            builder.Services.AddDataProtection();
+
+            builder.Services.AddAuthServiceAuthentication(builder.Configuration);
 
             builder.Services.AddCore()
                 .AddPostgresInfrastructure(builder.Configuration);
