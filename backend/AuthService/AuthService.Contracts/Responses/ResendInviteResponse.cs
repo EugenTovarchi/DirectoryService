@@ -7,5 +7,4 @@ public sealed record ResendInviteResponse(
     string? DisplayName,
     Guid? CompanyId,
     IReadOnlyCollection<string> Roles,
-    string InviteToken,
     DateTime InviteTokenExpiresAt);

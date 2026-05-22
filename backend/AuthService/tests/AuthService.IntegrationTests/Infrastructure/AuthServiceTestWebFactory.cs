@@ -1,4 +1,5 @@
 using System.Data.Common;
+using AuthService.Core.Abstractions;
 using AuthService.Core.Database;
 using AuthService.Infrastructure.Postgres;
 using AuthService.Infrastructure.Postgres.Database;
@@ -63,6 +64,7 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<AuthServiceDbContext>();
             services.RemoveAll<NpgsqlDataSource>();
             services.RemoveAll<INpgsqlConnectionFactory>();
+            services.RemoveAll<IInviteEmailSender>();
 
             services.AddDbContext<AuthServiceDbContext>(_ =>
                 AuthServiceDbContext.Create(_dbContainer.GetConnectionString()));
@@ -80,6 +82,8 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             });
 
             services.AddScoped<INpgsqlConnectionFactory, NpgsqlConnectionFactory>();
+            services.AddSingleton<TestInviteEmailSender>();
+            services.AddSingleton<IInviteEmailSender>(sp => sp.GetRequiredService<TestInviteEmailSender>());
         });
 
         base.ConfigureWebHost(builder);

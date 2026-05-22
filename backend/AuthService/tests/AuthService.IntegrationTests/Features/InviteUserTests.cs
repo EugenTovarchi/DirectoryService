@@ -64,7 +64,6 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         invitedUser.DisplayName.Should().Be("New User");
         invitedUser.CompanyId.Should().Be(companyId);
         invitedUser.Roles.Should().BeEquivalentTo(AuthRoles.VIEWER);
-        invitedUser.InviteToken.Should().NotBeNullOrWhiteSpace();
         invitedUser.InviteTokenExpiresAt.Should().BeAfter(DateTime.UtcNow);
         invitedUser.InviteTokenExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(3), TimeSpan.FromMinutes(1));
 
@@ -81,9 +80,10 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
         await AssertUserCannotLoginAsync("new-user@example.com", "password123");
 
+        string inviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
         HttpResponseMessage acceptResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(invitedUser.InviteToken, "password123"));
+            new AcceptInviteRequest(inviteToken, "password123"));
         acceptResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         UserInviteToken savedInviteToken = await ExecuteInDb(dbContext => dbContext.UserInviteTokens
@@ -116,12 +116,12 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
         HttpResponseMessage firstResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(invitedUser.InviteToken, "password123"));
+            new AcceptInviteRequest(GetLatestInviteTokenForUser(invitedUser.UserId), "password123"));
         firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         HttpResponseMessage secondResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(invitedUser.InviteToken, "password456"));
+            new AcceptInviteRequest(GetLatestInviteTokenForUser(invitedUser.UserId), "password456"));
 
         secondResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -188,6 +188,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
                 "Resend Invite User",
                 companyId,
                 AuthRoles.VIEWER));
+        string originalInviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
 
         using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{invitedUser.UserId}/resend-invite");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
@@ -205,9 +206,9 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         ResendInviteResponse resend = envelope.Result!;
         resend.UserId.Should().Be(invitedUser.UserId);
         resend.Email.Should().Be("resend-invite-user@example.com");
-        resend.InviteToken.Should().NotBeNullOrWhiteSpace();
-        resend.InviteToken.Should().NotBe(invitedUser.InviteToken);
         resend.InviteTokenExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(3), TimeSpan.FromMinutes(1));
+        string resentInviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
+        resentInviteToken.Should().NotBe(originalInviteToken);
 
         List<UserInviteToken> inviteTokens = await ExecuteInDb(dbContext => dbContext.UserInviteTokens
             .Where(token => token.UserId == invitedUser.UserId)
@@ -221,12 +222,12 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
         HttpResponseMessage oldTokenResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(invitedUser.InviteToken, "password123"));
+            new AcceptInviteRequest(originalInviteToken, "password123"));
         oldTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         HttpResponseMessage newTokenResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(resend.InviteToken, "password123"));
+            new AcceptInviteRequest(resentInviteToken, "password123"));
         newTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -395,7 +396,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         envelope!.Result.Should().NotBeNull();
         envelope.Result!.CompanyId.Should().Be(targetCompanyId);
         envelope.Result.Roles.Should().BeEquivalentTo(AuthRoles.COMPANY_ADMIN);
-        envelope.Result.InviteToken.Should().NotBeNullOrWhiteSpace();
+        GetLatestInviteTokenForUser(envelope.Result.UserId).Should().NotBeNullOrWhiteSpace();
     }
 
     private async Task AssertUserCanLoginAsync(string email, string password)
@@ -425,6 +426,29 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         envelope!.Result.Should().NotBeNull();
 
         return envelope.Result!;
+    }
+
+    private string GetLatestInviteTokenForUser(Guid userId)
+    {
+        TestInviteEmailSender emailSender = Services.GetRequiredService<TestInviteEmailSender>();
+        Uri inviteLink = emailSender.Messages
+            .Where(message => message.UserId == userId)
+            .Select(message => message.InviteLink)
+            .Last();
+
+        return ExtractToken(inviteLink);
+    }
+
+    private static string ExtractToken(Uri inviteLink)
+    {
+        string query = inviteLink.Query.TrimStart('?');
+        string? tokenPair = query
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(part => part.StartsWith("token=", StringComparison.Ordinal));
+
+        tokenPair.Should().NotBeNull();
+
+        return Uri.UnescapeDataString(tokenPair!["token=".Length..]);
     }
 
     private async Task AddExpiredInviteTokenAsync(Guid userId, Guid createdByUserId, string rawInviteToken)

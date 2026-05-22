@@ -43,6 +43,8 @@ public static class CoreDependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<InviteLinkFactory>();
+        services.AddScoped<IInviteEmailSender, SmtpInviteEmailSender>();
 
         return services;
     }

@@ -17,7 +17,7 @@
 - Commands/state changes: Identity и EF Core.
 - Query/read-heavy endpoints: Dapper + `INpgsqlConnectionFactory`.
 - Authenticated endpoints читают user id через `ClaimsPrincipalExtensions.GetUserId()`.
-- Raw refresh/invite tokens не храним в БД и не логируем.
+- Raw refresh/invite tokens не храним в БД и не логируем; raw invite token наружу выходит только внутри invite link.
 - Password hash, security stamp, token hashes и session secrets наружу не возвращаем.
 - Для sensitive flows используем `ITransactionManager.BeginTransactionAsync(...)`, `ITransactionScope`, `SaveChangeAsync(...)`, `Commit()`.
 - AuthService коммиты: сначала показать изменения, потом краткая сводка, потом спросить коммитить или нет.
@@ -289,36 +289,53 @@
 - `POST /api/users/{userId}/resend-invite`.
 - Только inactive user без password.
 - Active pending invite tokens отзываются перед выпуском нового token.
-- Новый invite token живет 3 дня, в БД хранится только hash, raw token возвращается один раз.
+- Новый invite token живет 3 дня, в БД хранится только hash.
 
-**Что дало:** invite lifecycle теперь поддерживает повторную выдачу секрета до подключения email delivery, не логируя raw token и не раскрывая users из другой company.
+**Что дало:** invite lifecycle поддерживает повторную выдачу секрета, не логируя raw token и не раскрывая users из другой company.
+
+</details>
+
+<details>
+<summary>20. Invite email delivery</summary>
+
+**Зачем:** убрать raw invite token из API response и доставлять secret по ожидаемому onboarding каналу.
+
+**Сделано:**
+- SMTP abstraction для invite emails.
+- `POST /api/users/invite` и `POST /api/users/{userId}/resend-invite` отправляют invite link после commit.
+- Docker local-dev получил Mailpit: SMTP `mailpit:1025`, UI `http://localhost:8025`.
+- API responses больше не содержат standalone raw invite token.
+
+**Что дало:** invite/resend стали ближе к production flow: raw token есть только в ссылке, не хранится в БД и не логируется.
 
 </details>
 
 ## Ближайший План
 
-1. Email delivery integration:
-   - Mailpit для local/dev;
-   - real SMTP/provider позже;
-   - raw invite token только в ссылке, без логов.
+1. Password reset:
+   - отдельный token lifecycle;
+   - одинаковые public failure shapes;
+   - rate limiting до public stage.
 
 2. User profile edit:
    - редактировать safe поля пользователя;
    - не смешивать с role/status/password flows.
 
-3. Password reset:
-   - отдельный token lifecycle;
-   - одинаковые public failure shapes;
-   - rate limiting до public stage.
-
-4. Audit history:
+3. Audit history:
    - invite created/accepted/revoked;
    - role/status changes;
    - session revocation.
 
-5. Downstream permission integration:
+4. Downstream permission integration:
    - первые protected flows в FileService и DirectoryService;
    - проверить `401/403`, policies и Swagger auth.
+
+5. Invite email outbox/retry hardening:
+   - записывать email delivery job в той же transaction, что и invite/resend token;
+   - background worker отправляет SMTP и делает retry/backoff;
+   - не хранить raw invite token отдельно от delivery payload дольше нужного срока;
+   - не логировать raw token, link или SMTP credentials;
+   - делать перед production-grade delivery, не блокирует текущий MVP.
 
 ## Открытые Решения
 

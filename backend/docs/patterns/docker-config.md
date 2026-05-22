@@ -44,6 +44,7 @@ Runtime configuration comes from compose `env_file`:
 
 - `DirectoryService.Development.env`
 - `FileService.Development.env`
+- `AuthService.Development.env`
 
 Inside Docker, services use Docker DNS names:
 
@@ -52,6 +53,7 @@ Inside Docker, services use Docker DNS names:
 - `redis`
 - `minio`
 - `loki`
+- `mailpit`
 - `directory-service`
 - `file-service`
 

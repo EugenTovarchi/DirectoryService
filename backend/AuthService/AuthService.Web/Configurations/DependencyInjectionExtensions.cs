@@ -1,3 +1,4 @@
+using AuthService.Core.Options;
 using SharedService.Framework.Logging;
 using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
@@ -30,6 +31,31 @@ public static class DependencyInjectionExtensions
         services.AddSerilogLogging(configuration, "AuthService");
         services.AddOpenApiSpec("AuthService");
         services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "AuthService");
+        services.AddEmailOptions(configuration);
+
+        return services;
+    }
+
+    private static IServiceCollection AddEmailOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services
+            .AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SECTION_NAME))
+            .Validate(
+                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.SmtpHost),
+                "Email:SmtpHost is required when Email:Enabled is true")
+            .Validate(
+                options => !options.Enabled || options.SmtpPort > 0,
+                "Email:SmtpPort must be positive when Email:Enabled is true")
+            .Validate(
+                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.FromEmail),
+                "Email:FromEmail is required when Email:Enabled is true")
+            .Validate(
+                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.InviteBaseUrl),
+                "Email:InviteBaseUrl is required when Email:Enabled is true")
+            .ValidateOnStart();
 
         return services;
     }

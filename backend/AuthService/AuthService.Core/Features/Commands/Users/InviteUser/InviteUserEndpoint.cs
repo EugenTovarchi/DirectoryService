@@ -4,6 +4,8 @@ using AuthService.Core.Abstractions;
 using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
 using AuthService.Core.Failures;
+using AuthService.Core.Models;
+using AuthService.Core.Services;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -78,6 +80,8 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
     private readonly ITokenService _tokenService;
+    private readonly InviteLinkFactory _inviteLinkFactory;
+    private readonly IInviteEmailSender _inviteEmailSender;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<InviteUserCommand> _validator;
     private readonly ILogger<InviteUserHandler> _logger;
@@ -87,6 +91,8 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         RoleManager<ApplicationRole> roleManager,
         IUserInviteTokenRepository inviteTokenRepository,
         ITokenService tokenService,
+        InviteLinkFactory inviteLinkFactory,
+        IInviteEmailSender inviteEmailSender,
         ITransactionManager transactionManager,
         IValidator<InviteUserCommand> validator,
         ILogger<InviteUserHandler> logger)
@@ -95,6 +101,8 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         _roleManager = roleManager;
         _inviteTokenRepository = inviteTokenRepository;
         _tokenService = tokenService;
+        _inviteLinkFactory = inviteLinkFactory;
+        _inviteEmailSender = inviteEmailSender;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -182,6 +190,18 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
+        Uri inviteLink = _inviteLinkFactory.Create(inviteToken.RawToken);
+        UnitResult<Error> emailResult = await _inviteEmailSender.SendInviteAsync(
+            new InviteEmailMessage(
+                invitedUser.Id,
+                invitedUser.Email!,
+                invitedUser.DisplayName?.Value,
+                inviteLink,
+                inviteTokenExpiresAt),
+            cancellationToken);
+        if (emailResult.IsFailure)
+            return emailResult.Error.ToFailure();
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -198,7 +218,6 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
             invitedUser.DisplayName?.Value,
             command.Request.CompanyId,
             [role],
-            inviteToken.RawToken,
             inviteTokenExpiresAt);
     }
 }
