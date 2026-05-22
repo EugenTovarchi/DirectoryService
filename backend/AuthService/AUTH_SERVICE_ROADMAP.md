@@ -329,23 +329,37 @@
 
 </details>
 
+<details>
+<summary>22. Admin user profile edit</summary>
+
+**Зачем:** дать admin UI безопасное редактирование пользовательских полей без смешивания с role/status/password flows.
+
+**Сделано:**
+- `PATCH /api/users/{userId}/profile`.
+- Endpoint требует `users.manage`.
+- Current slice обновляет только `displayName`.
+- `displayName: null` очищает display name.
+- CompanyAdmin ограничен своей company, SystemAdmin может менять users из любой company.
+- Response остается `CompanyUserDetailsResponse`.
+
+**Что дало:** малорисковый profile edit отделен от high-risk actions: role, status, password, sessions и company context.
+
+</details>
+
 ## Ближайший План
 
-1. User profile edit:
-   - редактировать safe поля пользователя;
-   - не смешивать с role/status/password flows.
-
-2. Audit history:
+1. Audit history:
    - invite created/accepted/revoked;
    - password reset requested/completed;
+   - profile changes;
    - role/status changes;
    - session revocation.
 
-3. Downstream permission integration:
+2. Downstream permission integration:
    - первые protected flows в FileService и DirectoryService;
    - проверить `401/403`, policies и Swagger auth.
 
-4. Invite/password reset email outbox/retry hardening:
+3. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
    - не хранить raw invite/reset token отдельно от delivery payload дольше нужного срока;

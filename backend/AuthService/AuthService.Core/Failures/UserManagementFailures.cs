@@ -115,6 +115,13 @@ public static class UserManagementFailures
             "isActive").ToFailure();
     }
 
+    public static Failure UserProfileChangeFailed()
+    {
+        return Error.Validation(
+            "user.profile.change.failed",
+            "User profile change failed").ToFailure();
+    }
+
     public static Failure SelfRoleChangeIsInvalid()
     {
         return Error.Validation(

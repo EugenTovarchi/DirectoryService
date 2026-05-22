@@ -348,6 +348,15 @@ Current `GET /api/users/{userId}` MVP behavior:
 - Read-side implementation uses Dapper with `INpgsqlConnectionFactory`.
 - Does not return password hash, security stamp, concurrency stamp, refresh tokens, session metadata, or directory/tree access rules.
 
+Current `PATCH /api/users/{userId}/profile` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Updates only safe profile fields; current slice supports `displayName`.
+- `displayName: null` clears the display name.
+- Does not change email, username, role, status, password, sessions, company context, or permissions.
+- Uses the same company boundary as other admin user-management endpoints: `SystemAdmin` can update any Identity user, while `CompanyAdmin` can update only users from their own `CurrentCompanyId`.
+- Returns `CompanyUserDetailsResponse`.
+
 Current `PATCH /api/users/{userId}/change-status` MVP behavior:
 
 - Requires Bearer access token with `users.manage` permission.
@@ -765,6 +774,8 @@ Email delivery для invite/resend добавлен через SMTP abstraction
 
 Password reset flow добавлен отдельным lifecycle. План блока: дать пользователю восстановление доступа без раскрытия существования email и без переиспользования invite tokens. Сделано: `POST /api/auth/request-password-reset` создает hash-only reset token на 1 час и отправляет reset link, `POST /api/auth/reset-password` заменяет Identity password, помечает token used и отзывает active refresh sessions. Влияние: AuthService получил public password recovery flow с одинаковыми failure shapes для unknown/expired/reused token и без хранения raw reset token.
 
+Admin user profile edit добавлен отдельным flow от role/status/password. План блока: дать admin UI безопасное редактирование пользовательских полей без смешивания с high-risk actions. Сделано: `PATCH /api/users/{userId}/profile` через `users.manage` обновляет только `displayName`, поддерживает clear через `null`, соблюдает company boundary и возвращает `CompanyUserDetailsResponse`. Влияние: profile edit стал отдельной малорисковой операцией, а email/username/role/status/password остаются в своих flows.
+
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 
 ### Конспект По Сегодняшним AuthService Шагам
@@ -846,6 +857,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Invite acceptance MVP: `POST /api/auth/accept-invite` принимает invite token и password, проверяет hash stored token, активирует пользователя и помечает invite accepted; unknown/expired/revoked/reused invite возвращает `invite.token.is.invalid`.
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
+- User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
@@ -869,9 +881,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `80/80`.
+Последние проверки проходили: build `0 warnings / 0 errors`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `87/87`.
 
-Следующий ближайший AuthService блок: user profile edit или audit history. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: audit history для invite, password reset, role/status/profile changes и session revocation. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 
