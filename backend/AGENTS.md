@@ -5,19 +5,20 @@ Primary entry point for work started from `backend/`.
 ## Startup
 
 1. Read this file.
-2. Read `.codex/rules/*.md`.
+2. Use `caveman` skill/mode for progress notes, explanations, plans, and final summaries unless the user explicitly asks for normal mode or clarity would suffer.
+3. Read `.codex/rules/*.md`.
    - Use Serena MCP automatically for relevant C# code navigation, inspection, or refactoring tasks.
    - Activate the owning Serena project: `FileService`, `DirectoryService`, or `SharedService`.
    - Call `check_onboarding_performed` before project work.
    - For full Serena MCP usage, see [.codex/rules/serena-mcp.md](.codex/rules/serena-mcp.md).
    - For skills, MCP servers, connectors, and external agent guidance, see [.codex/rules/agent-tooling-governance.md](.codex/rules/agent-tooling-governance.md).
-3. Read [docs/architecture/overview.md](docs/architecture/overview.md).
-4. Read only the affected service doc:
+4. Read [docs/architecture/overview.md](docs/architecture/overview.md).
+5. Read only the affected service doc:
    - [docs/services/directory-service.md](docs/services/directory-service.md)
    - [docs/services/file-service.md](docs/services/file-service.md)
    - [docs/architecture/shared-kernel.md](docs/architecture/shared-kernel.md)
-5. Read the affected service `AGENTS.md`.
-6. Read focused pattern/rule docs as needed:
+6. Read the affected service `AGENTS.md`.
+7. Read focused pattern/rule docs as needed:
    - [docs/patterns/configuration.md](docs/patterns/configuration.md)
    - [docs/patterns/docker-config.md](docs/patterns/docker-config.md)
    - [docs/patterns/video-processing.md](docs/patterns/video-processing.md)
