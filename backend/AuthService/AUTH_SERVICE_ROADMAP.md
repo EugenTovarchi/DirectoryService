@@ -346,18 +346,34 @@
 
 </details>
 
+<details>
+<summary>23. Audit history write-side</summary>
+
+**Зачем:** сохранять security-sensitive историю действий без логирования raw tokens, links, password hashes или credentials.
+
+**Сделано:**
+- `auth_audit_events` table.
+- `AuthAuditEvent` entity и repository.
+- Audit actions для invite created/resent/accepted.
+- Audit actions для password reset requested/completed.
+- Audit actions для profile/status/role changes.
+- Audit actions для session revoke, revoke all sessions и logout.
+- Focused integration tests проверяют появление audit events.
+
+**Что дало:** AuthService получил write-side security history для будущего admin/audit UI, compliance и расследований.
+
+</details>
+
 ## Ближайший План
 
-1. Audit history:
-   - invite created/accepted/revoked;
-   - password reset requested/completed;
-   - profile changes;
-   - role/status changes;
-   - session revocation.
-
-2. Downstream permission integration:
+1. Downstream permission integration:
    - первые protected flows в FileService и DirectoryService;
    - проверить `401/403`, policies и Swagger auth.
+
+2. Audit read API:
+   - фильтры по company/user/action/date;
+   - safe response без raw token/link/credential metadata;
+   - pagination для admin/security UI.
 
 3. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;

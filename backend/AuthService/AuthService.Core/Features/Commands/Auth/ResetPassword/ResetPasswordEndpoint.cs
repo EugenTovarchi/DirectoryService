@@ -55,6 +55,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITokenService _tokenService;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ResetPasswordCommand> _validator;
     private readonly ILogger<ResetPasswordHandler> _logger;
@@ -64,6 +65,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         IPasswordResetTokenRepository passwordResetTokenRepository,
         IRefreshTokenRepository refreshTokenRepository,
         ITokenService tokenService,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ResetPasswordCommand> validator,
         ILogger<ResetPasswordHandler> logger)
@@ -72,6 +74,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         _passwordResetTokenRepository = passwordResetTokenRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _tokenService = tokenService;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -117,6 +120,15 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
             user.Id,
             revokedByIp: null,
             cancellationToken);
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            user.CurrentCompanyId,
+            user.Id,
+            user.Email,
+            AuthAuditActions.PASSWORD_RESET_COMPLETED,
+            actorUserId: null).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

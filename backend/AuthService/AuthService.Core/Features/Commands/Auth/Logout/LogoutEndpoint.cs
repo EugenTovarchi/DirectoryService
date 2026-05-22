@@ -50,6 +50,7 @@ public sealed class LogoutHandler : ICommandHandler<LogoutCommand>
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly ITokenService _tokenService;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly IValidator<LogoutCommand> _validator;
     private readonly ILogger<LogoutHandler> _logger;
 
@@ -57,12 +58,14 @@ public sealed class LogoutHandler : ICommandHandler<LogoutCommand>
         IRefreshTokenRepository refreshTokenRepository,
         ITransactionManager transactionManager,
         ITokenService tokenService,
+        IAuthAuditRepository auditRepository,
         IValidator<LogoutCommand> validator,
         ILogger<LogoutHandler> logger)
     {
         _refreshTokenRepository = refreshTokenRepository;
         _transactionManager = transactionManager;
         _tokenService = tokenService;
+        _auditRepository = auditRepository;
         _validator = validator;
         _logger = logger;
     }
@@ -88,6 +91,16 @@ public sealed class LogoutHandler : ICommandHandler<LogoutCommand>
             return transactionScopeResult.Error.ToFailure();
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            companyId: null,
+            refreshToken.UserId,
+            email: null,
+            AuthAuditActions.LOGOUT,
+            refreshToken.UserId,
+            ipAddress: command.IpAddress).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

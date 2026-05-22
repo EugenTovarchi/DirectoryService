@@ -357,6 +357,15 @@ Current `PATCH /api/users/{userId}/profile` MVP behavior:
 - Uses the same company boundary as other admin user-management endpoints: `SystemAdmin` can update any Identity user, while `CompanyAdmin` can update only users from their own `CurrentCompanyId`.
 - Returns `CompanyUserDetailsResponse`.
 
+Current audit history MVP behavior:
+
+- Audit events are stored in `auth_audit_events`.
+- Audit events are written inside the same transaction as the state change when the flow has a transaction boundary.
+- Stored fields are intentionally safe: company id, target user id, email, action, actor user id, created time, IP/user agent when available, and small JSON metadata.
+- Raw access tokens, refresh tokens, invite tokens, password reset tokens, invite links, reset links, password hashes, and SMTP credentials are never written to audit.
+- Current audited actions include invite created/resent/accepted, password reset requested/completed, profile/status/role changes, session revoke, revoke-all-sessions, and logout.
+- Audit read APIs are not exposed yet; this slice creates the write-side history needed by future admin/security UI.
+
 Current `PATCH /api/users/{userId}/change-status` MVP behavior:
 
 - Requires Bearer access token with `users.manage` permission.
@@ -776,6 +785,8 @@ Password reset flow добавлен отдельным lifecycle. План бл
 
 Admin user profile edit добавлен отдельным flow от role/status/password. План блока: дать admin UI безопасное редактирование пользовательских полей без смешивания с high-risk actions. Сделано: `PATCH /api/users/{userId}/profile` через `users.manage` обновляет только `displayName`, поддерживает clear через `null`, соблюдает company boundary и возвращает `CompanyUserDetailsResponse`. Влияние: profile edit стал отдельной малорисковой операцией, а email/username/role/status/password остаются в своих flows.
 
+Audit history write-side добавлен для security-sensitive auth/user-management flows. План блока: начать сохранять историю важных действий без раскрытия секретов и без read UI. Сделано: `auth_audit_events` хранит safe fields и metadata, handlers пишут audit events внутри transaction для invite, password reset, profile, status, role и session flows. Влияние: AuthService теперь сохраняет базовую security history для будущего admin/audit UI и расследований.
+
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 
 ### Конспект По Сегодняшним AuthService Шагам
@@ -858,6 +869,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
 - User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
+- Audit history write-side MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
@@ -881,9 +893,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `87/87`.
+Последние проверки проходили: build `0 warnings / 0 errors`, AuthAudit integration `3/3`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `90/90`.
 
-Следующий ближайший AuthService блок: audit history для invite, password reset, role/status/profile changes и session revocation. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: downstream permission integration или audit read API. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 

@@ -65,17 +65,20 @@ public sealed class UpdateUserProfileValidator : AbstractValidator<UpdateUserPro
 public sealed class UpdateUserProfileHandler : ICommandHandler<CompanyUserDetailsResponse, UpdateUserProfileCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<UpdateUserProfileCommand> _validator;
     private readonly ILogger<UpdateUserProfileHandler> _logger;
 
     public UpdateUserProfileHandler(
         UserManager<ApplicationUser> userManager,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<UpdateUserProfileCommand> validator,
         ILogger<UpdateUserProfileHandler> logger)
     {
         _userManager = userManager;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -119,6 +122,15 @@ public sealed class UpdateUserProfileHandler : ICommandHandler<CompanyUserDetail
         IdentityResult updateResult = await _userManager.UpdateAsync(targetUser);
         if (!updateResult.Succeeded)
             return UserManagementFailures.UserProfileChangeFailed();
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            targetUser.CurrentCompanyId,
+            targetUser.Id,
+            targetUser.Email,
+            AuthAuditActions.USER_PROFILE_CHANGED,
+            command.RequestedByUserId).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

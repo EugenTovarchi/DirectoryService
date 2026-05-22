@@ -58,6 +58,7 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
     private readonly ITokenService _tokenService;
     private readonly PasswordResetLinkFactory _passwordResetLinkFactory;
     private readonly IPasswordResetEmailSender _passwordResetEmailSender;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RequestPasswordResetCommand> _validator;
     private readonly ILogger<RequestPasswordResetHandler> _logger;
@@ -68,6 +69,7 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         ITokenService tokenService,
         PasswordResetLinkFactory passwordResetLinkFactory,
         IPasswordResetEmailSender passwordResetEmailSender,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RequestPasswordResetCommand> validator,
         ILogger<RequestPasswordResetHandler> logger)
@@ -77,6 +79,7 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         _tokenService = tokenService;
         _passwordResetLinkFactory = passwordResetLinkFactory;
         _passwordResetEmailSender = passwordResetEmailSender;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -116,6 +119,15 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         UnitResult<Error> addTokenResult = _passwordResetTokenRepository.Add(resetTokenResult.Value);
         if (addTokenResult.IsFailure)
             return UserManagementFailures.PasswordResetTokenCreationFailed();
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            user.CurrentCompanyId,
+            user.Id,
+            user.Email,
+            AuthAuditActions.PASSWORD_RESET_REQUESTED,
+            actorUserId: null).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

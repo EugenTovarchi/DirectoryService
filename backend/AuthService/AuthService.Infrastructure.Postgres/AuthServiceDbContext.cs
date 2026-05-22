@@ -27,6 +27,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<UserInviteToken> UserInviteTokens => Set<UserInviteToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<AuthAuditEvent> AuthAuditEvents => Set<AuthAuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -41,6 +42,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.ApplyConfiguration(new RefreshTokenConfiguration());
         builder.ApplyConfiguration(new UserInviteTokenConfiguration());
         builder.ApplyConfiguration(new PasswordResetTokenConfiguration());
+        builder.ApplyConfiguration(new AuthAuditEventConfiguration());
     }
 
     private static void ConfigureIdentityTableNames(ModelBuilder builder)

@@ -1,5 +1,6 @@
 using AuthService.Core.Abstractions;
 using AuthService.Core.Extensions;
+using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -49,17 +50,20 @@ public sealed class RevokeAllSessionsValidator : AbstractValidator<RevokeAllSess
 public sealed class RevokeAllSessionsHandler : ICommandHandler<RevokeAllSessionsCommand>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RevokeAllSessionsCommand> _validator;
     private readonly ILogger<RevokeAllSessionsHandler> _logger;
 
     public RevokeAllSessionsHandler(
         IRefreshTokenRepository refreshTokenRepository,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RevokeAllSessionsCommand> validator,
         ILogger<RevokeAllSessionsHandler> logger)
     {
         _refreshTokenRepository = refreshTokenRepository;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -84,6 +88,16 @@ public sealed class RevokeAllSessionsHandler : ICommandHandler<RevokeAllSessions
             command.UserId,
             command.RevokedByIp,
             cancellationToken);
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            companyId: null,
+            command.UserId,
+            email: null,
+            AuthAuditActions.ALL_SESSIONS_REVOKED,
+            command.UserId,
+            ipAddress: command.RevokedByIp).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

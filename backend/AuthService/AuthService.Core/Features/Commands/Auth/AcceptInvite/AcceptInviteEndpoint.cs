@@ -55,6 +55,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<AcceptInviteCommand> _validator;
     private readonly ILogger<AcceptInviteHandler> _logger;
@@ -63,6 +64,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
         IUserInviteTokenRepository inviteTokenRepository,
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<AcceptInviteCommand> validator,
         ILogger<AcceptInviteHandler> logger)
@@ -70,6 +72,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
         _inviteTokenRepository = inviteTokenRepository;
         _userManager = userManager;
         _tokenService = tokenService;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -115,6 +118,15 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
             return UserManagementFailures.UserCreationFailed();
 
         inviteToken.Accept();
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            user.CurrentCompanyId,
+            user.Id,
+            user.Email,
+            AuthAuditActions.INVITE_ACCEPTED,
+            actorUserId: null).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

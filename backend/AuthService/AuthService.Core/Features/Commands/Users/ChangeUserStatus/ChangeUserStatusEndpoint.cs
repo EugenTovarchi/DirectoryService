@@ -63,6 +63,7 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserStatusCommand> _validator;
     private readonly ILogger<ChangeUserStatusHandler> _logger;
@@ -70,12 +71,14 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
     public ChangeUserStatusHandler(
         UserManager<ApplicationUser> userManager,
         IRefreshTokenRepository refreshTokenRepository,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ChangeUserStatusCommand> validator,
         ILogger<ChangeUserStatusHandler> logger)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -130,6 +133,16 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         IdentityResult updateResult = await _userManager.UpdateAsync(targetUser);
         if (!updateResult.Succeeded)
             return UserManagementFailures.UserStatusChangeFailed();
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            targetUser.CurrentCompanyId,
+            targetUser.Id,
+            targetUser.Email,
+            AuthAuditActions.USER_STATUS_CHANGED,
+            command.RequestedByUserId,
+            metadataJson: $$"""{"isActive":{{targetUser.IsActive.ToString().ToLowerInvariant()}}}""").Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

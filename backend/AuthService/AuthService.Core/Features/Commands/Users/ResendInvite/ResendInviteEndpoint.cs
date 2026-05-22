@@ -67,6 +67,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
     private readonly ITokenService _tokenService;
     private readonly InviteLinkFactory _inviteLinkFactory;
     private readonly IInviteEmailSender _inviteEmailSender;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ResendInviteCommand> _validator;
     private readonly ILogger<ResendInviteHandler> _logger;
@@ -77,6 +78,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         ITokenService tokenService,
         InviteLinkFactory inviteLinkFactory,
         IInviteEmailSender inviteEmailSender,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ResendInviteCommand> validator,
         ILogger<ResendInviteHandler> logger)
@@ -86,6 +88,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         _tokenService = tokenService;
         _inviteLinkFactory = inviteLinkFactory;
         _inviteEmailSender = inviteEmailSender;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -139,6 +142,15 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         UnitResult<Error> addInviteTokenResult = _inviteTokenRepository.Add(inviteTokenResult.Value);
         if (addInviteTokenResult.IsFailure)
             return UserManagementFailures.InviteTokenCreationFailed();
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            targetUser.CurrentCompanyId,
+            targetUser.Id,
+            targetUser.Email,
+            AuthAuditActions.INVITE_RESENT,
+            command.RequestedByUserId).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

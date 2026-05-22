@@ -82,6 +82,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
     private readonly ITokenService _tokenService;
     private readonly InviteLinkFactory _inviteLinkFactory;
     private readonly IInviteEmailSender _inviteEmailSender;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<InviteUserCommand> _validator;
     private readonly ILogger<InviteUserHandler> _logger;
@@ -93,6 +94,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         ITokenService tokenService,
         InviteLinkFactory inviteLinkFactory,
         IInviteEmailSender inviteEmailSender,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<InviteUserCommand> validator,
         ILogger<InviteUserHandler> logger)
@@ -103,6 +105,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         _tokenService = tokenService;
         _inviteLinkFactory = inviteLinkFactory;
         _inviteEmailSender = inviteEmailSender;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -181,6 +184,15 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
             await _userManager.DeleteAsync(invitedUser);
             return UserManagementFailures.InviteTokenCreationFailed();
         }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            invitedUser.CurrentCompanyId,
+            invitedUser.Id,
+            invitedUser.Email,
+            AuthAuditActions.INVITE_CREATED,
+            command.InvitedByUserId).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

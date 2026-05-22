@@ -66,6 +66,7 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserRoleCommand> _validator;
     private readonly ILogger<ChangeUserRoleHandler> _logger;
@@ -73,12 +74,14 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
     public ChangeUserRoleHandler(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ChangeUserRoleCommand> validator,
         ILogger<ChangeUserRoleHandler> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -143,6 +146,16 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
             if (!removeResult.Succeeded)
                 return UserManagementFailures.RoleChangeFailed();
         }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            targetUser.CurrentCompanyId,
+            targetUser.Id,
+            targetUser.Email,
+            AuthAuditActions.USER_ROLE_CHANGED,
+            command.RequestedByUserId,
+            metadataJson: $$"""{"role":"{{role}}"}""").Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)

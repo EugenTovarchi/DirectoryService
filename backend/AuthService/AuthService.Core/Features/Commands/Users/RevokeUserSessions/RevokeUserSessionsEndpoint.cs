@@ -61,6 +61,7 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RevokeUserSessionsCommand> _validator;
     private readonly ILogger<RevokeUserSessionsHandler> _logger;
@@ -68,12 +69,14 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
     public RevokeUserSessionsHandler(
         UserManager<ApplicationUser> userManager,
         IRefreshTokenRepository refreshTokenRepository,
+        IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RevokeUserSessionsCommand> validator,
         ILogger<RevokeUserSessionsHandler> logger)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
+        _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
@@ -116,6 +119,16 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
             targetUser.Id,
             command.RevokedByIp,
             cancellationToken);
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+            targetUser.CurrentCompanyId,
+            targetUser.Id,
+            targetUser.Email,
+            AuthAuditActions.ALL_SESSIONS_REVOKED,
+            command.RequestedByUserId,
+            ipAddress: command.RevokedByIp).Value);
+        if (addAuditResult.IsFailure)
+            return addAuditResult.Error.ToFailure();
 
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
