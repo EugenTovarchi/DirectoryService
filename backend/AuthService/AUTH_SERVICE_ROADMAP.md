@@ -8,7 +8,7 @@
 - Seed ролей, permissions и role-permission связей.
 - Login, access JWT, refresh token rotation, reuse detection, logout.
 - Self-session management: list, revoke one session, revoke all sessions.
-- Admin user management: invite, list, details, status, role, sessions, revoke sessions.
+- Admin user management: invite, resend invite, list, details, status, role, sessions, revoke sessions.
 - Invite token lifecycle без `InitialPassword`: pending user, one-time invite token на 3 дня, accept invite.
 - Security-sensitive commands используют явный transaction scope по FS/DS-style паттерну.
 
@@ -280,33 +280,43 @@
 
 </details>
 
+<details>
+<summary>19. Resend invite</summary>
+
+**Зачем:** дать администратору способ выдать новый invite, если первичная ссылка потеряна или истекла, без создания второго пользователя.
+
+**Сделано:**
+- `POST /api/users/{userId}/resend-invite`.
+- Только inactive user без password.
+- Active pending invite tokens отзываются перед выпуском нового token.
+- Новый invite token живет 3 дня, в БД хранится только hash, raw token возвращается один раз.
+
+**Что дало:** invite lifecycle теперь поддерживает повторную выдачу секрета до подключения email delivery, не логируя raw token и не раскрывая users из другой company.
+
+</details>
+
 ## Ближайший План
 
-1. Resend invite endpoint:
-   - отозвать текущий pending invite;
-   - создать новый invite token на 3 дня;
-   - вернуть raw token для local/dev до email delivery.
+1. Email delivery integration:
+   - Mailpit для local/dev;
+   - real SMTP/provider позже;
+   - raw invite token только в ссылке, без логов.
 
 2. User profile edit:
    - редактировать safe поля пользователя;
    - не смешивать с role/status/password flows.
 
-3. Email delivery integration:
-   - Mailpit для local/dev;
-   - real SMTP/provider позже;
-   - raw invite token только в ссылке, без логов.
-
-4. Password reset:
+3. Password reset:
    - отдельный token lifecycle;
    - одинаковые public failure shapes;
    - rate limiting до public stage.
 
-5. Audit history:
+4. Audit history:
    - invite created/accepted/revoked;
    - role/status changes;
    - session revocation.
 
-6. Downstream permission integration:
+5. Downstream permission integration:
    - первые protected flows в FileService и DirectoryService;
    - проверить `401/403`, policies и Swagger auth.
 

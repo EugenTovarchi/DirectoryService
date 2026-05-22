@@ -169,6 +169,120 @@ public sealed class InviteUserTests : AuthServiceBaseTests
     }
 
     [Fact]
+    public async Task ResendInvite_For_Pending_User_Should_Revoke_Active_Token_And_Create_New_Token()
+    {
+        Guid companyId = Guid.NewGuid();
+        await CreateIdentityUserAsync(
+            "resend-invite-admin@example.com",
+            "resendinviteadmin",
+            "Resend Invite Admin",
+            companyId,
+            AuthRoles.COMPANY_ADMIN);
+        TokenResponse login = await LoginAsync("resend-invite-admin@example.com");
+
+        InviteUserResponse invitedUser = await InviteUserAsync(
+            login.AccessToken,
+            new InviteUserRequest(
+                "resend-invite-user@example.com",
+                "resendinviteuser",
+                "Resend Invite User",
+                companyId,
+                AuthRoles.VIEWER));
+
+        using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{invitedUser.UserId}/resend-invite");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Envelope<ResendInviteResponse>? envelope =
+            await response.Content.ReadFromJsonAsync<Envelope<ResendInviteResponse>>();
+
+        envelope.Should().NotBeNull();
+        envelope!.Result.Should().NotBeNull();
+
+        ResendInviteResponse resend = envelope.Result!;
+        resend.UserId.Should().Be(invitedUser.UserId);
+        resend.Email.Should().Be("resend-invite-user@example.com");
+        resend.InviteToken.Should().NotBeNullOrWhiteSpace();
+        resend.InviteToken.Should().NotBe(invitedUser.InviteToken);
+        resend.InviteTokenExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(3), TimeSpan.FromMinutes(1));
+
+        List<UserInviteToken> inviteTokens = await ExecuteInDb(dbContext => dbContext.UserInviteTokens
+            .Where(token => token.UserId == invitedUser.UserId)
+            .OrderBy(token => token.CreatedAt)
+            .ToListAsync());
+
+        inviteTokens.Should().HaveCount(2);
+        inviteTokens[0].RevokedAt.Should().NotBeNull();
+        inviteTokens[1].RevokedAt.Should().BeNull();
+        inviteTokens[1].AcceptedAt.Should().BeNull();
+
+        HttpResponseMessage oldTokenResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/accept-invite",
+            new AcceptInviteRequest(invitedUser.InviteToken, "password123"));
+        oldTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        HttpResponseMessage newTokenResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/accept-invite",
+            new AcceptInviteRequest(resend.InviteToken, "password123"));
+        newTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ResendInvite_For_Active_User_Should_Return_BadRequest()
+    {
+        Guid companyId = Guid.NewGuid();
+        await CreateIdentityUserAsync(
+            "resend-active-admin@example.com",
+            "resendactiveadmin",
+            "Resend Active Admin",
+            companyId,
+            AuthRoles.COMPANY_ADMIN);
+        ApplicationUser targetUser = await CreateIdentityUserAsync(
+            "resend-active-user@example.com",
+            "resendactiveuser",
+            "Resend Active User",
+            companyId,
+            AuthRoles.VIEWER);
+        TokenResponse login = await LoginAsync("resend-active-admin@example.com");
+
+        using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{targetUser.Id}/resend-invite");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ResendInvite_To_Another_Company_By_CompanyAdmin_Should_Return_NotFound()
+    {
+        Guid companyId = Guid.NewGuid();
+        await CreateIdentityUserAsync(
+            "resend-company-admin@example.com",
+            "resendcompanyadmin",
+            "Resend Company Admin",
+            companyId,
+            AuthRoles.COMPANY_ADMIN);
+        ApplicationUser targetUser = await CreatePendingIdentityUserAsync(
+            "resend-other-company-user@example.com",
+            "resendothercompanyuser",
+            "Resend Other Company User",
+            Guid.NewGuid(),
+            AuthRoles.VIEWER);
+        TokenResponse login = await LoginAsync("resend-company-admin@example.com");
+
+        using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{targetUser.Id}/resend-invite");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task InviteUser_Without_Access_Token_Should_Return_Unauthorized()
     {
         InviteUserRequest inviteRequest = new(

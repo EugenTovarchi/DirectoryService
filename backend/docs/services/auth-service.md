@@ -302,6 +302,16 @@ Current `POST /api/auth/accept-invite` MVP behavior:
 - Does not issue access/refresh tokens; after accepting invite the user signs in through `POST /api/auth/login`.
 - Does not return password hash, security stamp, refresh tokens, token hashes, or session metadata.
 
+Current `POST /api/users/{userId}/resend-invite` MVP behavior:
+
+- Requires Bearer access token with `users.manage` permission.
+- Works only for inactive users without `PasswordHash`; active or password-protected users return `invite.resend.is.invalid`.
+- `CompanyAdmin` can resend invites only inside their own `CurrentCompanyId`; `SystemAdmin` can resend for users in any company.
+- Revokes active pending invite tokens for the user before creating a replacement token.
+- Creates a new one-time invite token that expires after 3 days.
+- Stores only invite token hash in `user_invite_tokens`; raw invite token is returned only once in `ResendInviteResponse`.
+- Does not log raw invite token and does not send email yet.
+
 Legacy `/auth/users` registration/read endpoints are removed from the current AuthService surface. New user creation must go through Identity-based user management, starting with `POST /api/users/invite`. The legacy `auth_users` table is dropped by the `DropLegacyAuthUsers` EF migration.
 
 Current `GET /api/users` MVP behavior:
@@ -775,6 +785,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Current user flow: `GET /api/auth/me` возвращает текущего пользователя, roles, permissions и company context.
 - User management MVP: `POST /api/users/invite` создает inactive Identity user без password, назначает role/company context через `users.manage`, создает one-time invite token на 3 дня и возвращает raw token только один раз для local/dev integration.
 - Invite acceptance MVP: `POST /api/auth/accept-invite` принимает invite token и password, проверяет hash stored token, активирует пользователя и помечает invite accepted; unknown/expired/revoked/reused invite возвращает `invite.token.is.invalid`.
+- Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и выдает новый raw invite token один раз.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
@@ -798,9 +809,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, InviteUser integration `8/8`, unit `6/6`, integration `71/71`.
+Последние проверки проходили: build `0 warnings / 0 errors`, InviteUser integration `11/11`, unit `6/6`, integration `71/71`.
 
-Следующий ближайший AuthService блок: развивать user management после invite token lifecycle. Ближайшие кандидаты: resend invite endpoint, user profile edit или email delivery integration.
+Следующий ближайший AuthService блок: email delivery через Mailpit/local-dev после invite/resend invite, затем password reset flow.
 
 ## Post-MVP Backlog
 

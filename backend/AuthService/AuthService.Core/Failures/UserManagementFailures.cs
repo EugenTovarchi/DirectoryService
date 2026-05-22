@@ -63,6 +63,13 @@ public static class UserManagementFailures
             "Invite token creation failed").ToFailure();
     }
 
+    public static Failure InviteResendIsInvalid()
+    {
+        return Error.Validation(
+            "invite.resend.is.invalid",
+            "Invite can be resent only for inactive users without password").ToFailure();
+    }
+
     public static Failure RoleChangeFailed()
     {
         return Error.Validation(
