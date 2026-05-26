@@ -36,7 +36,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
 
     public async Task<Result<Guid, Failure>> Handle(
         CreateDepartmentCommand command,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (command == null)
             return Errors.General.ValueIsInvalid("command").ToFailure();

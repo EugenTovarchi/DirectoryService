@@ -27,7 +27,7 @@ public class CreateLocationHandler : ICommandHandler<Guid, CreateLocationCommand
         _logger = logger;
     }
 
-    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<Guid, Failure>> Handle(CreateLocationCommand command, CancellationToken cancellationToken)
     {
         if (command == null)
             return Errors.General.ValueIsInvalid("command").ToFailure();

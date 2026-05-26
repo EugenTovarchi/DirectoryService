@@ -33,7 +33,7 @@ public class S3BucketInitializationService : BackgroundService
             {
                 _logger.LogInformation("S3 bucket initialization service  required buckets");
 
-                throw new ArgumentException("Required buckets is required");
+                throw new InvalidOperationException("Required buckets is required");
             }
 
             _logger.LogInformation("S3 bucket initialization service started. Buckets: {Buckets}",
@@ -45,14 +45,13 @@ public class S3BucketInitializationService : BackgroundService
 
             await Task.WhenAll(tasks);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogInformation("S3 bucket initialization service canceled");
+            _logger.LogInformation(ex, "S3 bucket initialization service canceled");
         }
         catch (Exception e)
         {
-            _logger.LogCritical(e, "S3 bucket initialization service critical failed");
-            throw;
+            throw new InvalidOperationException("S3 bucket initialization service failed", e);
         }
     }
 
@@ -96,12 +95,11 @@ public class S3BucketInitializationService : BackgroundService
          }
          catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
          {
-             _logger.LogError("Status code - not found!");
+             _logger.LogError(ex, "Status code - not found!");
          }
          catch (Exception e)
          {
-             _logger.LogError(e, "Failed to initialize bucket {BucketName}", bucketName);
-             throw;
+             throw new InvalidOperationException($"Failed to initialize bucket '{bucketName}'", e);
          }
      }
 }

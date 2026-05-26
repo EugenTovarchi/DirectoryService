@@ -53,10 +53,10 @@ public class GetLocationsHandler : IQueryHandler<PagedList<GetLocationResponse>,
         string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(
                     " AND  ", conditions) : string.Empty;
 
-        string direction = query.SortDirection?.ToLower() == "asc" ? "ASC"
+        string direction = query.SortDirection?.ToLowerInvariant() == "asc" ? "ASC"
             : "DESC";
 
-        string orderByField = query.SortBy?.ToLower() switch
+        string orderByField = query.SortBy?.ToLowerInvariant() switch
         {
             "name" => "name",
             "created at" => "created_at",

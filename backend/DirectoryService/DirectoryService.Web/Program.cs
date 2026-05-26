@@ -8,6 +8,8 @@ namespace DirectoryService.Web;
 
 public class Program
 {
+    protected Program() { }
+
     public static async Task Main(string[] args)
     {
         try
@@ -41,7 +43,10 @@ public class Program
 
             var app = builder.Build();
 
-            await app.ApplyMigrations();
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                await app.ApplyMigrations();
+            }
 
             app.WebConfigure();
 

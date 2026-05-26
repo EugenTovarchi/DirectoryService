@@ -26,9 +26,9 @@ public class DeleteExpireDepartmentsBackgroundService(
                 await RunCleanUpAsync(stoppingToken);
             }
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {
-            logger.LogInformation("Background service stopping");
+            logger.LogInformation(ex, "Background service stopping");
         }
         catch (Exception ex)
         {

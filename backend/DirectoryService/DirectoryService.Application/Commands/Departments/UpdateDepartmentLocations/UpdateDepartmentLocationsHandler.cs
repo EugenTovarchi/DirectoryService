@@ -107,13 +107,13 @@ public class UpdateDepartmentLocationsHandler : ICommandHandler<Guid, UpdateDepa
         return department.Id.Value;
     }
 
-    private async Task<UnitResult<Error>> CheckLocationsExist(
+    private Task<UnitResult<Error>> CheckLocationsExist(
         IEnumerable<LocationId> locationIds,
         CancellationToken cancellationToken)
     {
         var idList = locationIds.ToList();
 
-        return await _locationRepository.AllLocationsExistAsync(
+        return _locationRepository.AllLocationsExistAsync(
             idList,
             cancellationToken);
     }
