@@ -158,8 +158,6 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
 
     private static void CreateFakeSpriteSheet(string outputPath)
     {
-        // Минимальный валидный JPEG для спрайт-листа
-        byte[] jpegData = [0xFF, 0xD8, 0xFF, 0xD9];
-        File.WriteAllBytes(outputPath, jpegData);
+        CreateFakeJpegImage(outputPath);
     }
 }
