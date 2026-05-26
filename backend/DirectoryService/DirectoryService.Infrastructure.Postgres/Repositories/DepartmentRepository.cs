@@ -159,7 +159,8 @@ public class DepartmentRepository(
         return Result.Success<Error>();
     }
 
-    public async Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken)
+    public async Task<Result<Department, Error>> GetById(Guid departmentId,
+        CancellationToken cancellationToken = default)
     {
         var department = await dbContext.Departments
             .FirstOrDefaultAsync(v => v.Id == departmentId, cancellationToken);
@@ -194,7 +195,7 @@ public class DepartmentRepository(
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
         {
-            logger.LogWarning("Could not lock descendants of {Path} - already locked", oldPath);
+            logger.LogWarning(pgEx, "Could not lock descendants of {Path} - already locked", oldPath);
             return Errors.General.ResourceLocked("department.descendants");
         }
         catch (Exception ex)
@@ -239,7 +240,7 @@ public class DepartmentRepository(
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
         {
-            logger.LogWarning("Descendants are already locked by other transactions");
+            logger.LogWarning(pgEx, "Descendants are already locked by other transactions");
             return Errors.Database.ResourceLocked("department_descendants");
         }
         catch (Exception ex)
@@ -289,7 +290,8 @@ public class DepartmentRepository(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Update error for descendants of department{ParentDepartmentId}", parentDepartmentId);
+            logger.LogError(ex, "Update error for descendants of department{ParentDepartmentId}",
+                parentDepartmentId.Value);
             return Errors.General.DatabaseError("update.descendants");
         }
     }
@@ -461,7 +463,7 @@ public class DepartmentRepository(
 
     public async Task<Result<bool, Error>> AllDepartmentsExistAsync(
         List<Guid> departmentsIds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -533,7 +535,7 @@ public class DepartmentRepository(
             return Errors.General.DatabaseError("creating_department_error");
         }
 
-        string constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLowerInvariant();
 
         switch (constraintName)
         {

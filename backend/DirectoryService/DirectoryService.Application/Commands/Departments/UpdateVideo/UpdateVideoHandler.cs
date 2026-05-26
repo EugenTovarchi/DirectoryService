@@ -51,7 +51,7 @@ public class UpdateVideoHandler : ICommandHandler<Guid, UpdateVideoCommand>
 
         await _transactionManager.SaveChangeAsync(cancellationToken);
 
-        _logger.LogInformation("Video id {Video_id} was updated for department:{DepartmentId}",
+        _logger.LogInformation("Video id {VideoId} was updated for department:{DepartmentId}",
             command.Request.VideoId, department.Id);
 
         return department.Id.Value;

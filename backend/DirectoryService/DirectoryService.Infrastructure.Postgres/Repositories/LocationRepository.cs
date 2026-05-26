@@ -96,7 +96,7 @@ public class LocationRepository : ILocationRepository
             : Errors.General.NotFoundEntity("location");
     }
 
-    public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken = default)
+    public async Task<Result<Guid, Error>> Add(Location location, CancellationToken cancellationToken)
     {
         try
         {
@@ -130,7 +130,7 @@ public class LocationRepository : ILocationRepository
             return Errors.General.DatabaseError("creating_location_error");
         }
 
-        string constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLowerInvariant();
 
         if (constraintName == "ix_location_name")
         {

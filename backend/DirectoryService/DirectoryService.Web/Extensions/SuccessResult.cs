@@ -18,12 +18,7 @@ public class SuccessResult : IResult
 
 public class ControllerResult<TValue> : IResult
 {
-    private readonly TValue _value;
-
-    public ControllerResult(TValue value)
-    {
-        _value = value;
-    }
+    public ControllerResult(TValue value) { }
 
     public Task ExecuteAsync(HttpContext httpContext)
     {
