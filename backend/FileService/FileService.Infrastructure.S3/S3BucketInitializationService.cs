@@ -45,9 +45,9 @@ public class S3BucketInitializationService : BackgroundService
 
             await Task.WhenAll(tasks);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogInformation("S3 bucket initialization service canceled");
+            _logger.LogInformation(ex, "S3 bucket initialization service canceled");
         }
         catch (Exception ex)
         {

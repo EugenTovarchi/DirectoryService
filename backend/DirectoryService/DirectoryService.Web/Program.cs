@@ -43,7 +43,10 @@ public class Program
 
             var app = builder.Build();
 
-            await app.ApplyMigrations();
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                await app.ApplyMigrations();
+            }
 
             app.WebConfigure();
 

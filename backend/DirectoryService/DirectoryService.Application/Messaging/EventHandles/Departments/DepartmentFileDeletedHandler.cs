@@ -29,6 +29,7 @@ public class DepartmentFileDeletedHandler
         {
             _logger.LogDebug("Ignoring FileUploaded for {EntityType}:{EntityId}",
                 message.TargetEntityType, message.TargetEntityId);
+
             return;
         }
 
@@ -40,6 +41,7 @@ public class DepartmentFileDeletedHandler
         {
             _logger.LogWarning("Department {DepartmentId} not found for FileDeleted event." +
                                "FileId = {AssetId}", message.TargetEntityId, message.AssetId);
+
             return;
         }
 
@@ -84,6 +86,7 @@ public class DepartmentFileDeletedHandler
                 _logger.LogWarning(
                     "Unknown UsageType {AssetType} for file {AssetId}",
                     message.AssetType, message.AssetId);
+
                 break;
         }
     }

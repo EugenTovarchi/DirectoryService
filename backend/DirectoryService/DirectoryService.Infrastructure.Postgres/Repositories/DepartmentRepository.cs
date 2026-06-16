@@ -194,7 +194,7 @@ public class DepartmentRepository(
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
         {
-            logger.LogWarning("Could not lock descendants of {Path} - already locked", oldPath);
+            logger.LogWarning(pgEx, "Could not lock descendants of {Path} - already locked", oldPath);
             return Errors.General.ResourceLocked("department.descendants");
         }
         catch (Exception ex)
@@ -239,7 +239,7 @@ public class DepartmentRepository(
         }
         catch (PostgresException pgEx) when (pgEx.SqlState == PostgresErrorCodes.LockNotAvailable)
         {
-            logger.LogWarning("Descendants are already locked by other transactions");
+            logger.LogWarning(pgEx, "Descendants are already locked by other transactions");
             return Errors.Database.ResourceLocked("department_descendants");
         }
         catch (Exception ex)
@@ -289,7 +289,8 @@ public class DepartmentRepository(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Update error for descendants of department{ParentDepartmentId}", parentDepartmentId);
+            logger.LogError(ex, "Update error for descendants of department{ParentDepartmentId}",
+                parentDepartmentId.Value);
             return Errors.General.DatabaseError("update.descendants");
         }
     }
