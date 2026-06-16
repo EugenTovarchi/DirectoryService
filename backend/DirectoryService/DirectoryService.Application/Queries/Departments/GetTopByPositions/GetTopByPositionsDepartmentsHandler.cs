@@ -63,7 +63,9 @@ public class
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
 
-        string direction = query.SortDirection?.ToLowerInvariant() == "asc" ? "ASC" : "DESC";
+        string direction = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "ASC"
+            : "DESC";
 
         var departments = await connection.QueryAsync<GetTopDepartmentsResponse>(
             $"""
@@ -131,10 +133,10 @@ public class
                     .ToDictionary(v => v.Id, v => v);
 
                 foreach (var mediaInfo in departmentList
-                             .Where(department => department.MediaInfo?.Id != null)
-                             .Select(department => department.MediaInfo!))
+                             .Select(department => department.MediaInfo)
+                             .Where(mediaInfo => mediaInfo?.Id != null))
                 {
-                    if (videoInfoDict.TryGetValue(mediaInfo.Id, out var videoInfo))
+                    if (videoInfoDict.TryGetValue(mediaInfo!.Id, out var videoInfo))
                     {
                         mediaInfo.Id = videoInfo.Id;
                         mediaInfo.Status = videoInfo.Status;

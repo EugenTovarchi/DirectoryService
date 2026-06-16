@@ -159,8 +159,7 @@ public class DepartmentRepository(
         return Result.Success<Error>();
     }
 
-    public async Task<Result<Department, Error>> GetById(Guid departmentId,
-        CancellationToken cancellationToken = default)
+    public async Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken = default)
     {
         var department = await dbContext.Departments
             .FirstOrDefaultAsync(v => v.Id == departmentId, cancellationToken);

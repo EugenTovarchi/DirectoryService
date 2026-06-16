@@ -72,7 +72,7 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
             Directory.CreateDirectory(directory);
         }
 
-        CreateFakeSpriteSheet(outputPath);
+        CreateFakeJpegImage(outputPath);
 
         return Task.FromResult(UnitResult.Success<Error>());
     }
@@ -156,8 +156,4 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
         File.WriteAllBytes(outputPath, jpegData);
     }
 
-    private static void CreateFakeSpriteSheet(string outputPath)
-    {
-        CreateFakeJpegImage(outputPath);
-    }
 }

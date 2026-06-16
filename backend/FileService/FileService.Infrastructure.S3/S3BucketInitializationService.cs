@@ -49,9 +49,10 @@ public class S3BucketInitializationService : BackgroundService
         {
             _logger.LogInformation(ex, "S3 bucket initialization service canceled");
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            throw new InvalidOperationException("S3 bucket initialization service failed", e);
+            _logger.LogCritical(ex, "S3 bucket initialization service critical failed");
+            throw new InvalidOperationException("S3 bucket initialization service critical failed", ex);
         }
     }
 
@@ -97,9 +98,10 @@ public class S3BucketInitializationService : BackgroundService
          {
              _logger.LogError(ex, "Status code - not found!");
          }
-         catch (Exception e)
+         catch (Exception ex)
          {
-             throw new InvalidOperationException($"Failed to initialize bucket '{bucketName}'", e);
+             _logger.LogError(ex, "Failed to initialize bucket {BucketName}", bucketName);
+             throw new InvalidOperationException($"Failed to initialize bucket {bucketName}", ex);
          }
      }
 }
