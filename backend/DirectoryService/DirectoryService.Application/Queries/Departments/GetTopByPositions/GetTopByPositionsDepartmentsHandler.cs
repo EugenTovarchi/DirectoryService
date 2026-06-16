@@ -34,7 +34,7 @@ public class
         _fileCommunicationService = fileCommunicationService;
     }
 
-    public async Task<List<GetTopDepartmentsResponse>> Handle(GetTopDepartmentsQuery query, CancellationToken ct)
+    public async Task<List<GetTopDepartmentsResponse>> Handle(GetTopDepartmentsQuery query, CancellationToken ct = default)
     {
         string cacheKey = $"top_5_departments_by_positions: {query.SortDirection ?? "desc"}";
 
@@ -63,7 +63,9 @@ public class
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
 
-        string direction = query.SortDirection?.ToLower() == "asc" ? "ASC" : "DESC";
+        string direction = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "ASC"
+            : "DESC";
 
         var departments = await connection.QueryAsync<GetTopDepartmentsResponse>(
             $"""
@@ -130,14 +132,15 @@ public class
                 var videoInfoDict = result.Value.MediaAssets
                     .ToDictionary(v => v.Id, v => v);
 
-                foreach (var department in departmentList
-                             .Where(d => d.MediaInfo?.Id != null))
+                foreach (var mediaInfo in departmentList
+                             .Select(department => department.MediaInfo)
+                             .Where(mediaInfo => mediaInfo?.Id != null))
                 {
-                    if (videoInfoDict.TryGetValue(department.MediaInfo!.Id, out var videoInfo))
+                    if (videoInfoDict.TryGetValue(mediaInfo!.Id, out var videoInfo))
                     {
-                        department.MediaInfo.Id = videoInfo.Id;
-                        department.MediaInfo.Status = videoInfo.Status;
-                        department.MediaInfo.Url = videoInfo.Url ?? string.Empty;
+                        mediaInfo.Id = videoInfo.Id;
+                        mediaInfo.Status = videoInfo.Status;
+                        mediaInfo.Url = videoInfo.Url ?? string.Empty;
                     }
                 }
             }

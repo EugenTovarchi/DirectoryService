@@ -159,7 +159,7 @@ public class DepartmentRepository(
         return Result.Success<Error>();
     }
 
-    public async Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken)
+    public async Task<Result<Department, Error>> GetById(Guid departmentId, CancellationToken cancellationToken = default)
     {
         var department = await dbContext.Departments
             .FirstOrDefaultAsync(v => v.Id == departmentId, cancellationToken);
@@ -461,7 +461,7 @@ public class DepartmentRepository(
 
     public async Task<Result<bool, Error>> AllDepartmentsExistAsync(
         List<Guid> departmentsIds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -533,7 +533,7 @@ public class DepartmentRepository(
             return Errors.General.DatabaseError("creating_department_error");
         }
 
-        string constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLowerInvariant();
 
         switch (constraintName)
         {

@@ -40,7 +40,7 @@ public class MoveDepartmentHandler : ICommandHandler<Guid, MoveDepartmentCommand
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            _logger.LogWarning("Department: {command} is invalid!", command.DepartmentId);
+            _logger.LogWarning("Department: {Command} is invalid!", command.DepartmentId);
 
             return validationResult.ToErrors();
         }

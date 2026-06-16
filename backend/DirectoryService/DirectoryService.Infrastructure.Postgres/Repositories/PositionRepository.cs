@@ -142,7 +142,7 @@ public class PositionRepository : IPositionRepository
             return Errors.General.DatabaseError("creating_position_error");
         }
 
-        string constraintName = pgEx.ConstraintName.ToLower();
+        string constraintName = pgEx.ConstraintName.ToLowerInvariant();
 
         if (constraintName == "ix_position_name")
         {

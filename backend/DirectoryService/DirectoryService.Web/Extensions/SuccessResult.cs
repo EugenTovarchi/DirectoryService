@@ -28,7 +28,7 @@ public class ControllerResult<TValue> : IResult
     public Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        var envelope = Envelope.Ok();
+        var envelope = Envelope.Ok(_value);
 
         httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 

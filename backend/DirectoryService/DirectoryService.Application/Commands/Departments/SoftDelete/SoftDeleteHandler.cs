@@ -62,7 +62,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
             .MarkDepartmentAsDeleted(deletionPrefix, department.Id, cancellationToken);
         if (updateDepPathResult.IsFailure)
         {
-            _logger.LogError("Error when update path  of department:{department}", department.Id);
+            _logger.LogError("Error when update path  of department:{Department}", department.Id);
             transactionScope.Rollback();
             return updateDepPathResult.Error.ToFailure();
         }
@@ -76,7 +76,7 @@ public class SoftDeleteHandler : ICommandHandler<Guid, SoftDeleteCommand>
             cancellationToken);
         if (updateDescendantsPathResult.IsFailure)
         {
-            _logger.LogError("Error when update path descendants of department:{department}", department.Id);
+            _logger.LogError("Error when update path descendants of department:{Department}", department.Id);
             transactionScope.Rollback();
             return updateDescendantsPathResult.Error.ToFailure();
         }

@@ -54,13 +54,7 @@ public record Path
     {
         string[] segments = value.Split(SEPARATOR);
 
-        foreach (string segment in segments)
-        {
-            if (string.IsNullOrEmpty(segment) || !IsValidLtreeLabel(segment))
-                return false;
-        }
-
-        return true;
+        return segments.All(segment => !string.IsNullOrEmpty(segment) && IsValidLtreeLabel(segment));
     }
 
     private static bool IsValidLtreeLabel(string value)

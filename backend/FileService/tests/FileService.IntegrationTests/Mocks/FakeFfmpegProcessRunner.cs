@@ -72,7 +72,7 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
             Directory.CreateDirectory(directory);
         }
 
-        CreateFakeSpriteSheet(outputPath);
+        CreateFakeJpegImage(outputPath);
 
         return Task.FromResult(UnitResult.Success<Error>());
     }
@@ -156,10 +156,4 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
         File.WriteAllBytes(outputPath, jpegData);
     }
 
-    private static void CreateFakeSpriteSheet(string outputPath)
-    {
-        // Минимальный валидный JPEG для спрайт-листа
-        byte[] jpegData = [0xFF, 0xD8, 0xFF, 0xD9];
-        File.WriteAllBytes(outputPath, jpegData);
-    }
 }

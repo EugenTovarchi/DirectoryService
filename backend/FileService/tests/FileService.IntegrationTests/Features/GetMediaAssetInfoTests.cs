@@ -48,8 +48,8 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
         Assert.Equal("video/mp4", assetInfo.ContentType);
         Assert.Equal(file.Length, assetInfo.Size);
         Assert.NotNull(assetInfo.Url);
-        Assert.StartsWith("http", assetInfo.Url);
-        Assert.Contains(mediaAsset.Id.ToString(), assetInfo.Url);
+        Assert.StartsWith("http", assetInfo.Url, StringComparison.Ordinal);
+        Assert.Contains(mediaAsset.Id.ToString(), assetInfo.Url, StringComparison.Ordinal);
     }
 
     [Fact]
