@@ -27,8 +27,8 @@ public static class RabbitMqConfiguration
     {
         opts.ListenToRabbitQueue(MessagingConstants.DIRECTORY_SERVICE_QUEUE_NAME, queue =>
         {
-            queue.BindExchange(FileEventsRouting.EXCHANGE, bindingKey: FileEventsRouting.ALL_FILE_UPLOADED);
-            queue.BindExchange(FileEventsRouting.EXCHANGE, bindingKey: FileEventsRouting.ALL_FILE_DELETED);
+            queue.BindExchange(FileEventsRouting.EXCHANGE, bindingKey: FileEventsRouting.DEPARTMENT_FILE_DELETED);
+            queue.BindExchange(FileEventsRouting.EXCHANGE, bindingKey: FileEventsRouting.DEPARTMENT_FILE_UPLOADED);
 
             queue.IsDurable = true;
         });
