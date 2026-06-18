@@ -42,9 +42,10 @@ public static class WolverineConfiguration
         opts.PersistMessagesWithPostgresql(postgresConnectionString, "public");
         opts.UseEntityFrameworkCoreTransactions();
 
-        // Автоматический outbox для всех отправляемых сообщений
+        // Все исходящие сообщения не улетают напрямую в RabbitMQ, а сначала попадают в durable outbox.
         opts.Policies.UseDurableOutboxOnAllSendingEndpoints();
 
+        // Все входящие сообщения обрабатываются через durable inbox.
         opts.Policies.UseDurableInboxOnAllListeners();
     }
 }

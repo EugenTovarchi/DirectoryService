@@ -23,7 +23,7 @@ public sealed class CompleteMultipartUploadEndpoint : IEndpoint
     /// Выполняет отправку Id файла в DS сервис.
     /// Если видео, то начинает hls обработку через планировщик Quartz.
     /// </summary>
-    /// <param name="app">FileService</param>
+    /// <param name="app">FileService.</param>
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost("/files/multipart/end",
@@ -128,7 +128,8 @@ public sealed class CompleteMultipartUploadHandler
             var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
             if (saveResult.IsFailure)
             {
-                _logger.LogError("Error when try to save changes!");
+                _logger.LogError("Error when try to save changes after publishing message to outbox!");
+                return saveResult.Error.ToFailure();
             }
 
             if (mediaAsset.RequiresProcessing() && mediaAsset.AssetType == AssetType.VIDEO)
@@ -168,7 +169,7 @@ public sealed class CompleteMultipartUploadHandler
                 if (saveVideoProcessResult.IsFailure)
                 {
                     _logger.LogError("Error when try to save video process!");
-                    saveVideoProcessResult.Error.ToFailure();
+                    return saveVideoProcessResult.Error.ToFailure();
                 }
 
                 var scheduleResult = await _videoProcessingScheduler.ScheduleProcessingAsync(videoProcess.VideoAssetId,

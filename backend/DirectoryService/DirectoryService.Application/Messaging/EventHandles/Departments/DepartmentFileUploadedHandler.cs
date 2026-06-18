@@ -1,4 +1,5 @@
 ﻿using DirectoryService.Application.Database;
+using DirectoryService.Application.Messaging.Exceptions;
 using DirectoryService.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using SharedService.SharedKernel.Messaging.Files.Events;
@@ -36,7 +37,8 @@ public class DepartmentFileUploadedHandler
         _logger.LogInformation("Received FileUploaded event for department: {DepartmentId}" +
                                " with video: {VideoId}", message.TargetEntityId, message.AssetId);
 
-        var departmentResult = await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
+        var departmentResult =
+            await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
         if (departmentResult.IsFailure)
         {
             _logger.LogWarning("Department {DepartmentId} not found for FileUploaded event." +
@@ -53,9 +55,16 @@ public class DepartmentFileUploadedHandler
                 if (department.VideoAssetId != message.AssetId)
                 {
                     department.UpdateVideoId(message.AssetId);
-                    await _transactionManager.SaveChangeAsync(cancellationToken);
+                    var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+                    if (saveResult.IsFailure)
+                    {
+                        throw new TransientFileEventException(
+                            $"Failed to save VideoAssetId for department {department.Id.Value}" +
+                            $" after FileUploaded {message.AssetId}: {saveResult.Error.Message}");
+                    }
+
                     _logger.LogInformation("Updated VideoAssetId for department {DepartmentId} to {AssetId}",
-                                           department.Id, message.AssetId);
+                        department.Id, message.AssetId);
                 }
                 else
                 {
@@ -65,13 +74,21 @@ public class DepartmentFileUploadedHandler
                 }
 
                 break;
+
             case MessagingConstants.ASSET_TYPE_PHOTO:
                 if (department.PhotoAssetId != message.AssetId)
                 {
                     department.UpdatePhotoId(message.AssetId);
-                    await _transactionManager.SaveChangeAsync(cancellationToken);
+                    var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+                    if (saveResult.IsFailure)
+                    {
+                        throw new TransientFileEventException(
+                            $"Failed to save PhotoAssetId for department {department.Id.Value}" +
+                            $" after FileUploaded {message.AssetId}: {saveResult.Error.Message}");
+                    }
+
                     _logger.LogInformation("Updated PhotoAssetId for department {DepartmentId} to {AssetId}",
-                                           department.Id, message.AssetId);
+                        department.Id, message.AssetId);
                 }
                 else
                 {
@@ -83,11 +100,10 @@ public class DepartmentFileUploadedHandler
                 break;
 
             default:
-                _logger.LogWarning(
-                    "Unknown AssetType {AssetType} for file {AssetId}",
-                    message.AssetType, message.AssetId);
-
-                break;
+                throw new PoisonFileEventException(
+                    $"Unknown AssetType '{message.AssetType}' for FileUploaded event. " +
+                    $"AssetId={message.AssetId}, TargetEntityType={message.TargetEntityType}," +
+                    $" TargetEntityId={message.TargetEntityId}");
         }
     }
 }
