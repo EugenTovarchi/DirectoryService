@@ -7,6 +7,7 @@ namespace FileService.Contracts.Messaging;
 
 public static class RabbitMqConfiguration
 {
+    // Подключает Wolverine к RabbitMQ.
     public static void ConfigureRabbitMq(this WolverineOptions opts, string connectionString)
     {
         opts.UseRabbitMq(new Uri(connectionString)) // Из appsettings.Development.json

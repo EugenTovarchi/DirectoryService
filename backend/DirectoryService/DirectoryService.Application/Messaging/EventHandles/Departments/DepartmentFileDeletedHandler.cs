@@ -1,4 +1,5 @@
 ﻿using DirectoryService.Application.Database;
+using DirectoryService.Application.Messaging.Exceptions;
 using DirectoryService.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using SharedService.SharedKernel.Messaging.Files.Events;
@@ -27,7 +28,7 @@ public class DepartmentFileDeletedHandler
                 MessagingConstants.ENTITY_TYPE_DEPARTMENT,
                 StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogDebug("Ignoring FileUploaded for {EntityType}:{EntityId}",
+            _logger.LogDebug("Ignoring FileDeleted for {EntityType}:{EntityId}",
                 message.TargetEntityType, message.TargetEntityId);
 
             return;
@@ -36,7 +37,8 @@ public class DepartmentFileDeletedHandler
         _logger.LogInformation("Received FileDeleted event for department: {DepartmentId}" +
                                " with video: {VideoId}", message.TargetEntityId, message.AssetId);
 
-        var departmentResult = await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
+        var departmentResult =
+            await _departmentRepository.GetBy(d => d.Id == message.TargetEntityId, cancellationToken);
         if (departmentResult.IsFailure)
         {
             _logger.LogWarning("Department {DepartmentId} not found for FileDeleted event." +
@@ -53,7 +55,14 @@ public class DepartmentFileDeletedHandler
                 if (department.VideoAssetId == message.AssetId)
                 {
                     department.CleanVideoId();
-                    await _transactionManager.SaveChangeAsync(cancellationToken);
+                    var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+                    if (saveResult.IsFailure)
+                    {
+                        throw new TransientFileEventException(
+                            $"Failed to clean VideoAssetId for department {department.Id.Value}" +
+                            $" after FileDeleted {message.AssetId}: {saveResult.Error.Message}");
+                    }
+
                     _logger.LogInformation("Cleared video department for: {DepartmentId}",
                         department.Id);
                 }
@@ -65,11 +74,19 @@ public class DepartmentFileDeletedHandler
                 }
 
                 break;
+
             case MessagingConstants.ASSET_TYPE_PHOTO:
                 if (department.PhotoAssetId == message.AssetId)
                 {
                     department.CleanPhotoId();
-                    await _transactionManager.SaveChangeAsync(cancellationToken);
+                    var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+                    if (saveResult.IsFailure)
+                    {
+                        throw new TransientFileEventException(
+                            $"Failed to clean PhotoAssetId for department {department.Id.Value}" +
+                            $" after FileDeleted {message.AssetId}: {saveResult.Error.Message}");
+                    }
+
                     _logger.LogInformation("Cleared photo department for: {DepartmentId}",
                         department.Id);
                 }
@@ -83,11 +100,10 @@ public class DepartmentFileDeletedHandler
                 break;
 
             default:
-                _logger.LogWarning(
-                    "Unknown UsageType {AssetType} for file {AssetId}",
-                    message.AssetType, message.AssetId);
-
-                break;
+                throw new PoisonFileEventException(
+                    $"Unknown AssetType '{message.AssetType}' for FileDeleted event. " +
+                    $"AssetId={message.AssetId}, TargetEntityType={message.TargetEntityType}," +
+                    $" TargetEntityId={message.TargetEntityId}");
         }
     }
 }
