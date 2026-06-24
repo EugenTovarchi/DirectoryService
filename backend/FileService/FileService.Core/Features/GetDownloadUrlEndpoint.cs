@@ -49,7 +49,9 @@ public sealed class GetDownloadUrlHandler
 
         MediaAsset? mediaAsset = await _fileReadDbContext.ReadMediaAssets
             .FirstOrDefaultAsync(m => m.Id == request.MediaAssetId
-                                      && m.Status == MediaStatus.UPLOADED, cancellationToken);
+                                      && (m.Status == MediaStatus.UPLOADED
+                                          || m.Status == MediaStatus.PROCESSING
+                                          || m.Status == MediaStatus.READY), cancellationToken);
         if (mediaAsset == null)
         {
             _logger.LogInformation("Media assets not found");

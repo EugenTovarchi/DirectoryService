@@ -47,13 +47,40 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
         Assert.Equal("test-file.mp4", assetInfo.FileName);
         Assert.Equal("video/mp4", assetInfo.ContentType);
         Assert.Equal(file.Length, assetInfo.Size);
-        Assert.NotNull(assetInfo.Url);
-        Assert.StartsWith("http", assetInfo.Url, StringComparison.Ordinal);
-        Assert.Contains(mediaAsset.Id.ToString(), assetInfo.Url, StringComparison.Ordinal);
+        Assert.Null(assetInfo.ViewUrl);
+        Assert.NotNull(assetInfo.DownloadUrl);
+        Assert.Null(assetInfo.ThumbnailUrl);
+        Assert.StartsWith("http", assetInfo.DownloadUrl, StringComparison.Ordinal);
+        Assert.Contains(mediaAsset.Id.ToString(), assetInfo.DownloadUrl, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GetMediaAssetInfo_With_Uploading_Status_ShouldReturnNull()
+    public async Task GetMediaAssetInfo_With_Ready_Video_Should_Return_View_And_Download_Urls()
+    {
+        // Arrange
+        CancellationToken cancellationToken = new CancellationTokenSource().Token;
+
+        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.READY, cancellationToken: cancellationToken);
+
+        // Act
+        HttpResponseMessage getResponse = await AppHttpClient
+            .PostAsync($"/files/{mediaAsset.Id}", null, cancellationToken);
+
+        Result<GetMediaAssetResponse, Failure> getResult = await getResponse
+            .HandleResponseAsync<GetMediaAssetResponse>(cancellationToken);
+
+        // Assert
+        Assert.True(getResult.IsSuccess);
+        Assert.NotNull(getResult.Value);
+        Assert.Equal("ready", getResult.Value.Status);
+        Assert.NotNull(getResult.Value.ViewUrl);
+        Assert.NotNull(getResult.Value.DownloadUrl);
+        Assert.Contains("master.m3u8", getResult.Value.ViewUrl, StringComparison.Ordinal);
+        Assert.Contains(mediaAsset.Id.ToString(), getResult.Value.DownloadUrl, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetMediaAssetInfo_With_Uploading_Status_ShouldReturnNotFound()
     {
         // Arrange
         CancellationToken cancellationToken = new CancellationTokenSource().Token;
@@ -66,12 +93,12 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
         HttpResponseMessage getResponse = await AppHttpClient
             .PostAsync(url, null, cancellationToken);
 
-        Result<GetMediaAssetResponse, Failure> getResult = (await getResponse
-            .HandleNullableResponseAsync<GetMediaAssetResponse>(cancellationToken))!;
+        Result<GetMediaAssetResponse, Failure> getResult = await getResponse
+            .HandleResponseAsync<GetMediaAssetResponse>(cancellationToken);
 
         // Assert
-        Assert.True(getResult.IsSuccess);
-        Assert.Null(getResult.Value);
+        Assert.True(getResult.IsFailure);
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
     [Fact]
@@ -88,7 +115,7 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
     }
 
     [Fact]
-    public async Task GetMediaAssetInfo_With_Valid_But_NonExistent_Guid_Should_Return_Null()
+    public async Task GetMediaAssetInfo_With_Valid_But_NonExistent_Guid_Should_Return_NotFound()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
@@ -96,11 +123,23 @@ public class GetMediaAssetInfoTests : FileServiceBaseTests
         // Act
         var response = await AppHttpClient.PostAsync($"/files/{nonExistentId}", null);
 
-        var result = await response.HandleNullableResponseAsync<GetMediaAssetResponse>();
+        var result = await response.HandleResponseAsync<GetMediaAssetResponse>();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.Value);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(result.IsFailure);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMediaAssetInfo_With_Empty_Guid_Should_Return_BadRequest()
+    {
+        // Act
+        var response = await AppHttpClient.PostAsync($"/files/{Guid.Empty}", null);
+
+        var result = await response.HandleResponseAsync<GetMediaAssetResponse>();
+
+        // Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

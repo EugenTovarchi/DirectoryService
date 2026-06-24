@@ -1,7 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Responses;
 using FileService.Core.FilesStorage;
-using FileService.Domain;
 using FileService.Domain.Assets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -45,28 +44,30 @@ public sealed class GetMediaAssetInfoHandler
         CancellationToken cancellationToken)
     {
         if (mediaAssetId == Guid.Empty)
-            return Result.Success<GetMediaAssetResponse, Failure>(null!);
+            return Errors.General.ValueIsInvalid("MediaAssetId").ToFailure();
 
         MediaAsset? mediaAsset = await _fileReadDbContext.ReadMediaAssets
-            .FirstOrDefaultAsync(m => m.Id == mediaAssetId
-                                      && m.Status == MediaStatus.UPLOADED, cancellationToken);
+            .FirstOrDefaultAsync(m => m.Id == mediaAssetId, cancellationToken);
         if (mediaAsset == null)
         {
             _logger.LogInformation("Media assets not found");
-            return Result.Success<GetMediaAssetResponse, Failure>(null!);
+            return Errors.General.NotFoundEntity("MediaAssetId").ToFailure();
         }
 
-        var storageKey = mediaAsset.UploadKey;
-
-        Result<string, Error> urlResult = await _fileStorageProvider
-            .GenerateDownloadUrlAsync(storageKey, cancellationToken);
-        if (urlResult.IsFailure)
+        if (!MediaAssetUrlBuilder.CanExposeMediaInfo(mediaAsset))
         {
-            _logger.LogError("Error when try to generate download url!");
-            return urlResult.Error.ToFailure();
+            _logger.LogInformation("Media asset {MediaAssetId} is not ready for exposure", mediaAssetId);
+            return Errors.General.NotFoundEntity("MediaAssetId").ToFailure();
         }
 
-        string? url = urlResult.Value;
+        var urlsResult = await MediaAssetUrlBuilder.BuildAsync(mediaAsset, _fileStorageProvider, cancellationToken);
+        if (urlsResult.IsFailure)
+        {
+            _logger.LogError("Error when try to generate media asset urls!");
+            return urlsResult.Error.ToFailure();
+        }
+
+        MediaAssetUrls urls = urlsResult.Value;
 
         return new GetMediaAssetResponse(
             mediaAsset.Id,
@@ -74,7 +75,9 @@ public sealed class GetMediaAssetInfoHandler
             mediaAsset.AssetType.ToString().ToLowerInvariant(),
             mediaAsset.CreatedAt,
             mediaAsset.UpdatedAt,
-            url,
+            urls.ViewUrl,
+            urls.DownloadUrl,
+            urls.ThumbnailUrl,
             mediaAsset.MediaData.Size,
             mediaAsset.MediaData.FileName.Value,
             mediaAsset.MediaData.ContentType.Value);

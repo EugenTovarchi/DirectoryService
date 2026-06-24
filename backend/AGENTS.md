@@ -46,6 +46,7 @@ Primary entry point for work started from `backend/`.
 
 - Use Russian by default for progress notes, explanations, plans, and final summaries.
 - Keep code, identifiers, file paths, CLI commands, logs, error messages, and commit messages in their original language unless explicitly asked to translate.
+- When the user asks for a detailed commit description, write the commit body in Russian using at least 2-3 sentences unless the user explicitly requests another language.
 - Do not translate existing source comments, public API names, error codes, or domain terminology unless the task explicitly requires it.
 
 ## Workspace Map
