@@ -11,6 +11,7 @@ AuthService отвечает за identity и жизненный цикл ток
 - роли;
 - permissions;
 - выдача access token;
+- целевой контур централизованной выдачи OAuth 2.0/OpenID Connect токенов для клиентов и микросервисов;
 - rotation и отзыв refresh token;
 - минимальный company/tenant context.
 
@@ -62,6 +63,7 @@ AuthService не отвечает на детальные бизнес-вопр�
 - Не кладем большие access trees и high-cardinality данные в JWT claims.
 - Не храним JWT secrets в committed appsettings files.
 - Не логируем access tokens и refresh tokens.
+- OAuth 2.0/OpenID Connect внедряем отдельным качественным MVP поверх текущей Identity/JWT базы после сквозной JWT/permission integration в FileService и DirectoryService; authorization server вручную не пишем, предпочтительный стек - OpenIddict.
 
 ## Authentication Flow
 
@@ -168,6 +170,52 @@ JWT-настройки подключаются через `IOptions<JwtOptions>
 `SigningKey` не храним в committed appsettings. Для локального запуска используем User Secrets, для Docker local-dev используем `AuthService.Development.env`, для production нужен secret manager или CI/CD secrets.
 
 Текущий MVP использует symmetric signing: AuthService подписывает JWT и downstream-сервисы проверяют подпись тем же секретом. Следующий security-hardening шаг - перейти на private/public key signing, где AuthService хранит private key, а FileService/DirectoryService получают только public key для проверки подписи.
+
+## OAuth 2.0 / OpenID Connect Target Plan
+
+Цель будущего AuthService milestone - уметь объяснить и показать централизованную выдачу и проверку токенов с использованием ASP.NET Core Identity, OAuth 2.0, OpenID Connect и JWT. Это должно закрывать резюме-level формулировку: AuthService является authorization server, клиенты получают tokens через стандартный protocol flow, а FileService/DirectoryService валидируют access JWT как resource servers.
+
+Этот этап не является ближайшим implementation slice. Перед OpenIddict нужно сначала доказать текущую Identity/JWT основу на реальном сквозном пути: AuthService выдал access token, FileService/DirectoryService проверили token, применили permission policies и вернули ожидаемые `401/403`.
+
+MVP делаем без отдельного frontend application. Для backend-проверки достаточно Swagger/Postman/manual dev client и, если нужен interactive `/authorize` сценарий, минимальных Razor/MVC login/consent pages внутри AuthService. Эти страницы не считаются продуктовым frontend; они нужны, чтобы корректно пройти Authorization Code Flow и объяснить протокол.
+
+Preferred implementation:
+
+- ASP.NET Core Identity остается source of truth для users, passwords, roles и security stamps.
+- OpenIddict добавляется как OAuth 2.0/OpenID Connect server layer.
+- PostgreSQL хранит Identity данные, OpenIddict applications/authorizations/tokens/scopes и AuthService domain tables.
+- Access tokens остаются JWT.
+- Refresh tokens выдаются через standard OAuth/OIDC flow; текущую hash-only refresh session model нужно либо адаптировать к OpenIddict lifecycle, либо явно оставить для legacy/custom endpoints до миграции.
+- Downstream services валидируют tokens по issuer, audience, lifetime и signing keys через JWKS/OpenIddict validation, а не через shared symmetric secret как финальное состояние MVP.
+
+Required protocol capabilities:
+
+- Discovery: `/.well-known/openid-configuration`.
+- JWKS endpoint для public signing keys.
+- Authorization Code Flow with PKCE.
+- Token endpoint для code exchange и refresh.
+- ID token для OpenID Connect.
+- UserInfo endpoint для profile/email/basic company context.
+- Client registration seed для dev clients: `client_id`, redirect URIs, allowed scopes, grant types.
+- Scopes/resources: минимум `openid`, `profile`, `email`, `offline_access`, `directory`, `files`, `auth`.
+
+Required learning/interview cases:
+
+- Чем ASP.NET Core Identity отличается от OAuth 2.0/OpenID Connect: Identity хранит users/passwords/roles, OAuth/OIDC описывает protocol выдачи tokens клиентам.
+- Почему Authorization Code Flow + PKCE безопаснее password flow для browser/mobile/public clients.
+- Чем access token, ID token и refresh token отличаются по назначению и аудитории.
+- Почему resource services валидируют JWT локально через issuer/audience/signing keys и не ходят в AuthService на каждый запрос.
+- Что такое discovery document и JWKS, зачем нужны key id и key rotation.
+- Почему roles/permissions claims должны быть небольшими и почему детальные access trees остаются в DirectoryService/FileService.
+- Как отличать `401 Unauthorized` от `403 Forbidden` в downstream services.
+
+MVP acceptance criteria:
+
+- AuthService поднимается с OpenIddict migrations и seeded dev client.
+- Manual flow через Swagger/Postman/dev client получает authorization code, меняет его на access token/id token/refresh token и вызывает protected endpoint.
+- FileService или DirectoryService имеет хотя бы один protected endpoint, который принимает валидный JWT и возвращает `401/403` при missing/invalid token или недостаточных permissions.
+- Integration tests покрывают discovery/JWKS, valid code flow, invalid redirect/client/scope, token validation и permission failure.
+- Документация объясняет текущие границы: это backend/OIDC MVP, не production-grade enterprise SSO.
 
 ## Roles
 
@@ -836,9 +884,12 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- После появления invite flow создавать invite token/session entities через фабрики с явными инвариантами.
+- Настроить JWT validation в FileService и DirectoryService для текущих AuthService access tokens.
 - Добавить первый защищенный downstream flow в FileService/DirectoryService через permission policies.
-- Подготовить private/public key JWT signing как отдельный security-hardening блок.
+- Покрыть `401` без token, `401` с invalid/expired token и `403` при нехватке permission.
+- Добавить audit read API с фильтрами по company/user/action/date и pagination.
+- Добавить rate limiting/temporary throttling для public auth endpoints: login, refresh, request password reset, invite resend.
+- После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
 
 ## Учебный Backlog
 
@@ -847,6 +898,11 @@ Security-sensitive command handlers используют явные EF transacti
 - Почему AuthService использует ASP.NET Core Identity вместо собственной password/auth реализации.
 - Чем отличаются authentication и authorization.
 - Чем access token отличается от refresh token.
+- Чем access token отличается от ID token.
+- Чем OAuth 2.0 отличается от OpenID Connect.
+- Что делает authorization server, resource server и client.
+- Почему Authorization Code Flow + PKCE выбран для MVP.
+- Как работают discovery document и JWKS.
 - Почему refresh token хранится в БД только как hash.
 - Почему login возвращает одинаковую ошибку для missing user, wrong password и inactive user.
 - Как `Issuer`, `Audience`, `SigningKey`, lifetime и `ClockSkew` участвуют в JWT validation.
@@ -895,7 +951,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Последние проверки проходили: build `0 warnings / 0 errors`, AuthAudit integration `3/3`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `90/90`.
 
-Следующий ближайший AuthService блок: downstream permission integration или audit read API. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: downstream JWT validation и permission integration в FileService/DirectoryService. После него идут audit read API и hardening public auth endpoints. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 
@@ -918,7 +974,7 @@ Session UX:
 Enterprise/B2B:
 
 - Verified company email domains как optional настройка.
-- SSO/SAML/OIDC federation для крупных клиентов.
+- SSO/SAML/OIDC federation для крупных клиентов поверх базового OAuth 2.0/OpenID Connect authorization server.
 - Multi-company membership для холдингов, подрядчиков и операторов нескольких клиентов.
 - `UserCompanyMembership` вместо одного `CurrentCompanyId` в `ApplicationUser`.
 
