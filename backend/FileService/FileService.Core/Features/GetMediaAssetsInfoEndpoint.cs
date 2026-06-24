@@ -3,8 +3,6 @@ using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Core.FilesStorage;
-using FileService.Core.Models;
-using FileService.Domain;
 using FileService.Domain.Assets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -50,45 +48,32 @@ public sealed class GetMediaAssetsInfoHandler
         if (!request.MediaAssetIds.Any())
             return new GetMediaAssetsResponse([]);
 
-        List<MediaAsset> readyMediaAssets = await _fileReadDbContext.ReadMediaAssets
-            .Where(m => request.MediaAssetIds.Contains(m.Id)
-                        && m.Status == MediaStatus.UPLOADED)
+        List<MediaAsset> mediaAssets = await _fileReadDbContext.ReadMediaAssets
+            .Where(m => request.MediaAssetIds.Contains(m.Id))
             .ToListAsync(cancellationToken);
-        if (readyMediaAssets.Count == 0)
+        if (mediaAssets.Count == 0)
         {
-            _logger.LogInformation("No ready media assets found");
+            _logger.LogInformation("No media assets found");
             return new GetMediaAssetsResponse([]);
         }
 
-        List<StorageKey> keys = readyMediaAssets.Select(m => m.UploadKey).ToList()!;
-
-        Result<IReadOnlyList<MediaUrl>, Error> urlsResult = await _fileStorageProvider
-            .GenerateDownloadUrlsAsync(keys, cancellationToken);
-        if (urlsResult.IsFailure)
-        {
-            _logger.LogError("Error when try to generate download urls!");
-            return urlsResult.Error.ToFailure();
-        }
-
-        var urls = urlsResult.Value;
-
-        var urlsDict = urls.ToDictionary(url => url.StorageKey, url => url.PresignedUrl);
         var results = new List<GetMediaAssetDto>();
 
-        foreach (MediaAsset readyMediaAsset in readyMediaAssets)
+        foreach (MediaAsset mediaAsset in mediaAssets.Where(MediaAssetUrlBuilder.CanExposeMediaInfo))
         {
-            string? downloadUrl = null;
+            var urlsResult = await MediaAssetUrlBuilder.BuildAsync(mediaAsset, _fileStorageProvider, cancellationToken);
+            if (urlsResult.IsFailure)
+                return urlsResult.Error.ToFailure();
 
-            if (urlsDict.TryGetValue(readyMediaAsset.UploadKey, out string? url))
-            {
-                downloadUrl = url;
-            }
+            MediaAssetUrls urls = urlsResult.Value;
 
             var mediaAssetDto = new GetMediaAssetDto(
-                readyMediaAsset.Id,
-                readyMediaAsset.Status.ToString().ToLowerInvariant(),
-                readyMediaAsset.AssetType.ToString().ToLowerInvariant(),
-                downloadUrl);
+                mediaAsset.Id,
+                mediaAsset.Status.ToString().ToLowerInvariant(),
+                mediaAsset.AssetType.ToString().ToLowerInvariant(),
+                urls.ViewUrl,
+                urls.DownloadUrl,
+                urls.ThumbnailUrl);
 
             results.Add(mediaAssetDto);
         }

@@ -51,15 +51,43 @@ public class GetMediaAssetsInfoTests : FileServiceBaseTests
 
         Assert.NotNull(asset1Info);
         Assert.Equal(mediaAsset1.Id, asset1Info.Id);
-        Assert.NotNull(asset1Info.Url);
+        Assert.Null(asset1Info.ViewUrl);
+        Assert.NotNull(asset1Info.DownloadUrl);
 
         var asset2Info = response.MediaAssets.FirstOrDefault(a => a.Id == mediaAsset2.Id);
 
         Assert.NotNull(asset2Info);
         Assert.Equal(asset2Info.Id, asset2Info.Id);
-        Assert.NotNull(asset2Info.Url);
+        Assert.Null(asset2Info.ViewUrl);
+        Assert.NotNull(asset2Info.DownloadUrl);
 
-        Assert.NotEqual(asset1Info.Url, asset2Info.Url);
+        Assert.NotEqual(asset1Info.DownloadUrl, asset2Info.DownloadUrl);
+    }
+
+    [Fact]
+    public async Task GetMediaAssetsInfo_WithReadyVideo_ShouldReturnViewUrl()
+    {
+        // Arrange
+        CancellationToken cancellationToken = new CancellationTokenSource().Token;
+
+        var mediaAsset = await CreateVideoAssetAsync(MediaStatus.READY, cancellationToken: cancellationToken);
+        var request = new GetMediaAssetsRequest([mediaAsset.Id]);
+
+        // Act
+        HttpResponseMessage getResponse = await AppHttpClient
+            .PostAsJsonAsync("/files/batch", request, cancellationToken);
+
+        Result<GetMediaAssetsResponse, Failure> getResult = (await getResponse
+            .HandleResponseAsync<GetMediaAssetsResponse>(cancellationToken))!;
+
+        // Assert
+        Assert.True(getResult.IsSuccess);
+        Assert.Single(getResult.Value.MediaAssets);
+        var assetInfo = getResult.Value.MediaAssets[0];
+        Assert.Equal("ready", assetInfo.Status);
+        Assert.NotNull(assetInfo.ViewUrl);
+        Assert.NotNull(assetInfo.DownloadUrl);
+        Assert.Contains("master.m3u8", assetInfo.ViewUrl, StringComparison.Ordinal);
     }
 
     [Fact]

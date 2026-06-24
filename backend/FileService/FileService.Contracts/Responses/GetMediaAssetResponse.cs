@@ -6,7 +6,9 @@ public record GetMediaAssetResponse(
     string AssetType,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    string? Url,
+    string? ViewUrl,
+    string? DownloadUrl,
+    string? ThumbnailUrl,
     long? Size,
     string? FileName,
     string? ContentType );

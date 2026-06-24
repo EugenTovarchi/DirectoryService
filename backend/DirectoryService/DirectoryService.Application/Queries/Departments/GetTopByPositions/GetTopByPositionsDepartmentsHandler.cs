@@ -140,7 +140,9 @@ public class
                     {
                         mediaInfo.Id = videoInfo.Id;
                         mediaInfo.Status = videoInfo.Status;
-                        mediaInfo.Url = videoInfo.Url ?? string.Empty;
+                        mediaInfo.ViewUrl = videoInfo.ViewUrl ?? string.Empty;
+                        mediaInfo.DownloadUrl = videoInfo.DownloadUrl ?? string.Empty;
+                        mediaInfo.ThumbnailUrl = videoInfo.ThumbnailUrl ?? string.Empty;
                     }
                 }
             }

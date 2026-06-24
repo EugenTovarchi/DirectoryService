@@ -19,5 +19,7 @@ public class MediaDto
 {
     public Guid Id { get; set; }
     public string Status { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
+    public string ViewUrl { get; set; } = string.Empty;
+    public string DownloadUrl { get; set; } = string.Empty;
+    public string ThumbnailUrl { get; set; } = string.Empty;
 }
