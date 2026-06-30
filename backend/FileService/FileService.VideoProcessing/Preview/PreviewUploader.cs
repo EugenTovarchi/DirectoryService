@@ -105,8 +105,10 @@ public class PreviewUploader : IPreviewUploader
 
             if (result.IsFailure)
             {
-                _logger.LogError("Failed to extract frame at {Timestamp}s: {Error}",
-                    timestamps[i].TotalSeconds, result.Error);
+                _logger.LogError(
+                    "Failed to extract preview frame at {TimestampSeconds} seconds. Error code: {ErrorCode}",
+                    timestamps[i].TotalSeconds,
+                    result.Error.Code);
                 return result.Error;
             }
 
@@ -130,7 +132,9 @@ public class PreviewUploader : IPreviewUploader
 
         if (spriteResult.IsFailure)
         {
-            _logger.LogWarning("Failed to create sprite sheet: {Error}", spriteResult.Error);
+            _logger.LogWarning(
+                "Failed to create preview sprite sheet. Error code: {ErrorCode}",
+                spriteResult.Error.Code);
             return null;
         }
 
@@ -162,7 +166,7 @@ public class PreviewUploader : IPreviewUploader
 
             previewKeys.Add(uploadResult.Value);
 
-            _logger.LogDebug("Uploaded preview {FileName} to: {FullPath}",
+            _logger.LogDebug("Uploaded preview {FileName} to storage path {StoragePath}",
                 fileName, uploadResult.Value.FullPath);
         }
 
@@ -179,8 +183,9 @@ public class PreviewUploader : IPreviewUploader
         var storageKeyResult = CreateStorageKey(videoAssetId, spriteFileName);
         if (storageKeyResult.IsFailure)
         {
-            _logger.LogWarning("Failed to create storage key for sprite sheet: {Error}",
-                storageKeyResult.Error);
+            _logger.LogWarning(
+                "Failed to create storage key for preview sprite sheet. Error code: {ErrorCode}",
+                storageKeyResult.Error.Code);
             return null;
         }
 
@@ -191,11 +196,14 @@ public class PreviewUploader : IPreviewUploader
 
         if (uploadResult.IsFailure)
         {
-            _logger.LogWarning("Failed to upload sprite sheet: {Error}", uploadResult.Error);
+            _logger.LogWarning(
+                "Failed to upload preview sprite sheet. Error code: {ErrorCode}",
+                uploadResult.Error.Code);
             return null;
         }
 
-        _logger.LogDebug("Uploaded sprite sheet to: {FullPath}", uploadResult.Value.FullPath);
+        _logger.LogDebug("Uploaded preview sprite sheet to storage path {StoragePath}",
+            uploadResult.Value.FullPath);
         return uploadResult.Value;
     }
 

@@ -10,6 +10,13 @@ namespace FileService.VideoProcessing.FfmpegProcess;
 
 public class FfmpegProcessRunner : IFfmpegProcessRunner
 {
+    private static readonly Rendition[] _renditions =
+    [
+        new(360, "2M"),
+        new(720, "3M"),
+        new(1080, "5M"),
+    ];
+
     private readonly VideoProcessingOptions _videoOptions;
     private readonly PreviewOptions _previewOptions;
     private readonly IDataProcessRunner _dataProcessRunner;
@@ -42,6 +49,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
     public async Task<UnitResult<Error>> GenerateHlsAsync(
         string inputFileUrl,
         string outputDirectory,
+        VideoMetadata metadata,
         CancellationToken cancellationToken = default)
     {
         if (!Directory.Exists(outputDirectory))
@@ -49,7 +57,7 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
             Directory.CreateDirectory(outputDirectory);
         }
 
-        string arguments = BuildFfmpegHlsArguments(inputFileUrl, outputDirectory);
+        string arguments = BuildFfmpegHlsArguments(inputFileUrl, outputDirectory, metadata);
         var command = new ProcessCommand(_videoOptions.FfmpegPath, arguments);
 
         Result<ProcessResult, Error> processResult = await _dataProcessRunner.RunAsync(command,
@@ -133,10 +141,13 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
     private static string BuildFfprobeArguments(string inputFileUrl)
     {
         return
-            $"-v error -select_streams v:0 -show_entries stream=width,height -show_entries format=duration -of json \"{inputFileUrl}\"";
+            $"-v error -show_entries stream=codec_type,width,height -show_entries format=duration -of json \"{inputFileUrl}\"";
     }
 
-    private string BuildFfmpegHlsArguments(string inputFileUrl, string outputDirectory)
+    private string BuildFfmpegHlsArguments(
+        string inputFileUrl,
+        string outputDirectory,
+        VideoMetadata metadata)
     {
         string hwaccel = _videoOptions.UseHardwareAcceleration
             ? "-hwaccel cuda -hwaccel_output_format cuda"
@@ -148,17 +159,21 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string segmentPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.SEGMENT_FILE_PATTERN);
         string streamPlaylistPattern = CombineAndNormalize(normalizedOutputDir, VideoAsset.STREAM_PLAYLIST_PATTERN);
 
+        Rendition[] renditions = GetRenditions(metadata.Height);
+        string splitOutputs = string.Concat(Enumerable.Range(0, renditions.Length).Select(index => $"[v{index}]"));
+        string scaleFilters = string.Join("; ", renditions.Select((rendition, index) =>
+            $"[v{index}]scale=w=-2:h={rendition.Height}[v{index}out]"));
+        string filterComplex = $"[0:v:0]split={renditions.Length}{splitOutputs}; {scaleFilters}";
+        string streamMap = string.Join(" ", renditions.Select((rendition, index) => metadata.HasAudio
+            ? $"v:{index},a:{index},name:{rendition.Height}p"
+            : $"v:{index},name:{rendition.Height}p"));
+
         return $"-y -stats -loglevel error {hwaccel} -i \"{normalizedInputUrl}\" " +
-               "-filter_complex \"" +
-               "[0:v]split=3[v0][v1][v2]; " +
-               "[v0]scale=w=-2:h=360[v0out]; " +
-               "[v1]scale=w=-2:h=720[v1out]; " +
-               "[v2]scale=w=-2:h=1080[v2out]; " +
-               "[0:a]asplit=3[a0][a1][a2]\" " +
-               BuildVideoMappings() +
-               BuildAudioMappings() +
+               $"-filter_complex \"{filterComplex}\" " +
+               BuildVideoMappings(renditions) +
+               BuildAudioMappings(renditions.Length, metadata.HasAudio) +
                "-f hls " +
-               "-var_stream_map \"v:0,a:0,name:360p v:1,a:1,name:720p v:2,a:2,name:1080p\" " +
+               $"-var_stream_map \"{streamMap}\" " +
                "-hls_time 4 " +
                "-hls_list_size 0 " +
                "-hls_segment_type mpegts " +
@@ -168,20 +183,32 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
                $"\"{streamPlaylistPattern}\"";
     }
 
-    private string BuildVideoMappings()
+    private string BuildVideoMappings(IReadOnlyList<Rendition> renditions)
     {
         string encoder = _videoOptions.VideoEncoder;
         string preset = _videoOptions.VideoPreset;
 
-        return $"-map \"[v0out]\" -c:v:0 {encoder} -preset {preset} -b:v:0 2M -maxrate:v:0 2M -bufsize:v:0 2M -g 20 " +
-               $"-map \"[v1out]\" -c:v:1 {encoder} -preset {preset} -b:v:1 3M -maxrate:v:1 3M -bufsize:v:1 3M -g 20 " +
-               $"-map \"[v2out]\" -c:v:2 {encoder} -preset {preset} -b:v:2 5M -maxrate:v:2 5M -bufsize:v:2 5M -g 20 ";
+        return string.Concat(renditions.Select((rendition, index) =>
+            $"-map \"[v{index}out]\" -c:v:{index} {encoder} -preset {preset} " +
+            $"-b:v:{index} {rendition.Bitrate} -maxrate:v:{index} {rendition.Bitrate} " +
+            $"-bufsize:v:{index} {rendition.Bitrate} -g 20 "));
     }
 
-    private static string BuildAudioMappings() =>
-        "-map \"[a0]\" -c:a:0 aac -b:a:0 96k -ac 2 " +
-        "-map \"[a1]\" -c:a:1 aac -b:a:1 96k -ac 2 " +
-        "-map \"[a2]\" -c:a:2 aac -b:a:2 96k -ac 2 ";
+    private static string BuildAudioMappings(int renditionCount, bool hasAudio)
+    {
+        return hasAudio
+            ? string.Concat(Enumerable.Range(0, renditionCount).Select(index =>
+                $"-map 0:a:0 -c:a:{index} aac -b:a:{index} 96k -ac 2 "))
+            : string.Empty;
+    }
+
+    private static Rendition[] GetRenditions(int sourceHeight)
+    {
+        Rendition[] renditions = _renditions.Where(rendition => rendition.Height <= sourceHeight).ToArray();
+        return renditions.Length > 0
+            ? renditions
+            : [new Rendition(sourceHeight, "1M")];
+    }
 
     private static string BuildExtractFrameArguments(
         string inputFileUrl,
@@ -267,4 +294,6 @@ public class FfmpegProcessRunner : IFfmpegProcessRunner
         string combined = Path.Combine(parts);
         return NormalizePath(combined);
     }
+
+    private sealed record Rendition(int Height, string Bitrate);
 }

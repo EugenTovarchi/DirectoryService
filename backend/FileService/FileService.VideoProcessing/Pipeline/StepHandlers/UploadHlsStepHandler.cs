@@ -30,7 +30,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
     public async Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Upload hls to S3 for video asset: {VideoAsset}", context.VideoProcess.VideoAssetId);
+        _logger.LogDebug("Uploading HLS files for video asset {VideoAssetId}", context.VideoProcess.VideoAssetId);
 
         if (string.IsNullOrWhiteSpace(context.HlsOutputDirectory))
             return FileErrors.HlsProcessingFailed("HLS output directory isn`t set");
@@ -66,7 +66,7 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         if (firstError.IsFailure)
             return firstError.Error;
 
-        _logger.LogInformation("Successfully uploaded {FileCount} hls files for video asset: {VideoAsset}",
+        _logger.LogInformation("Uploaded {FileCount} HLS files for video asset {VideoAssetId}",
             hlsFiles.Length, context.VideoProcess.VideoAssetId);
 
         var masterPlaylistKey = context.VideoAsset.GetMasterPlaylistKey();
@@ -76,6 +76,10 @@ public sealed class UploadHlsStepHandler : IProcessingStepHandler
         var setMasterKeyResult = context.VideoAsset.GetHlsMasterPlaylistKey(masterPlaylistKey.Value);
         if (setMasterKeyResult.IsFailure)
             return setMasterKeyResult.Error;
+
+        var setProcessHlsKeyResult = context.VideoProcess.SetHlsKey(masterPlaylistKey.Value);
+        if (setProcessHlsKeyResult.IsFailure)
+            return setProcessHlsKeyResult.Error;
 
         return context;
     }

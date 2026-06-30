@@ -41,6 +41,69 @@ public class VideoProcessTests
     }
 
     [Fact]
+    public void Create_ShouldPersistConfiguredRetryLimitAndCorrelationId()
+    {
+        const string correlationId = "upload-correlation-id";
+
+        var result = VideoProcess.Create(_videoAssetId, _validRawKey, 5, correlationId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.MaxRetries.Should().Be(5);
+        result.Value.CorrelationId.Should().Be(correlationId);
+    }
+
+    [Fact]
+    public void Create_WithNegativeRetryLimit_ShouldReturnError()
+    {
+        var result = VideoProcess.Create(_videoAssetId, _validRawKey, -1);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("processing.max.retries.invalid");
+    }
+
+    [Fact]
+    public void RetryCount_ShouldIncrementWhenRetryStarts_NotWhenItIsPlanned()
+    {
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey, maxRetries: 3).Value;
+        VideoProcessStep step = process.Steps[0];
+        process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
+        process.Fail("Temporary failure", isCritical: false).IsSuccess.Should().BeTrue();
+
+        for (int retry = 1; retry <= 3; retry++)
+        {
+            process.PlannedRetry(DateTime.UtcNow.AddMinutes(retry)).IsSuccess.Should().BeTrue();
+            process.RetryCount.Should().Be(retry - 1);
+
+            process.PrepareForRetry().IsSuccess.Should().BeTrue();
+            process.RetryCount.Should().Be(retry);
+
+            process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
+            process.Fail("Temporary failure", isCritical: false).IsSuccess.Should().BeTrue();
+        }
+
+        process.CanRetry().Should().BeFalse();
+    }
+
+    [Fact]
+    public void PrepareForRetry_ShouldResetAllStepsBecauseProcessingContextIsEphemeral()
+    {
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey, maxRetries: 3).Value;
+        VideoProcessStep firstStep = process.Steps[0];
+        VideoProcessStep secondStep = process.Steps[1];
+
+        process.StartStep(firstStep.Order, firstStep.Name).IsSuccess.Should().BeTrue();
+        process.CompleteStep(firstStep.Order).IsSuccess.Should().BeTrue();
+        process.StartStep(secondStep.Order, secondStep.Name).IsSuccess.Should().BeTrue();
+        process.Fail("Temporary failure", isCritical: false).IsSuccess.Should().BeTrue();
+
+        process.PrepareForRetry().IsSuccess.Should().BeTrue();
+
+        process.Steps.Should().OnlyContain(step => step.Status == VideoProcessStatus.PENDING);
+        process.Status.Should().Be(VideoProcessStatus.PENDING);
+        process.RetryCount.Should().Be(1);
+    }
+
+    [Fact]
     public void Create_ShouldInitializeStepsWithUniqueOrders()
     {
         var result = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
@@ -146,15 +209,15 @@ public class VideoProcessTests
     }
 
     [Fact]
-    public void Fail_WhenStatusIsNotRunning_ShouldReturnError()
+    public void Fail_WhenStatusIsPending_ShouldFailProcessWithoutCurrentStep()
     {
         var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
 
         var failResult = process.Fail("Some error");
 
-        failResult.IsFailure.Should().BeTrue();
-        failResult.Error.Code.Should().Be("processing.invalid.status");
-        process.Status.Should().Be(VideoProcessStatus.PENDING);
+        failResult.IsSuccess.Should().BeTrue();
+        process.Status.Should().Be(VideoProcessStatus.FAILED);
+        process.ErrorMessage.Should().Be("Some error");
     }
 
     [Fact]
@@ -205,6 +268,24 @@ public class VideoProcessTests
         }
 
         process.TotalProgress.Should().Be(100);
+    }
+
+    [Fact]
+    public void SetHlsKey_WhenUploadStepIsRunning_ShouldSucceed()
+    {
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
+        foreach (VideoProcessStep step in process.Steps.TakeWhile(step => step.Name != StepNames.UploadHls))
+        {
+            process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
+            process.CompleteStep(step.Order).IsSuccess.Should().BeTrue();
+        }
+
+        VideoProcessStep uploadStep = process.Steps.First(step => step.Name == StepNames.UploadHls);
+        process.StartStep(uploadStep.Order, uploadStep.Name).IsSuccess.Should().BeTrue();
+        StorageKey hlsKey = StorageKey.Create("master.m3u8", "hls/video", "file-service-videos").Value;
+
+        process.SetHlsKey(hlsKey).IsSuccess.Should().BeTrue();
+        process.HlsKey.Should().Be(hlsKey);
     }
 
     [Fact]

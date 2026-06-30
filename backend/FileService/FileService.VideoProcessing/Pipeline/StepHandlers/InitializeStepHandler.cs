@@ -19,14 +19,15 @@ public sealed class InitializeStepHandler : IProcessingStepHandler
     public Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Initializing video processing for video asset: {VideoAsset}",
+        _logger.LogDebug("Initializing processing context for video asset {VideoAssetId}",
             context.VideoProcess.VideoAssetId);
 
         var createWorkdirResult = context.CreateWorkingDirectory();
         if (createWorkdirResult.IsFailure)
             return Task.FromResult(Result.Failure<ProcessingContext, Error>(createWorkdirResult.Error));
 
-        _logger.LogDebug("Workdir created: {Workdir}", context.WorkingDirectory);
+        _logger.LogDebug("Created working directory for video asset {VideoAssetId}",
+            context.VideoProcess.VideoAssetId);
 
         return Task.FromResult(Result.Success<ProcessingContext, Error>(context));
     }

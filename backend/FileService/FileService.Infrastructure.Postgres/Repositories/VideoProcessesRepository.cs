@@ -78,6 +78,34 @@ public class VideoProcessesRepository(
         return videoProcess;
     }
 
+    public async Task<Result<IReadOnlyList<RecoverableVideoProcess>, Error>> GetRecoverableVideoProcessesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            List<RecoverableVideoProcess> processes = await dbContext.VideoProcesses
+                .AsNoTracking()
+                .Where(process =>
+                    process.Status == VideoProcessStatus.PENDING
+                    || process.Status == VideoProcessStatus.RUNNING
+                    || (process.Status == VideoProcessStatus.FAILED
+                        && !process.IsCriticalError
+                        && process.RetryCount < process.MaxRetries))
+                .Select(process => new RecoverableVideoProcess(
+                    process.VideoAssetId,
+                    process.CorrelationId,
+                    process.NextRetryAt))
+                .ToListAsync(cancellationToken);
+
+            return processes;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load recoverable video processes");
+            return Errors.General.DatabaseError("load_recoverable_video_processes_error");
+        }
+    }
+
     private Result<Guid, Error> HandlePostgresException(PostgresException pgEx, Guid videoProcessId)
     {
         if (!string.Equals(pgEx.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.OrdinalIgnoreCase)

@@ -6,6 +6,8 @@ namespace FileService.Domain.MediaProcessing;
 
 public sealed class VideoProcess
 {
+    public const int MAX_CORRELATION_ID_LENGTH = 128;
+
     private static readonly (string Name, double Progress)[] _stepsProgress =
     [
         (StepNames.Initialize, 0),
@@ -27,6 +29,7 @@ public sealed class VideoProcess
 
     public Guid Id { get; private set; }
     public Guid VideoAssetId { get; private set; }
+    public string CorrelationId { get; private set; } = string.Empty;
 
     // Исходный файл в S3 хранилище.
     public StorageKey RawKey { get; private set; }
@@ -67,7 +70,11 @@ public sealed class VideoProcess
 
     public bool CanRetry() => RetryCount < MaxRetries && !IsCriticalError;
 
-    public static Result<VideoProcess, Error> Create(Guid videoAssetId, StorageKey rawKey)
+    public static Result<VideoProcess, Error> Create(
+        Guid videoAssetId,
+        StorageKey rawKey,
+        int maxRetries = 3,
+        string? correlationId = null)
     {
         if (rawKey is null)
             return Error.Validation("videoProcess.rawKey.invalid", "RawKey is required");
@@ -75,13 +82,26 @@ public sealed class VideoProcess
         if (videoAssetId == Guid.Empty)
             return Error.Validation("videoAssetId.is.empty", "videoAssetId is required");
 
+        if (maxRetries < 0)
+            return Error.Validation("processing.max.retries.invalid", "Max retries must not be negative");
+
+        if (correlationId?.Length > MAX_CORRELATION_ID_LENGTH)
+        {
+            return Error.Validation("processing.correlation.id.invalid",
+                $"Correlation id must not exceed {MAX_CORRELATION_ID_LENGTH} characters");
+        }
+
         var process = new VideoProcess
         {
             Id = Guid.NewGuid(),
             RawKey = rawKey,
             VideoAssetId = videoAssetId,
+            CorrelationId = string.IsNullOrWhiteSpace(correlationId)
+                ? Guid.NewGuid().ToString()
+                : correlationId,
             Status = VideoProcessStatus.PENDING,
             TotalProgress = 0,
+            MaxRetries = maxRetries,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -229,8 +249,6 @@ public sealed class VideoProcess
 
         if (nextStep == null)
         {
-            FinishProcessing();
-
             return Result.Success<VideoProcessStep?, Error>(null);
         }
 
@@ -246,7 +264,7 @@ public sealed class VideoProcess
         if (Status != VideoProcessStatus.RUNNING)
         {
             return Error.Failure("processing.invalid.status",
-                $"Cannot process the  step when status is {Status}");
+                $"Cannot process the step when status is {Status}");
         }
 
         VideoProcessStep? stepToComplete = _steps.FirstOrDefault(s => s.Order == order);
@@ -296,10 +314,10 @@ public sealed class VideoProcess
     /// <returns>Статус: FAILED, сообщение об ошибке и явл ли ошибка критической.</returns>
     public UnitResult<Error> Fail(string errorMessage, bool isCritical = false)
     {
-        if (Status != VideoProcessStatus.RUNNING)
+        if (Status is not(VideoProcessStatus.PENDING or VideoProcessStatus.RUNNING))
         {
             return Error.Failure("processing.invalid.status",
-                $"Cannot process the  step when status is {Status}");
+                $"Cannot fail processing when status is {Status}");
         }
 
         if (string.IsNullOrWhiteSpace(errorMessage))
@@ -363,7 +381,6 @@ public sealed class VideoProcess
                 $"Max retries exceeded");
         }
 
-        RetryCount++;
         NextRetryAt = nextRetryAt;
 
         return UnitResult.Success<Error>();
@@ -416,10 +433,10 @@ public sealed class VideoProcess
         if (Status != VideoProcessStatus.RUNNING)
             return Error.Failure("processing.invalid.status", $"Status is {Status}");
 
-        var step = _steps.FirstOrDefault(s => string.Equals(s.Name, StepNames.GenerateHls,
+        var step = _steps.FirstOrDefault(s => string.Equals(s.Name, StepNames.UploadHls,
             StringComparison.OrdinalIgnoreCase));
         if (step?.Status != VideoProcessStatus.RUNNING)
-            return Error.Validation("step.invalid.status", "GenerateHls step is not running");
+            return Error.Validation("step.invalid.status", "UploadHls step is not running");
 
         HlsKey = hlsKey;
         UpdatedAt = DateTime.UtcNow;
@@ -427,20 +444,6 @@ public sealed class VideoProcess
         RecalculateTotalProgress();
 
         return UnitResult.Success<Error>();
-    }
-
-    /// <summary>
-    /// Возвращает задержку для следующей попытки.
-    /// </summary>
-    public TimeSpan GetNextRetryDelay()
-    {
-        return RetryCount switch
-        {
-            0 => TimeSpan.FromMinutes(1),
-            1 => TimeSpan.FromMinutes(2),
-            2 => TimeSpan.FromMinutes(4),
-            _ => TimeSpan.FromMinutes(8)
-        };
     }
 
     /// <summary>
@@ -467,10 +470,15 @@ public sealed class VideoProcess
         if (!CanRetry())
             return Error.Validation("retry.not.allowed", "Cannot retry this process");
 
-        // Тут сбрасываем статус текущего шага
-        var currentStep = CurrentStep ?? _steps.FirstOrDefault(s => s.Status == VideoProcessStatus.FAILED);
-        currentStep?.Reset();
+        // ProcessingContext и локальные файлы не переживают новый Quartz execution,
+        // поэтому retry обязан заново выполнить весь pipeline, начиная с Initialize.
+        foreach (VideoProcessStep step in _steps)
+        {
+            step.Reset();
+        }
 
+        RetryCount++;
+        NextRetryAt = null;
         Status = VideoProcessStatus.PENDING;
         UpdatedAt = DateTime.UtcNow;
         ErrorMessage = null;

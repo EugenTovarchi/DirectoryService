@@ -27,7 +27,7 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
     public async Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Cleaning up temporary files for VideoAsset: {VideoAssetId}",
+        _logger.LogDebug("Cleaning temporary files for video asset {VideoAssetId}",
             context.VideoProcess.VideoAssetId);
 
         if (string.IsNullOrWhiteSpace(context.WorkingDirectory))
@@ -40,8 +40,10 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
             cancellationToken);
         if (deleteResult.IsFailure)
         {
-            _logger.LogWarning("Failed to delete raw file from storage for video asset: {VideoAssetId}. Error: {Error}",
-                context.VideoProcess.VideoAssetId, deleteResult.Error);
+            _logger.LogWarning(
+                "Failed to delete raw file from storage for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                context.VideoProcess.VideoAssetId,
+                deleteResult.Error.Code);
         }
         else
         {
@@ -54,14 +56,15 @@ public sealed class CleanupStepHandler : IProcessingStepHandler
             if (Directory.Exists(context.WorkingDirectory))
             {
                 Directory.Delete(context.WorkingDirectory, true);
-                _logger.LogDebug("Directory deleted: {Directory}", context.WorkingDirectory);
+                _logger.LogDebug("Deleted working directory for video asset {VideoAssetId}",
+                    context.VideoProcess.VideoAssetId);
 
                 context.Cleanup();
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to delete working directory: {Directory}. Will be cleaned later",
+            _logger.LogWarning(ex, "Failed to delete working directory {WorkingDirectory}; it will be cleaned later",
                 context.WorkingDirectory);
         }
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
 using FileService.Domain;
 using Microsoft.Extensions.Logging;
@@ -8,8 +9,10 @@ using SharedService.SharedKernel;
 namespace FileService.VideoProcessing.ProcessRunner;
 
 // Класс-обёртка над процессом.
-public class DataProcessRunner : IDataProcessRunner
+public partial class DataProcessRunner : IDataProcessRunner
 {
+    private const int MAX_LOGGED_STDERR_LENGTH = 4096;
+
     private readonly ILogger<DataProcessRunner> _logger;
 
     public DataProcessRunner(ILogger<DataProcessRunner> logger)
@@ -50,14 +53,9 @@ public class DataProcessRunner : IDataProcessRunner
             if (args.Data is null) return;
             errorBuilder.AppendLine(args.Data);
             onOutput?.Invoke(args.Data);
-            _logger.LogDebug("STDERR: {Data}", args.Data);
         };
 
-        _logger.LogInformation("Starting process: {FileName} {Arguments}", processCommand.ExecutableFile,
-            processCommand.Arguments);
-
-        _logger.LogDebug("Full command: {FileName} {Arguments}",
-            processCommand.ExecutableFile, processCommand.Arguments);
+        _logger.LogDebug("Starting external process {FileName}", processCommand.ExecutableFile);
 
         process.Start();
         process.BeginOutputReadLine();
@@ -67,10 +65,23 @@ public class DataProcessRunner : IDataProcessRunner
         {
             await process.WaitForExitAsync(cancellationToken);
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Process was canceled: {FileName} {Arguments}", processCommand.ExecutableFile,
-                processCommand.Arguments);
+            _logger.LogInformation("External process {FileName} was canceled", processCommand.ExecutableFile);
+
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync(CancellationToken.None);
+                }
+            }
+            catch (Exception killException)
+            {
+                _logger.LogWarning(killException, "Failed to terminate external process {FileName}",
+                    processCommand.ExecutableFile);
+            }
 
             return FileErrors.OperationCancelled();
         }
@@ -79,13 +90,28 @@ public class DataProcessRunner : IDataProcessRunner
 
         if (result.ExitCode != 0)
         {
-            _logger.LogError("Process failed with exit code {ExitCode}", result.ExitCode);
-            _logger.LogError("STDERR: {Error}", result.StandardError);
-            _logger.LogError("STDOUT: {Output}", result.StandardOutput);
+            _logger.LogError(
+                "External process {FileName} failed with exit code {ExitCode}. Stderr: {StandardError}",
+                processCommand.ExecutableFile,
+                result.ExitCode,
+                SanitizeProcessOutput(result.StandardError));
 
             return FileErrors.ProcessFailed();
         }
 
         return result;
     }
+
+    private static string RedactUrls(string value) => UrlPattern().Replace(value, "[REDACTED_URL]");
+
+    private static string SanitizeProcessOutput(string value)
+    {
+        string sanitizedValue = RedactUrls(value);
+        return sanitizedValue.Length <= MAX_LOGGED_STDERR_LENGTH
+            ? sanitizedValue
+            : $"{sanitizedValue[..MAX_LOGGED_STDERR_LENGTH]} [TRUNCATED]";
+    }
+
+    [GeneratedRegex(@"https?://\S+", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex UrlPattern();
 }
