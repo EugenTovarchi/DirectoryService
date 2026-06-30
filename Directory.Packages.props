@@ -6,8 +6,8 @@
     <!-- Internal packages -->
     <PackageVersion Include="istreddev.core" Version="0.0.1" />
     <PackageVersion Include="IstredDev.FileService.Contracts" Version="0.0.5" />
-    <PackageVersion Include="istreddev.framework" Version="0.0.13" />
-    <PackageVersion Include="istreddev.sharedkernel" Version="0.0.6" />
+    <PackageVersion Include="istreddev.framework" Version="0.0.14" />
+    <PackageVersion Include="istreddev.sharedkernel" Version="0.0.7" />
 
     <!-- Microsoft packages -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />

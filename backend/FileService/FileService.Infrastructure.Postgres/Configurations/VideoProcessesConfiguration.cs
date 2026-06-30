@@ -15,6 +15,7 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
 
         builder.Property(v => v.Id).HasColumnName("id");
         builder.Property(v => v.VideoAssetId).HasColumnName("video_asset_id");
+        builder.Property(v => v.CorrelationId).HasColumnName("correlation_id").HasMaxLength(128);
 
         builder.Property(m => m.RawKey)
             .HasConversion(
@@ -64,6 +65,7 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
             metaData.Property(md => md.Duration).HasColumnName("duration");
             metaData.Property(md => md.Width).HasColumnName("width");
             metaData.Property(md => md.Height).HasColumnName("height");
+            metaData.Property(md => md.HasAudio).HasColumnName("has_audio");
         });
 
         builder.HasIndex(ps => ps.CreatedAt).HasDatabaseName("ix_processes_created_at");

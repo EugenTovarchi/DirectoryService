@@ -26,6 +26,7 @@ public class FakeFfmpegProcessRunner : IFfmpegProcessRunner
     public Task<UnitResult<Error>> GenerateHlsAsync(
         string inputFileUrl,
         string outputDirectory,
+        VideoMetadata metadata,
         CancellationToken cancellationToken = default)
     {
         if (!Directory.Exists(outputDirectory))

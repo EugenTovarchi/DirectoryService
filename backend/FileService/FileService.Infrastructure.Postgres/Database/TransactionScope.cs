@@ -22,7 +22,7 @@ public class TransactionScope : ITransactionScope
         try
         {
             _transaction.Commit();
-            _logger.LogInformation("Transaction committed successfully");
+            _logger.LogDebug("Database transaction committed");
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)
@@ -42,7 +42,7 @@ public class TransactionScope : ITransactionScope
         try
         {
             _transaction.Rollback();
-            _logger.LogInformation("Transaction rolled back");
+            _logger.LogWarning("Database transaction rolled back");
             return UnitResult.Success<Error>();
         }
         catch (Exception ex)

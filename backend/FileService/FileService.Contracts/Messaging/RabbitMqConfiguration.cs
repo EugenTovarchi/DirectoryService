@@ -1,4 +1,5 @@
-﻿using SharedService.SharedKernel.Messaging.Files;
+﻿using FileService.Contracts.Messaging.Events;
+using SharedService.SharedKernel.Messaging.Files;
 using SharedService.SharedKernel.Messaging.Files.Events;
 using Wolverine;
 using Wolverine.RabbitMQ;
@@ -38,5 +39,10 @@ public static class RabbitMqConfiguration
             message => FileEventsRouting.RoutingKeys.FileDeleted(
                     message.AssetType, message.TargetEntityType))
                 .UseDurableOutbox();
+
+        opts.PublishMessagesToRabbitMqExchange<VideoReady>(
+                FileEventsRouting.EXCHANGE,
+                message => VideoEventsRouting.VideoReady(message.TargetEntityType))
+            .UseDurableOutbox();
     }
 }

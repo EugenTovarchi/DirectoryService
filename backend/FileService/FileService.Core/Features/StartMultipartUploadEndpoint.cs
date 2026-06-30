@@ -88,9 +88,6 @@ public sealed class StartMultipartUploadHandler
 
         _mediaAssetsRepository.Add(mediaAssetResult.Value);
 
-        var assetId = mediaAssetResult.Value.Id;
-        _logger.LogInformation("Media asset added to database: {AssetId}", assetId);
-
         var startUploadResult = await _fileStorageProvider.StartMultipartUploadAsync(
             mediaAssetResult.Value.UploadKey,
             mediaAssetResult.Value.MediaData,
@@ -107,16 +104,20 @@ public sealed class StartMultipartUploadHandler
             return chunkUploadUrlResult.Error.ToFailure();
 
         mediaAssetResult.Value.MarkUploading();
-        var mediaAssetValueKey = mediaAssetResult.Value.Id;
-        _logger.LogInformation("Media asset started uploading: {MediaAssetResultValueKey}",
-            mediaAssetValueKey);
-
         var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            _logger.LogError("Error when try to save media asset!");
+            _logger.LogError(
+                "Failed to persist multipart upload state for media asset {MediaAssetId}. Error code: {ErrorCode}",
+                mediaAssetResult.Value.Id,
+                saveResult.Error.Code);
             return saveResult.Error.ToFailure();
         }
+
+        _logger.LogInformation(
+            "Started multipart upload for media asset {MediaAssetId} with {ChunkCount} chunks",
+            mediaAssetResult.Value.Id,
+            chunkCalculatorResult.Value.TotalChunks);
 
         return new StartMultipartUploadResponse(
             mediaAssetResult.Value.Id,

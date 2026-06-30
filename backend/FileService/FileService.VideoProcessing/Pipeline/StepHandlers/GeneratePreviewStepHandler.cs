@@ -32,7 +32,7 @@ public sealed class GeneratePreviewStepHandler : IProcessingStepHandler
         ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generating preview for video asset: {VideoAssetId}",
+        _logger.LogDebug("Generating previews for video asset {VideoAssetId}",
             context.VideoProcess.VideoAssetId);
 
         if (string.IsNullOrEmpty(context.MediaAssetUrl))
@@ -54,7 +54,7 @@ public sealed class GeneratePreviewStepHandler : IProcessingStepHandler
         var timestamps = _previewCalculator.CalculateExtractionTimes(metadata.Duration);
         if (timestamps.Count == 0)
         {
-            _logger.LogWarning("No preview timestamps calculated for video duration: {Duration}",
+            _logger.LogWarning("No preview timestamps were calculated for video duration {VideoDuration}",
                 metadata.Duration);
             return context;
         }
@@ -77,11 +77,11 @@ public sealed class GeneratePreviewStepHandler : IProcessingStepHandler
 
         context.SetPreviewKeys(uploadResult.Value.PreviewKeys, uploadResult.Value.SpriteKey);
 
-        _logger.LogInformation("Preview generation completed for video: {VideoAssetId}. " +
-                               "Generated {Count} previews, SpriteSheet: {HasSprite}",
-            context.VideoProcess.VideoAssetId,
+        _logger.LogInformation(
+            "Generated {PreviewCount} previews for video asset {VideoAssetId}. Sprite sheet created: {HasSpriteSheet}",
             uploadResult.Value.PreviewKeys.Count,
-            uploadResult.Value.SpriteKey != null ? "Yes" : "No");
+            context.VideoProcess.VideoAssetId,
+            uploadResult.Value.SpriteKey != null);
 
         return context;
     }
