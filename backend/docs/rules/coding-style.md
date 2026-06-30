@@ -5,6 +5,11 @@ Use this with [domain-rules.md](domain-rules.md) and [naming-conventions.md](nam
 ## General
 
 - Prefer small, surgical changes.
+- Follow KISS: prefer the simplest implementation that clearly expresses the intent.
+- Write code for a reader seeing it for the first time. Prefer explicit control flow and named intermediate variables over compact or clever expressions.
+- Do not use bitwise operations as arithmetic shortcuts. Use a readable `switch`, `if`, or named calculation unless bit manipulation is part of the actual domain problem.
+- Avoid nested ternary expressions. A single ternary is appropriate only when both outcomes are short and immediately understandable.
+- Name all private instance and static fields in `_camelCase`, including `readonly` fields. Keep public properties and other public members in `PascalCase`.
 - Inspect existing service patterns before adding new code.
 - Keep controllers/endpoints thin.
 - Put business workflow logic in handlers/services.
