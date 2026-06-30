@@ -87,6 +87,12 @@ namespace FileService.Infrastructure.Postgres.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
 
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("correlation_id");
+
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("text")
                         .HasColumnName("error_message");
@@ -363,6 +369,10 @@ namespace FileService.Infrastructure.Postgres.Migrations
                             b1.Property<int>("Height")
                                 .HasColumnType("integer")
                                 .HasColumnName("height");
+
+                            b1.Property<bool>("HasAudio")
+                                .HasColumnType("boolean")
+                                .HasColumnName("has_audio");
 
                             b1.Property<int>("Width")
                                 .HasColumnType("integer")

@@ -2,7 +2,7 @@
 
 public record PreviewOptions
 {
-    public const string SECTION_NAME = "PreviewOptions";
+    public const string SECTION_NAME = nameof(PreviewOptions);
 
     public int Quality { get; init; } = 2;
 

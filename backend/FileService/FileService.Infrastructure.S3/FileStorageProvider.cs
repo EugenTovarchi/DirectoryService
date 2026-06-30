@@ -225,7 +225,7 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 
             await _s3Client.DeleteObjectAsync(requestForDelete, cancellationToken);
 
-            _log.LogInformation("File: {Key} was deleted", storageKey.Location);
+            _log.LogInformation("Deleted storage object from location {StorageLocation}", storageKey.Location);
 
             return storageKey.Key;
         }

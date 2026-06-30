@@ -54,15 +54,25 @@ public class TransactionManager : ITransactionManager
             await _transaction.CommitAsync(cancellationToken);
             return UnitResult.Success<Error>();
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateConcurrencyException ex)
         {
-            _logger.LogError(ex, "Concurrency conflict during transaction");
+            _logger.LogWarning(
+                "Database concurrency conflict while committing transaction. Conflicting entries: {ConflictingEntryCount}",
+                ex.Entries.Count);
             await RollbackAsync(cancellationToken);
             return Error.Failure("database", "Concurrency conflict");
         }
-        catch (OperationCanceledException ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Operation conflict during commit transaction");
+            _logger.LogError(
+                "Database update failed while committing transaction. Exception type: {ExceptionType}",
+                ex.GetType().Name);
+            await RollbackAsync(cancellationToken);
+            return Error.Failure("database", "Database update failed");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Database transaction commit was canceled");
             await RollbackAsync(cancellationToken);
             return Error.Failure("database", "Operation cancelled");
         }
@@ -99,14 +109,23 @@ public class TransactionManager : ITransactionManager
 
            return UnitResult.Success<Error>();
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateConcurrencyException ex)
         {
-            _logger.LogError(ex, "Concurrency conflict during transaction");
+            _logger.LogWarning(
+                "Database concurrency conflict while saving changes. Conflicting entries: {ConflictingEntryCount}",
+                ex.Entries.Count);
             return Error.Failure("database", "Concurrency conflict");
         }
-        catch (OperationCanceledException ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Operation conflict during commit transaction");
+            _logger.LogError(
+                "Database update failed while saving changes. Exception type: {ExceptionType}",
+                ex.GetType().Name);
+            return Error.Failure("database", "Database update failed");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Saving database changes was canceled");
             return Error.Failure("database", "Operation cancelled");
         }
         catch(Exception ex)

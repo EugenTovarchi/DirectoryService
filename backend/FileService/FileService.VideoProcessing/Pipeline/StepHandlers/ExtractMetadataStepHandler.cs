@@ -28,7 +28,8 @@ public sealed class ExtractMetadataStepHandler : IProcessingStepHandler
     public async Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Extracting metadata for video asset: {VideoAsset}", context.VideoProcess.VideoAssetId);
+        _logger.LogDebug("Extracting metadata for video asset {VideoAssetId}",
+            context.VideoProcess.VideoAssetId);
 
         Result<string, Error> inputFileUrl = await _fileStorageProvider
             .GenerateDownloadUrlAsync(context.VideoAsset.UploadKey, cancellationToken);

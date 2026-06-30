@@ -29,7 +29,7 @@ public sealed class GenerateHlsStepHandler : IProcessingStepHandler
     public async Task<Result<ProcessingContext, Error>> ExecuteAsync(ProcessingContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generate hls  for video asset: {VideoAsset}",
+        _logger.LogDebug("Generating HLS for video asset {VideoAssetId}",
             context.VideoProcess.VideoAssetId);
 
         string inputFileUrl;
@@ -40,16 +40,14 @@ public sealed class GenerateHlsStepHandler : IProcessingStepHandler
         }
         else
         {
-            _logger.LogDebug("InputFileUrl not caught, generating new presigned url");
+            _logger.LogDebug("Input media URL is missing from processing context; generating a new presigned URL");
 
             var inputFileUrlResult = await _fileStorageProvider
                 .GenerateDownloadUrlAsync(context.VideoAsset.UploadKey, cancellationToken);
-            if(inputFileUrlResult.IsFailure)
+            if (inputFileUrlResult.IsFailure)
                 return inputFileUrlResult.Error;
 
             inputFileUrl = inputFileUrlResult.Value;
-
-            _logger.LogInformation("Extracting metadata for video asset: {VideoAsset}", context.VideoProcess.VideoAssetId);
         }
 
         if (string.IsNullOrEmpty(context.HlsOutputDirectory))
@@ -58,12 +56,14 @@ public sealed class GenerateHlsStepHandler : IProcessingStepHandler
         }
 
         if (context.VideoProcess.MetaData is null)
-        {
-            _logger.LogWarning("Metadata is null, progress tracking will be disabled");
-        }
+            return FileErrors.HlsProcessingFailed("Video metadata is required for HLS generation");
 
-        var result = await _ffmpegProcessRunner.GenerateHlsAsync(inputFileUrl, context.HlsOutputDirectory, cancellationToken);
-        if(result.IsFailure)
+        var result = await _ffmpegProcessRunner.GenerateHlsAsync(
+            inputFileUrl,
+            context.HlsOutputDirectory,
+            context.VideoProcess.MetaData,
+            cancellationToken);
+        if (result.IsFailure)
             return result.Error;
 
         return context;
