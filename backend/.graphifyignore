@@ -1,0 +1,32 @@
+graphify-out/
+
+# Документы требуют внешний LLM backend; индексируем код полностью локально.
+*.md
+*.mdx
+*.qmd
+*.html
+*.txt
+*.rst
+*.yaml
+*.yml
+
+# Не отправляем изображения и медиа во внешние backend-ы.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.pdf
+*.docx
+*.xlsx
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+*.mp3
+*.wav
+*.m4a
+*.ogg
