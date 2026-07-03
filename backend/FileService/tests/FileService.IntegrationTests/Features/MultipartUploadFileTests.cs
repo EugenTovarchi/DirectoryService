@@ -1,6 +1,4 @@
 ﻿using System.Net.Http.Json;
-using Amazon.S3;
-using Amazon.S3.Model;
 using CSharpFunctionalExtensions;
 using FileService.Contracts;
 using FileService.Contracts.Requests;
@@ -10,7 +8,6 @@ using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using SharedService.Framework.ControllersResults;
 using SharedService.SharedKernel;
 using CompleteMultipartUploadRequest = FileService.Contracts.Requests.CompleteMultipartUploadRequest;
@@ -19,21 +16,20 @@ namespace FileService.IntegrationTests.Features;
 
 public class MultipartUploadFileTests : FileServiceBaseTests
 {
-    private readonly FileServiceTestWebFactory _factory;
-
     public MultipartUploadFileTests(FileServiceTestWebFactory factory)
         : base(factory)
     {
-        _factory = factory;
     }
 
     [Fact]
     public async Task MultipartUploadFiles_FullCycle_With_Valid_Data_Should_Succeed()
     {
         // Arrange
-        CancellationToken cancellationToken = new CancellationTokenSource().Token;
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
 
         FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+        await CreateTestBucketAsync(PreviewAsset.LOCATION);
 
         // Act
         var startMultipartUploadResponse = await StartMultipartUpload(fileInfo, cancellationToken);
@@ -45,6 +41,10 @@ public class MultipartUploadFileTests : FileServiceBaseTests
 
         // Assert
         Assert.True(result.IsSuccess);
+        await WaitForVideoProcessingCompletionAsync(
+            startMultipartUploadResponse.MediaAssetId,
+            cancellationToken);
+
         await ExecuteInDb(async dbContext =>
         {
             var mediaAsset = await dbContext.MediaAssets
@@ -52,28 +52,13 @@ public class MultipartUploadFileTests : FileServiceBaseTests
 
             Assert.NotNull(mediaAsset);
 
-            MediaStatus[] validStatuses = [MediaStatus.UPLOADED, MediaStatus.PROCESSING, MediaStatus.READY];
-            Assert.Contains(mediaAsset.Status, validStatuses.AsEnumerable());
+            Assert.Equal(MediaStatus.READY, mediaAsset.Status);
 
             var videoProcess = await dbContext.VideoProcesses
                 .FirstOrDefaultAsync(v => v.VideoAssetId == mediaAsset.Id, cancellationToken);
 
             Assert.NotNull(videoProcess);
-            VideoProcessStatus[] validProcessStatuses =
-                [VideoProcessStatus.RUNNING, VideoProcessStatus.SUCCEEDED];
-            Assert.Contains(videoProcess.Status, validProcessStatuses.AsEnumerable());
-
-            IAmazonS3 s3Client = _factory.Services.GetRequiredService<IAmazonS3>();
-
-            if (mediaAsset.Status != MediaStatus.READY)
-            {
-                var s3Object = await s3Client.GetObjectAsync(
-                    mediaAsset.UploadKey.Location,
-                    mediaAsset.UploadKey.Value,
-                    cancellationToken);
-
-                Assert.Equal(s3Object.ContentLength, fileInfo.Length);
-            }
+            Assert.Equal(VideoProcessStatus.SUCCEEDED, videoProcess.Status);
         });
     }
 
@@ -159,6 +144,40 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         UnitResult<Failure> completeResult = await completeResponse.HandleResponseAsync(cancellationToken);
 
         return completeResult;
+    }
+
+    private async Task WaitForVideoProcessingCompletionAsync(
+        Guid videoAssetId,
+        CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            (MediaStatus? AssetStatus, VideoProcessStatus? ProcessStatus, string? ErrorMessage) state =
+                await ExecuteInDb(async dbContext =>
+                {
+                    var mediaAsset = await dbContext.MediaAssets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(asset => asset.Id == videoAssetId, cancellationToken);
+                    var videoProcess = await dbContext.VideoProcesses
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(process => process.VideoAssetId == videoAssetId, cancellationToken);
+
+                    return (mediaAsset?.Status, videoProcess?.Status, videoProcess?.ErrorMessage);
+                });
+
+            if (state.AssetStatus == MediaStatus.READY
+                && state.ProcessStatus == VideoProcessStatus.SUCCEEDED)
+            {
+                return;
+            }
+
+            if (state.ProcessStatus == VideoProcessStatus.FAILED)
+                Assert.Fail($"Video processing failed during integration test: {state.ErrorMessage}");
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        }
+
+        Assert.Fail($"Video processing did not complete for asset {videoAssetId} before timeout");
     }
 
 }

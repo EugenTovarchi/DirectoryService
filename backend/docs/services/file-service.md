@@ -30,7 +30,7 @@ Creation and mutation use factories/methods such as `MediaAsset.CreateForUpload`
 - S3/MinIO for object storage.
 - RabbitMQ/Wolverine for file events.
 - Redis for caching where configured.
-- Quartz for video processing scheduling.
+- Quartz with PostgreSQL persistent store for video processing scheduling and recovery.
 - ffmpeg/ffprobe for video metadata/HLS work.
 - Seq/Loki/Grafana for logs in local Docker.
 
@@ -59,7 +59,7 @@ See [../patterns/configuration.md](../patterns/configuration.md) and [../pattern
 
 - Start multipart upload: validate media data, create `MediaAsset`, request storage upload metadata, persist asset.
 - Complete multipart upload: complete storage upload, mark asset uploaded, publish `FileUploaded`, mark direct assets ready, schedule video processing when asset requires processing.
-- Video processing: Quartz schedules work, pipeline loads context, executes ordered step handlers, updates `VideoProcess` progress, stores HLS/preview output, marks video ready.
+- Video processing: after the upload transaction commits, persistent Quartz schedules work; the pipeline executes ordered step handlers, builds only source-appropriate HLS renditions, supports sources without audio, stores HLS/preview output, marks video ready, and publishes `VideoReady` through the outbox. Periodic reconciliation restores missing triggers, while a Quartz cleanup job removes stale temp directories.
 - Delete file: mark asset deleted and publish deletion event where current implementation does so.
 
 Related docs:

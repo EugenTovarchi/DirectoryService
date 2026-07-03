@@ -6,11 +6,12 @@ This file is the service index. For implementation detail, read only the affecte
 
 - [DirectoryService](../services/directory-service.md): directory hierarchy, departments, locations, positions, asset assignment.
 - [FileService](../services/file-service.md): file metadata, media assets, multipart upload/download/delete, S3/MinIO, video/HLS processing.
+- [AuthService](../services/auth-service.md): ASP.NET Core Identity users/roles, JWT access tokens, refresh token lifecycle, invites, password reset, sessions, and auth audit history.
 - [SharedService](shared-kernel.md): shared abstractions, result/error model, endpoint/controller helpers, validation helpers.
 
 ## Planned Services
 
-- AuthService: not implemented yet. New service work should follow [how-to-add-service.md](how-to-add-service.md) and reuse patterns documented in [../rules/coding-style.md](../rules/coding-style.md).
+- No separate planned service is tracked here right now. New service work should follow [how-to-add-service.md](how-to-add-service.md) and reuse patterns documented in [../rules/coding-style.md](../rules/coding-style.md).
 
 ## Cross-Service Rules
 

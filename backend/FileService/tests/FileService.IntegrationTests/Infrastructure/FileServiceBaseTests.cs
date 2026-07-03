@@ -146,7 +146,12 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
                     case MediaStatus.READY:
                         {
                             videoAsset.MarkUploaded();
-                            videoAsset.MarkReady();
+                            videoAsset.StartProcessing();
+                            var masterPlaylistKey = videoAsset.GetMasterPlaylistKey();
+                            Assert.True(masterPlaylistKey.IsSuccess,
+                                masterPlaylistKey.IsFailure ? masterPlaylistKey.Error.Message : null);
+                            videoAsset.GetHlsMasterPlaylistKey(masterPlaylistKey.Value);
+                            videoAsset.CompleteProcessing();
                             break;
                         }
                 }

@@ -2,12 +2,13 @@
 
 Start here after `../AGENTS.md`.
 
-This backend workspace is a .NET 9 multi-service system. Current services are DirectoryService and FileService; SharedService provides reusable packages and abstractions. AuthService is planned, not implemented here.
+This backend workspace is a .NET 9 multi-service system. Current services are DirectoryService, FileService, and AuthService; SharedService provides reusable packages and abstractions.
 
 ## Workspace Shape
 
 - DirectoryService owns directory data: departments, locations, positions, hierarchy, and assignment of file/video assets to directory entities.
 - FileService owns files, media assets, S3/MinIO storage, multipart upload, raw video upload, and HLS/video processing.
+- AuthService owns identity, ASP.NET Core Identity users/roles, access token issuing, refresh token lifecycle, invites, password reset, sessions, and auth audit history.
 - SharedService owns generic, service-neutral kernel/framework pieces used by services.
 - Shared messaging contracts must remain compatible across producers and consumers.
 

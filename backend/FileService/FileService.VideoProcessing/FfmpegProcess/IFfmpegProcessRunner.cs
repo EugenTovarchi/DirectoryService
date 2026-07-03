@@ -9,6 +9,7 @@ public interface IFfmpegProcessRunner
     Task<UnitResult<Error>> GenerateHlsAsync(
         string inputFileUrl,
         string outputDirectory,
+        VideoMetadata metadata,
         CancellationToken cancellationToken = default);
 
     Task<Result<VideoMetadata, Error>> ExtractMetadataAsync(string inputFileUrl,

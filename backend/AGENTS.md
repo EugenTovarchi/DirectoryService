@@ -26,6 +26,13 @@ Primary entry point for work started from `backend/`.
    - [docs/rules/domain-rules.md](docs/rules/domain-rules.md)
    - [docs/rules/naming-conventions.md](docs/rules/naming-conventions.md)
 
+## Graphify
+
+- Если задача связана с архитектурой, бизнес-flow, незнакомым модулем, несколькими файлами, межсервисными связями или неочевидными зависимостями, сначала используй Graphify MCP.
+- Перед правкой кода через Graphify определи, какие классы, файлы и связи относятся к задаче. После этого обязательно открой и проверь реальные исходные файлы. Не полагайся только на Graphify для точных изменений в коде.
+- Для маленьких локальных правок в заранее известном файле можно читать файл напрямую без Graphify.
+- После анализа через Graphify кратко напиши, какие файлы/классы относятся к задаче и почему, затем выполняй изменение.
+
 ## Operating Rules
 
 - Verify from code before editing; do not assume schema, contracts, DTOs, or boundaries.
@@ -46,6 +53,7 @@ Primary entry point for work started from `backend/`.
 
 - Use Russian by default for progress notes, explanations, plans, and final summaries.
 - Keep code, identifiers, file paths, CLI commands, logs, error messages, and commit messages in their original language unless explicitly asked to translate.
+- When the user asks for a detailed commit description, write the commit body in Russian using at least 2-3 sentences unless the user explicitly requests another language.
 - Do not translate existing source comments, public API names, error codes, or domain terminology unless the task explicitly requires it.
 
 ## Workspace Map

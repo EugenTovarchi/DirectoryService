@@ -2,7 +2,7 @@
   <ItemGroup>
     <PackageReference Include="Dapper"/>
     <PackageReference Include="istreddev.core" />
-    <PackageReference Include="istreddev.fileservice.contracts" />
+    <PackageReference Include="IstredDev.FileService.Contracts" />
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />

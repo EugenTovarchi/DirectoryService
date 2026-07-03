@@ -28,7 +28,8 @@ public static class FfprobeOutputParser
         if (response is null)
             return FileErrors.InvalidFfprobeOutput("Null response");
 
-        StreamInfo? stream = response.Streams?.FirstOrDefault();
+        StreamInfo? stream = response.Streams?.FirstOrDefault(streamInfo =>
+            string.Equals(streamInfo?.CodecType, "video", StringComparison.OrdinalIgnoreCase));
         if (stream is null)
             return FileErrors.InvalidFfprobeOutput("No video stream found");
 
@@ -41,7 +42,10 @@ public static class FfprobeOutputParser
 
         var duration = TimeSpan.FromSeconds(durationSeconds.Value);
 
-        return VideoMetadata.Create(duration, stream.Width.Value, stream.Height.Value);
+        bool hasAudio = response.Streams?.Any(streamInfo =>
+            string.Equals(streamInfo?.CodecType, "audio", StringComparison.OrdinalIgnoreCase)) == true;
+
+        return VideoMetadata.Create(duration, stream.Width.Value, stream.Height.Value, hasAudio);
     }
 }
 
@@ -56,6 +60,9 @@ public sealed class FfprobeResponse
 
 public sealed class StreamInfo
 {
+    [JsonPropertyName("codec_type")]
+    public string? CodecType { get; set; }
+
     [JsonPropertyName("width")]
     public int? Width { get; set; }
 

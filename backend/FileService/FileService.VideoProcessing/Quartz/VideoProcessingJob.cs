@@ -1,4 +1,6 @@
-﻿    using FileService.Core.Abstractions;
+﻿    using System.Diagnostics;
+    using System.Globalization;
+    using FileService.Core.Abstractions;
     using FileService.Domain;
     using FileService.Domain.MediaProcessing;
     using FileService.VideoProcessing.Pipeline;
@@ -8,6 +10,7 @@
 
     namespace FileService.VideoProcessing.Quartz;
 
+    [DisallowConcurrentExecution]
     public class VideoProcessingJob : IJob
     {
         private readonly IVideoProcessingService _videoProcessingService;
@@ -15,19 +18,25 @@
         private readonly IMediaAssetsRepository _mediaAssetsRepository;
         private readonly ITransactionManager _transactionManager;
         private readonly ILogger<VideoProcessingJob> _logger;
+        private readonly IVideoProcessingPolicy _processingPolicy;
+        private readonly VideoProcessingTelemetry _telemetry;
 
         public VideoProcessingJob(
             IVideoProcessingService videoProcessingService,
             IMediaAssetsRepository mediaAssetsRepository,
             ILogger<VideoProcessingJob> logger,
             ITransactionManager transactionManager,
-            IVideoProcessesRepository videoProcessesRepository)
+            IVideoProcessesRepository videoProcessesRepository,
+            IVideoProcessingPolicy processingPolicy,
+            VideoProcessingTelemetry telemetry)
         {
             _videoProcessingService = videoProcessingService;
             _mediaAssetsRepository = mediaAssetsRepository;
             _logger = logger;
             _transactionManager = transactionManager;
             _videoProcessesRepository = videoProcessesRepository;
+            _processingPolicy = processingPolicy;
+            _telemetry = telemetry;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -37,19 +46,46 @@
 
             if (!TryGetGuidFromJobData(jobDataMap, "VideoAssetId", out var videoAssetId))
             {
-                _logger.LogError("Invalid or missing VideoAssetId in JobDataMap");
+                _logger.LogError(
+                    "Invalid or missing VideoAssetId in job data for Quartz job {JobKey}",
+                    context.JobDetail.Key);
+                await DeleteJobAsync(context);
                 return;
             }
 
-            _logger.LogInformation("Starting processing for video {VideoAssetId}", videoAssetId);
-
-            int attemptNumber = jobDataMap.GetInt("AttemptNumber");
-            if (attemptNumber == 0)
+            string? correlationId = jobDataMap["CorrelationId"]?.ToString();
+            if (string.IsNullOrWhiteSpace(correlationId))
             {
-                attemptNumber = 1;
+                correlationId = Guid.NewGuid().ToString();
+                _logger.LogWarning(
+                    "Missing CorrelationId in video job data for {VideoAssetId}; generated fallback {CorrelationId}",
+                    videoAssetId,
+                    correlationId);
             }
 
-            _logger.LogInformation("Attempt: {Attempt} for video {VideoAssetId}", attemptNumber, videoAssetId);
+            using IDisposable? logScope = _logger.BeginScope(new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["CorrelationId"] = correlationId,
+                ["VideoAssetId"] = videoAssetId,
+            });
+            using Activity? activity = VideoProcessingTelemetry.ActivitySource.StartActivity(
+                "video.processing.job",
+                ActivityKind.Consumer);
+            activity?.SetTag("video.asset.id", videoAssetId);
+            activity?.SetTag("correlation.id", correlationId);
+
+            int attemptNumber = int.TryParse(
+                jobDataMap["AttemptNumber"]?.ToString(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int parsedAttempt)
+                ? parsedAttempt
+                : 1;
+
+            _logger.LogInformation(
+                "Starting video processing job attempt {AttemptNumber} for video asset {VideoAssetId}",
+                attemptNumber,
+                videoAssetId);
 
             try
             {
@@ -59,6 +95,15 @@
                 if (mediaAssetResult.IsFailure)
                 {
                     _logger.LogError("Video asset {VideoAssetId} not found", videoAssetId);
+                    var orphanedProcess = await _videoProcessesRepository.GetBy(
+                        process => process.VideoAssetId == videoAssetId,
+                        cancellationToken);
+                    if (orphanedProcess.IsSuccess)
+                    {
+                        orphanedProcess.Value.MarkAsPermanentlyFailed("Video asset not found");
+                        await _transactionManager.SaveChangeAsync(cancellationToken);
+                    }
+
                     await context.Scheduler.DeleteJob(context.JobDetail.Key, cancellationToken);
                     return;
                 }
@@ -68,8 +113,18 @@
                 if (mediaAsset.Status != MediaStatus.UPLOADED && mediaAsset.Status != MediaStatus.PROCESSING)
                 {
                     _logger.LogWarning(
-                        "Video {VideoAssetId} is not in not ready for processing, status {Status}, skipping",
+                        "Video asset {VideoAssetId} cannot be processed in status {MediaStatus}; skipping job",
                         videoAssetId, mediaAsset.Status);
+
+                    var invalidAssetProcess = await _videoProcessesRepository.GetBy(
+                        process => process.VideoAssetId == videoAssetId,
+                        cancellationToken);
+                    if (invalidAssetProcess.IsSuccess)
+                    {
+                        invalidAssetProcess.Value.MarkAsPermanentlyFailed(
+                            $"Video asset status {mediaAsset.Status} does not allow processing");
+                        await _transactionManager.SaveChangeAsync(cancellationToken);
+                    }
 
                     await DeleteJobAsync(context);
                     return;
@@ -86,18 +141,7 @@
                     // Уже обработан
                     if (process.Status == VideoProcessStatus.SUCCEEDED)
                     {
-                        _logger.LogInformation("Video {VideoAssetId} already processed", videoAssetId);
-                        await DeleteJobAsync(context);
-                        return;
-                    }
-
-                    // Превышен лимит попыток
-                    if (process.RetryCount >= process.MaxRetries)
-                    {
-                        _logger.LogError("Max retries {MaxRetries} exceeded for video {VideoAssetId}",
-                            process.MaxRetries, videoAssetId);
-                        process.MarkAsPermanentlyFailed("Max retries exceeded");
-                        await _transactionManager.SaveChangeAsync(cancellationToken);
+                        _logger.LogInformation("Video asset {VideoAssetId} is already processed", videoAssetId);
                         await DeleteJobAsync(context);
                         return;
                     }
@@ -106,30 +150,48 @@
                     if (process.IsCriticalError)
                     {
                         _logger.LogError(
-                            "Critical error for video {VideoAssetId}, cannot retry",
+                            "Video asset {VideoAssetId} has a permanent processing failure; retry is not allowed",
                             videoAssetId);
                         await DeleteJobAsync(context);
                         return;
                     }
-                }
 
-                // Если это повторная попытка и процесс существует - готовим к повтору
-                if (attemptNumber > 1 && existingProcess.IsSuccess)
-                {
-                    var process = existingProcess.Value;
-                    _logger.LogInformation("Preparing process for retry: {Attempt}", attemptNumber);
-
-                    var prepareResult = process.PrepareForRetry();
-                    if (prepareResult.IsFailure)
+                    if (process.Status == VideoProcessStatus.RUNNING)
                     {
-                        _logger.LogError("Failed to prepare for retry: {Error}", prepareResult.Error.Message);
-                        process.MarkAsPermanentlyFailed(prepareResult.Error.Message);
-                        await _transactionManager.SaveChangeAsync(cancellationToken);
-                        await DeleteJobAsync(context);
-                        return;
+                        _logger.LogWarning(
+                            "Recovering interrupted video processing execution for {VideoAssetId}",
+                            videoAssetId);
+                        var failInterruptedResult = process.Fail(
+                            "Previous video processing execution was interrupted",
+                            isCritical: false);
+                        if (failInterruptedResult.IsFailure)
+                        {
+                            process.MarkAsPermanentlyFailed(failInterruptedResult.Error.Message);
+                        }
                     }
 
-                    await _transactionManager.SaveChangeAsync(cancellationToken);
+                    if (process.Status == VideoProcessStatus.FAILED)
+                    {
+                        _logger.LogInformation(
+                            "Preparing retry {RetryNumber} for video asset {VideoAssetId}",
+                            process.RetryCount + 1,
+                            videoAssetId);
+
+                        var prepareResult = process.PrepareForRetry();
+                        if (prepareResult.IsFailure)
+                        {
+                            _logger.LogError(
+                                "Failed to prepare retry for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                                videoAssetId,
+                                prepareResult.Error.Code);
+                            process.MarkAsPermanentlyFailed(prepareResult.Error.Message);
+                            await _transactionManager.SaveChangeAsync(cancellationToken);
+                            await DeleteJobAsync(context);
+                            return;
+                        }
+
+                        await _transactionManager.SaveChangeAsync(cancellationToken);
+                    }
                 }
 
                 // Запускаем Pipeline (он сам создаст/загрузит VideoProcess)
@@ -137,9 +199,6 @@
 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation(
-                        "Successfully processed video {VideoAssetId} on attempt #{Attempt}",
-                        videoAssetId, attemptNumber);
                     await DeleteJobAsync(context);
                 }
                 else
@@ -163,8 +222,10 @@
             CancellationToken cancellationToken)
         {
             _logger.LogError(
-                "Attempt: {Attempt} failed for video {VideoAssetId}: {Error}",
-                attemptNumber, videoAssetId, error.Message);
+                "Video processing job attempt {AttemptNumber} failed for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                attemptNumber,
+                videoAssetId,
+                error.Code);
 
             // Загружаем процесс (Pipeline уже сохранил статус FAILED)
             var processResult = await _videoProcessesRepository.GetBy(
@@ -173,16 +234,40 @@
             if (processResult.IsFailure)
             {
                 _logger.LogError("Video process not found for {VideoAssetId}", videoAssetId);
+                await DeleteJobAsync(context);
                 return;
             }
 
             var process = processResult.Value;
 
+            // Final domain state may already be prepared in the DbContext when the first SaveChanges failed.
+            // Retry that atomic save (asset + process + Wolverine outbox) before creating another processing retry.
+            if (process.Status == VideoProcessStatus.SUCCEEDED)
+            {
+                var saveFinalStateResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+                if (saveFinalStateResult.IsSuccess)
+                {
+                    _logger.LogInformation(
+                        "Persisted previously prepared final state for video {VideoAssetId}",
+                        videoAssetId);
+                    await DeleteJobAsync(context);
+                }
+                else
+                {
+                    _logger.LogError(
+                        "Failed to persist prepared final state for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                        videoAssetId,
+                        saveFinalStateResult.Error.Code);
+                }
+
+                return;
+            }
+
             // Проверяем, можно ли повторить
             if (!process.CanRetry())
             {
                 _logger.LogWarning(
-                    "Cannot retry video {VideoAssetId} (Critical={Critical}, Retries={RetryCount}/{MaxRetries})",
+                    "Cannot retry video asset {VideoAssetId}. Permanent: {IsPermanent}; retry count: {RetryCount}/{MaxRetries}",
                     videoAssetId, process.IsCriticalError, process.RetryCount, process.MaxRetries);
 
                 process.MarkAsPermanentlyFailed(error.Message);
@@ -208,6 +293,7 @@
             if (processResult.IsFailure)
             {
                 _logger.LogError("Video process not found for {VideoAssetId}", videoAssetId);
+                await DeleteJobAsync(context);
                 return;
             }
 
@@ -229,14 +315,17 @@
             int currentAttempt,
             CancellationToken cancellationToken)
         {
-            var delay = process.GetNextRetryDelay();
+            var delay = _processingPolicy.GetRetryDelay(process.RetryCount);
             var nextRetryTime = DateTimeOffset.UtcNow.Add(delay);
             int nextAttempt = currentAttempt + 1;
 
             var plannedResult = process.PlannedRetry(nextRetryTime.UtcDateTime);
             if (plannedResult.IsFailure)
             {
-                _logger.LogError("Failed to plan retry: {Error}", plannedResult.Error.Message);
+                _logger.LogError(
+                    "Failed to plan retry for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                    process.VideoAssetId,
+                    plannedResult.Error.Code);
                 process.MarkAsPermanentlyFailed(plannedResult.Error.Message);
                 await _transactionManager.SaveChangeAsync(cancellationToken);
                 await DeleteJobAsync(context);
@@ -246,18 +335,22 @@
             await _transactionManager.SaveChangeAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Scheduling retry: {NextAttempt} for video {VideoAssetId} in {Delay} at {Time}",
+                "Scheduling retry {NextRetryNumber} for video asset {VideoAssetId} after {RetryDelay} at {NextRetryAt}",
                 nextAttempt, process.VideoAssetId, delay, nextRetryTime);
 
             var retryTrigger = TriggerBuilder.Create()
-                .WithIdentity($"Retry_{process.VideoAssetId}_{nextAttempt}_{Guid.NewGuid():N}")
+                .WithIdentity($"Retry_{process.VideoAssetId}_{nextAttempt}_{Guid.NewGuid():N}",
+                    VideoProcessingScheduler.GROUP_NAME)
+                .ForJob(context.JobDetail.Key)
                 .StartAt(nextRetryTime)
+                .WithSimpleSchedule(schedule => schedule.WithMisfireHandlingInstructionFireNow())
                 .UsingJobData("VideoAssetId", process.VideoAssetId.ToString())
-                .UsingJobData("AttemptNumber", nextAttempt)
+                .UsingJobData("AttemptNumber", nextAttempt.ToString(CultureInfo.InvariantCulture))
+                .UsingJobData("CorrelationId", process.CorrelationId)
                 .Build();
 
             await context.Scheduler.ScheduleJob(retryTrigger, cancellationToken);
-            await DeleteJobAsync(context);
+            _telemetry.RetriedJobs.Add(1);
         }
 
         private async Task DeleteJobAsync(IJobExecutionContext context)
@@ -268,7 +361,7 @@
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to delete job");
+                _logger.LogWarning(ex, "Failed to delete Quartz job {JobKey}", context.JobDetail.Key);
             }
         }
 

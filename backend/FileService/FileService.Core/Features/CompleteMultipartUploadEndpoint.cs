@@ -6,6 +6,7 @@ using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,9 @@ namespace FileService.Core.Features;
 
 public sealed class CompleteMultipartUploadEndpoint : IEndpoint
 {
+    private const string CORRELATION_ID_HEADER_NAME = "X-Correlation-Id";
+    private const int MAX_CORRELATION_ID_LENGTH = 128;
+
     /// <summary>
     /// Завершает загрузку файла в S3.
     /// Выполняет отправку Id файла в DS сервис.
@@ -30,7 +34,23 @@ public sealed class CompleteMultipartUploadEndpoint : IEndpoint
             async Task<EndpointResult> (
                 [FromBody] CompleteMultipartUploadRequest request,
                 [FromServices] CompleteMultipartUploadHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                HttpContext httpContext,
+                CancellationToken cancellationToken) => await handler.Handle(
+                request,
+                GetCorrelationId(httpContext),
+                cancellationToken));
+    }
+
+    private static string GetCorrelationId(HttpContext httpContext)
+    {
+        string? headerValue = httpContext.Request.Headers[CORRELATION_ID_HEADER_NAME].FirstOrDefault();
+        string correlationId = string.IsNullOrWhiteSpace(headerValue)
+            ? httpContext.TraceIdentifier
+            : headerValue;
+
+        return correlationId.Length <= MAX_CORRELATION_ID_LENGTH
+            ? correlationId
+            : correlationId[..MAX_CORRELATION_ID_LENGTH];
     }
 }
 
@@ -43,6 +63,7 @@ public sealed class CompleteMultipartUploadHandler
     private readonly IVideoProcessesRepository _videoProcessesRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IMessageBus _messageBus;
+    private readonly IVideoProcessingPolicy _videoProcessingPolicy;
 
     public CompleteMultipartUploadHandler(
         IFileStorageProvider fileStorageProvider,
@@ -51,6 +72,7 @@ public sealed class CompleteMultipartUploadHandler
         ITransactionManager transactionManager,
         IVideoProcessingScheduler videoProcessingScheduler,
         IVideoProcessesRepository videoProcessesRepository,
+        IVideoProcessingPolicy videoProcessingPolicy,
         IMessageBus messageBus)
     {
         _fileStorageProvider = fileStorageProvider;
@@ -59,12 +81,18 @@ public sealed class CompleteMultipartUploadHandler
         _transactionManager = transactionManager;
         _videoProcessingScheduler = videoProcessingScheduler;
         _videoProcessesRepository = videoProcessesRepository;
+        _videoProcessingPolicy = videoProcessingPolicy;
         _messageBus = messageBus;
     }
 
-    public async Task<UnitResult<Failure>> Handle(CompleteMultipartUploadRequest request,
+    public async Task<UnitResult<Failure>> Handle(
+        CompleteMultipartUploadRequest request,
+        string correlationId,
         CancellationToken cancellationToken)
     {
+        Guid? videoAssetIdToSchedule = null;
+        bool transactionCommitted = false;
+
         var transactionScopeResult = await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
             return transactionScopeResult.Error.ToFailure();
@@ -96,7 +124,12 @@ public sealed class CompleteMultipartUploadHandler
 
                 var commitResult = transactionScope.Commit();
                 if (commitResult.IsFailure)
-                    _logger.LogError("Failed to commit transaction after marking as failed");
+                {
+                    _logger.LogError(
+                        "Failed to commit failed upload state for media asset {MediaAssetId}. Error code: {ErrorCode}",
+                        mediaAsset.Id,
+                        commitResult.Error.Code);
+                }
 
                 return completeResult.Error.ToFailure();
             }
@@ -104,7 +137,10 @@ public sealed class CompleteMultipartUploadHandler
             var markUploadedResult = mediaAsset.MarkUploaded();
             if (markUploadedResult.IsFailure)
             {
-                _logger.LogError("Failed to mark media asset as UPLOADED: {Error}", markUploadedResult.Error.Message);
+                _logger.LogError(
+                    "Failed to mark media asset {MediaAssetId} as uploaded. Error code: {ErrorCode}",
+                    mediaAsset.Id,
+                    markUploadedResult.Error.Code);
                 return markUploadedResult.Error.ToFailure();
             }
 
@@ -123,83 +159,90 @@ public sealed class CompleteMultipartUploadHandler
                 TargetEntityType: mediaAsset.OwnerType);
 
             await _messageBus.PublishAsync(fileUploadedEvent);
-            _logger.LogInformation("Published FileUploaded event to outbox for asset {AssetId}", mediaAsset.Id);
 
             var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
             if (saveResult.IsFailure)
             {
-                _logger.LogError("Error when try to save changes after publishing message to outbox!");
+                _logger.LogError(
+                    "Failed to persist FileUploaded outbox event for media asset {MediaAssetId}. Error code: {ErrorCode}",
+                    mediaAsset.Id,
+                    saveResult.Error.Code);
                 return saveResult.Error.ToFailure();
             }
 
+            _logger.LogInformation(
+                "Persisted FileUploaded outbox event for media asset {MediaAssetId}",
+                mediaAsset.Id);
+
             if (mediaAsset.RequiresProcessing() && mediaAsset.AssetType == AssetType.VIDEO)
             {
-                var createVideoProcessResult = VideoProcess.Create(mediaAsset.Id, mediaAsset.UploadKey);
+                var createVideoProcessResult = VideoProcess.Create(
+                    mediaAsset.Id,
+                    mediaAsset.UploadKey,
+                    _videoProcessingPolicy.MaxRetries,
+                    correlationId);
                 if (createVideoProcessResult.IsFailure)
                 {
-                    _logger.LogError("Failed to create video process: {Error} for media asset: {Id}",
-                        createVideoProcessResult.Error.Message, mediaAsset.Id);
+                    _logger.LogError(
+                        "Failed to create video process for media asset {MediaAssetId}. Error code: {ErrorCode}",
+                        mediaAsset.Id,
+                        createVideoProcessResult.Error.Code);
 
                     return createVideoProcessResult.Error.ToFailure();
                 }
 
                 var videoProcess = createVideoProcessResult.Value;
-
-                var firstStep = videoProcess.Steps.OrderBy(s => s.Order).FirstOrDefault();
-                if (firstStep is null)
-                {
-                    _logger.LogError("No steps defined for video process for media asset: {Id}", mediaAsset.Id);
-                    return Errors.General.NotFoundValue("steps").ToFailure();
-                }
-
-                var startStepResult = videoProcess.StartStep(firstStep.Order, firstStep.Name);
-                if (startStepResult.IsFailure)
-                {
-                    _logger.LogError("Failed to start first step for video process: {Error}",
-                        startStepResult.Error.Message);
-                    return startStepResult.Error.ToFailure();
-                }
-
-                _logger.LogInformation("Started video process for asset {Id} with first step {StepName}",
-                    mediaAsset.Id, firstStep.Name);
-
                 _videoProcessesRepository.Add(videoProcess);
 
                 var saveVideoProcessResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                 if (saveVideoProcessResult.IsFailure)
                 {
-                    _logger.LogError("Error when try to save video process!");
+                    _logger.LogError(
+                        "Failed to persist video process for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                        mediaAsset.Id,
+                        saveVideoProcessResult.Error.Code);
                     return saveVideoProcessResult.Error.ToFailure();
                 }
 
-                var scheduleResult = await _videoProcessingScheduler.ScheduleProcessingAsync(videoProcess.VideoAssetId,
-                    cancellationToken);
-                if (scheduleResult.IsFailure)
-                {
-                    _logger.LogError("Schedule processing failed: {Error} for media asset: {Id} ",
-                        scheduleResult.Error.Message, videoProcess.VideoAssetId);
-                }
-                else
-                {
-                    _logger.LogInformation(
-                        "Successfully scheduled video processing for {VideoAssetId}",
-                        videoProcess.VideoAssetId);
-                }
+                videoAssetIdToSchedule = videoProcess.VideoAssetId;
+                _logger.LogInformation("Created pending video process for asset {VideoAssetId}",
+                    videoProcess.VideoAssetId);
             }
 
             var finalCommitResult = transactionScope.Commit();
             if (finalCommitResult.IsFailure)
                 return finalCommitResult.Error.ToFailure();
+            transactionCommitted = true;
 
-            _logger.LogInformation("Success complete to upload of {Id}", mediaAsset.Id);
+            if (videoAssetIdToSchedule.HasValue)
+            {
+                var scheduleResult = await _videoProcessingScheduler.ScheduleProcessingAsync(
+                    videoAssetIdToSchedule.Value,
+                    correlationId,
+                    startAt: null,
+                    cancellationToken: cancellationToken);
+                if (scheduleResult.IsFailure)
+                {
+                    _logger.LogError(
+                        "Failed to schedule processing for video asset {VideoAssetId}. Error code: {ErrorCode}",
+                        videoAssetIdToSchedule.Value,
+                        scheduleResult.Error.Code);
+                }
+            }
+
+            _logger.LogInformation("Completed multipart upload for media asset {MediaAssetId}", mediaAsset.Id);
 
             return UnitResult.Success<Failure>();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error");
-            transactionScope.Rollback();
-            return Error.Failure("unexpected", ex.Message).ToFailure();
+            _logger.LogError(
+                ex,
+                "Unexpected error while completing multipart upload for media asset {MediaAssetId}",
+                request.MediaAssetId);
+            if (!transactionCommitted)
+                transactionScope.Rollback();
+            return Error.Failure("unexpected", "Unexpected error while completing multipart upload").ToFailure();
         }
     }
 }

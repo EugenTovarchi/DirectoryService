@@ -5,9 +5,9 @@
   <ItemGroup>
     <!-- Internal packages -->
     <PackageVersion Include="istreddev.core" Version="0.0.1" />
-    <PackageVersion Include="istreddev.fileservice.contracts" Version="0.0.4" />
-    <PackageVersion Include="istreddev.framework" Version="0.0.13" />
-    <PackageVersion Include="istreddev.sharedkernel" Version="0.0.6" />
+    <PackageVersion Include="IstredDev.FileService.Contracts" Version="0.0.5" />
+    <PackageVersion Include="istreddev.framework" Version="0.0.14" />
+    <PackageVersion Include="istreddev.sharedkernel" Version="0.0.7" />
 
     <!-- Microsoft packages -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
@@ -42,6 +42,7 @@
     <!-- Messaging & Scheduling -->
     <PackageVersion Include="Quartz" Version="3.16.1" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.16.1" />
+    <PackageVersion Include="Quartz.Serialization.SystemTextJson" Version="3.16.1" />
     <PackageVersion Include="WolverineFx.EntityFrameworkCore" Version="5.28.0" />
     <PackageVersion Include="WolverineFx.Postgresql" Version="5.31.0" />
     <PackageVersion Include="WolverineFx.RabbitMQ" Version="5.28.0" />
