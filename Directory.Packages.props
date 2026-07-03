@@ -42,6 +42,7 @@
     <!-- Messaging & Scheduling -->
     <PackageVersion Include="Quartz" Version="3.16.1" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.16.1" />
+    <PackageVersion Include="Quartz.Serialization.SystemTextJson" Version="3.16.1" />
     <PackageVersion Include="WolverineFx.EntityFrameworkCore" Version="5.28.0" />
     <PackageVersion Include="WolverineFx.Postgresql" Version="5.31.0" />
     <PackageVersion Include="WolverineFx.RabbitMQ" Version="5.28.0" />

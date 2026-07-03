@@ -7,7 +7,7 @@
     <ItemGroup>
       <PackageReference Include="Quartz" />
       <PackageReference Include="Quartz.Extensions.Hosting" />
-      <PackageReference Include="Quartz.Serialization.SystemTextJson" VersionOverride="3.16.1" />
+      <PackageReference Include="Quartz.Serialization.SystemTextJson" />
     </ItemGroup>
 
 </Project>

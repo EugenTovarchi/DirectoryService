@@ -11,6 +11,7 @@
 - Admin user management: invite, resend invite, list, details, status, role, sessions, revoke sessions.
 - Invite token lifecycle без `InitialPassword`: pending user, one-time invite token на 3 дня, accept invite.
 - Security-sensitive commands используют явный transaction scope по FS/DS-style паттерну.
+- OAuth 2.0/OpenID Connect authorization server еще не внедрен; это целевой крупный этап после сквозной JWT/permission integration в FileService и DirectoryService.
 
 ## Архитектурные Правила
 
@@ -366,25 +367,50 @@
 
 ## Ближайший План
 
-1. Downstream permission integration:
-   - первые protected flows в FileService и DirectoryService;
-   - проверить `401/403`, policies и Swagger auth.
+1. Downstream JWT validation and permission integration:
+   - настроить проверку текущих AuthService JWT access tokens в FileService и DirectoryService;
+   - выбрать первые реальные protected endpoints в FileService и DirectoryService;
+   - добавить permission policies на базе текущих `permission` claims;
+   - проверить `401` без token, `401` с invalid/expired token и `403` при нехватке permission;
+   - настроить Swagger auth для защищенных downstream endpoints;
+   - покрыть сквозные cases integration tests: AuthService выдал token, downstream service принял/отклонил request.
 
 2. Audit read API:
    - фильтры по company/user/action/date;
    - safe response без raw token/link/credential metadata;
    - pagination для admin/security UI.
 
-3. Invite/password reset email outbox/retry hardening:
+3. Public auth endpoint hardening:
+   - rate limiting для login, refresh, request password reset и invite resend;
+   - account lockout или temporary throttling после серии неудачных login attempts;
+   - сохранить security-safe public responses без user/token enumeration.
+
+4. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
    - не хранить raw invite/reset token отдельно от delivery payload дольше нужного срока;
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
 
+5. OAuth 2.0/OpenID Connect AuthService MVP:
+   - внедрить OpenIddict как authorization server поверх существующего ASP.NET Core Identity user store;
+   - добавить discovery endpoint `/.well-known/openid-configuration`, JWKS, authorization endpoint и token endpoint;
+   - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;
+   - выпускать JWT access tokens с текущими user/company/role/permission claims;
+   - добавить ID token и `/connect/userinfo` для OpenID Connect сценария;
+   - описать client registration seed: `client_id`, redirect URIs, allowed scopes, grant types;
+   - сохранить текущие security правила: не логировать tokens/secrets, не хранить raw refresh/invite/reset tokens, держать claims небольшими;
+   - без отдельного frontend сделать минимальный backend/dev surface для обучения и проверки flow: Swagger/Postman плюс minimal Razor/MVC login/consent pages внутри AuthService, если они понадобятся для `/authorize`;
+   - покрыть ключевые кейсы integration tests: discovery/JWKS, authorization code + PKCE, token issuing, invalid client/redirect/scope, expired/invalid token, downstream API `401/403`.
+
 ## Открытые Решения
 
-- Когда переходить с symmetric JWT signing на private/public key signing.
+- Используем OpenIddict как основной OAuth 2.0/OpenID Connect stack или нужен отдельный provider/managed IdP.
+- Какие exact endpoints в FileService и DirectoryService защищаем первыми.
+- Какие permissions считаем минимальными для первого downstream slice: `directory.read/manage`, `files.read/upload`, `videos.read/upload`.
+- Какие dev clients нужны для MVP: Swagger, Postman/manual client, будущий SPA client.
+- Какие scopes/resources считать минимальными: `openid`, `profile`, `email`, `offline_access`, `directory`, `files`, `auth`.
+- Когда переводить JWT signing с symmetric key на private/public key signing и как хранить signing keys/certificates.
 - Какой минимальный seed нужен для первого `SystemAdmin`, company и первого `CompanyAdmin`.
 - Нужен ли отдельный generic token hashing service вместо текущего refresh-token-oriented naming.
 - Какой audit/event model брать для security history.
