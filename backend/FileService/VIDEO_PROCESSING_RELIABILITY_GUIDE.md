@@ -804,8 +804,9 @@ DataAnnotations тоже нормальная практика для прост
 - в runtime logs подтверждены `CorrelationId`, `VideoAssetId`, step/progress и elapsed time;
 - presigned URL, ffmpeg arguments и EF entity dumps в runtime logs отсутствуют;
 - Docker Compose config: valid;
-- полный Docker build заблокирован внешним `401 Unauthorized` GitHub Packages;
-- отдельная установка ffmpeg также сталкивалась с нестабильностью Debian mirror, поэтому в Dockerfile добавлены retries.
+- Docker restore переведён на GitLab Package Registry с BuildKit secrets;
+- полный Docker build выполнен успешно;
+- установка ffmpeg использует HTTPS, retries и BuildKit cache для защиты от нестабильности Debian mirror.
 
 ## 23. Ручные действия перед merge/deploy
 
@@ -816,17 +817,15 @@ SharedService packages уже обновлены в корневом `Directory.
 <PackageVersion Include="istreddev.sharedkernel" Version="0.0.7" />
 ```
 
-Остаётся перенести Quartz serializer в central package management:
+Quartz serializer перенесён в central package management:
 
 ```xml
 <PackageVersion Include="Quartz.Serialization.SystemTextJson" Version="3.16.1" />
 ```
 
-После этого убрать временный `VersionOverride="3.16.1"` из `FileService.VideoProcessing.csproj`.
-
 После публикации `IstredDev.FileService.Contracts 0.0.6` consumer может подключить `VideoReady`. До появления consumer менять DirectoryService package необязательно.
 
-Для полного Docker smoke test нужно исправить GitHub Packages token/permissions и повторить:
+Для повторного Docker smoke test передайте GitLab Deploy Token через `NUGET_USERNAME` и `NUGET_PASSWORD`:
 
 ```powershell
 docker compose -f ..\docker-compose-dev.yml up -d --build

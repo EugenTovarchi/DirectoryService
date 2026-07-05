@@ -27,7 +27,7 @@ RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=lock
     --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
     cp /run/secrets/nuget_config /tmp/nuget.config && \
-    dotnet nuget update source github \
+    dotnet nuget update source gitlab-sharedservice \
         --configfile /tmp/nuget.config \
         --username "$(cat /run/secrets/nuget_username)" \
         --password "$(cat /run/secrets/nuget_password)" \
@@ -46,7 +46,7 @@ RUN --mount=type=cache,id=nuget-global,target=/root/.nuget/packages,sharing=lock
     --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
     cp /run/secrets/nuget_config /tmp/nuget.config && \
-    dotnet nuget update source github \
+    dotnet nuget update source gitlab-sharedservice \
         --configfile /tmp/nuget.config \
         --username "$(cat /run/secrets/nuget_username)" \
         --password "$(cat /run/secrets/nuget_password)" \

@@ -15,11 +15,24 @@ description: Use when SharedService NuGet package changes and FileService/Direct
 dotnet pack -c Release
 ```
 
-4. Push package:
+4. Copy the committed source configuration, add a Deploy Token only to the ignored local copy, and push the package manually:
 
-```bash
-dotnet nuget push <package>.nupkg --source github --api-key <token>
+```powershell
+Copy-Item nuget.config nuget.local.config
+
+dotnet nuget update source gitlab-sharedservice `
+    --configfile nuget.local.config `
+    --username $env:NUGET_USERNAME `
+    --password $env:NUGET_PASSWORD `
+    --store-password-in-clear-text
+
+dotnet nuget push <package>.nupkg `
+    --source gitlab-sharedservice `
+    --configfile nuget.local.config
 ```
+
+The shared GitLab registry stores `IstredDev.Core`, `IstredDev.Framework`,
+`IstredDev.SharedKernel`, and `IstredDev.FileService.Contracts`.
 
 5. Update consuming services:
 
@@ -48,7 +61,9 @@ docker compose -f docker-compose-dev.yml up -d --build
 
 ## Important
 
-- NuGet push makes the package available.
+- Package publication is manual; GitLab CI release tags are not required.
+- Use a Deploy Token with `write_package_registry` for push and `read_package_registry` for restore.
+- Never add credentials to the committed root `nuget.config`; use a temporary or otherwise ignored local config for authenticated commands.
 - Consumers do not update automatically.
 - Update `PackageReference` explicitly.
 - Push SharedService source code to Git too, so package source is not lost.

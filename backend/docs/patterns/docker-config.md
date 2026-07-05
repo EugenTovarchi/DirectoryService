@@ -17,18 +17,21 @@ secrets.
 PowerShell example:
 
 ```powershell
-$env:NUGET_USERNAME="your-github-username"
-$env:NUGET_PASSWORD="your-github-pat"
+$env:NUGET_USERNAME="your-gitlab-deploy-token-username"
+$env:NUGET_PASSWORD="your-gitlab-deploy-token"
 docker compose -f docker-compose-dev.yml build file-service directory-service auth-service
 ```
 
-GitHub PAT scopes:
+GitLab Deploy Token scopes:
 
-- `read:packages` for Docker builds that restore private packages.
-- `repo` when packages or repositories are private.
-- `write:packages` only when publishing packages.
+- `read_package_registry` for Docker builds that restore packages.
+- `write_package_registry` for manual package publishing.
 
-Do not commit real PAT values. Prefer ignored local env/script files when needed,
+Internal packages are published manually to the SharedService project registry.
+The committed root `nuget.config` contains only package sources and mappings;
+credentials must be supplied through a temporary or otherwise ignored local config.
+
+Do not commit real token values. Prefer ignored local env/script files when needed,
 and do not print token values in logs.
 
 Dockerfiles must not:

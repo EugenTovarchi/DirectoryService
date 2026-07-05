@@ -4,9 +4,20 @@ WORKDIR /app
 EXPOSE 8080
 
 # ffmpeg/ffprobe выполняют HLS-транскодирование и извлечение метаданных внутри контейнера.
-RUN apt-get -o Acquire::Retries=3 update \
-    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    sed -i 's|http://deb.debian.org|https://deb.debian.org|g' \
+        /etc/apt/sources.list.d/debian.sources \
+    && apt-get -o Acquire::Retries=5 -o Acquire::https::Timeout=30 update \
+    && for attempt in 1 2 3; do \
+        apt-get -o Acquire::Retries=5 -o Acquire::https::Timeout=30 \
+            --fix-broken install -y \
+        && apt-get -o Acquire::Retries=5 -o Acquire::https::Timeout=30 \
+            install -y --no-install-recommends ffmpeg \
+        && break; \
+        if [ "$attempt" = 3 ]; then exit 1; fi; \
+        sleep $((attempt * 5)); \
+    done
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -30,7 +41,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
     --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
     cp /run/secrets/nuget_config /tmp/nuget.config && \
-    dotnet nuget update source github \
+    dotnet nuget update source gitlab-sharedservice \
         --configfile /tmp/nuget.config \
         --username "$(cat /run/secrets/nuget_username)" \
         --password "$(cat /run/secrets/nuget_password)" \

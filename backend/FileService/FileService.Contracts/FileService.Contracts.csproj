@@ -5,19 +5,15 @@
     <Authors>Istred</Authors>
     <Company>Istred</Company>
     <PackageDescription>Framework</PackageDescription>
-    <RepositoryUrl>https://github.com/EugenTovarchi/SharedService</RepositoryUrl>
+    <RepositoryUrl>https://gitlab.com/yudjineist/directory-service</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />
     <PackageReference Include="WolverineFx.Postgresql" />
     <PackageReference Include="WolverineFx.RabbitMQ" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
-      <HintPath>C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.12\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
-    </Reference>
   </ItemGroup>
 </Project>
