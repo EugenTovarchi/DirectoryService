@@ -18,6 +18,7 @@ namespace DirectoryService.Web.Controllers;
 public class DepartmentController : ApplicationController
 {
     [HttpPost("api/departments")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreateDepartmentRequest request,
        [FromServices] CreateDepartmentHandler handler,
@@ -34,6 +35,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpPatch("api/departments/{departmentId:guid}/locations")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateLocations(
        [FromRoute] Guid departmentId,
        [FromBody] UpdateDepartmentLocationsRequest request,
@@ -51,6 +53,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpPut("api/departments/{departmentId}/parent")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> MoveDepartment(
        [FromRoute] Guid departmentId,
        [FromBody] MoveDepartmentRequest request,
@@ -68,6 +71,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpGet("api/departments/top-positions")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetDepartmentsRequest request,
        [FromServices] GetTopByPositionsDepartmentsHandler handler,
@@ -109,6 +113,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpDelete("/api/departments/soft/{departmentId:guid}")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> SoftDelete(
         [FromRoute] Guid departmentId,
         [FromServices] SoftDeleteHandler handler,
@@ -121,6 +126,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpPatch("api/departments/{departmentId:guid}/video")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateDepartmentVideo(
         [FromRoute] Guid departmentId,
         [FromBody] UpdateVideoRequest request,

@@ -57,11 +57,14 @@ JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as Au
 
 ## Authorization
 
-- `GET /api/departments/roots` and `GET /api/departments/{parentId}/children` require the `directory.read` policy.
-- The policy requires a valid AuthService access token containing the `permission=directory.read` claim.
+- All current DirectoryService read actions require the `directory.read` policy: department roots/children/top positions and location queries.
+- All current DirectoryService mutations require the `directory.manage` policy: department/location/position creation, department move, location assignment, soft delete, and video assignment.
+- Policies require a valid AuthService access token containing the matching `permission` claim; controllers do not check AuthService role names directly.
 - Missing, invalid, or expired tokens return `401 Unauthorized`; an authenticated token without the permission returns `403 Forbidden`.
 - MVC actions use `[Authorize(Policy = ...)]`; policy names are kept in `DirectoryAuthorizationPolicies` rather than repeated as string literals.
 - Swagger exposes Bearer JWT authorization for local verification.
+
+Current routing note: `ApplicationController` has `[Route("[controller]")]`. Action templates without a leading `/` are therefore controller-relative (for example `/Location/api/locations`), while templates beginning with `/` are absolute. Normalizing these routes requires a separate compatibility decision because it changes the public HTTP surface.
 
 See [../patterns/configuration.md](../patterns/configuration.md) and [../patterns/docker-config.md](../patterns/docker-config.md).
 

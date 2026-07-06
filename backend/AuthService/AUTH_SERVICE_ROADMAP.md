@@ -381,11 +381,26 @@
 
 </details>
 
+<details>
+<summary>25. DirectoryService permission rollout</summary>
+
+**Зачем:** закрыть весь текущий DirectoryService HTTP surface после первого JWT validation slice.
+
+**Сделано:**
+- department/location read actions требуют `directory.read`;
+- department/location/position mutations требуют `directory.manage`;
+- controllers используют именованные policies и не зависят от AuthService role names;
+- integration tests отдельно показывают `401`, `403` и успешные read/manage requests.
+
+**Что дало:** роли можно развивать в AuthService как наборы permissions без переписывания DirectoryService endpoints.
+
+</details>
+
 ## Ближайший План
 
 1. Resource-service authorization rollout:
-   - распространить permission policies на оставшиеся read/write endpoints FileService и DirectoryService;
-   - сопоставить mutations с `files.upload`, `videos.upload` и `directory.manage` без прямых role checks;
+   - распространить permission policies на оставшиеся read/write endpoints FileService;
+   - сопоставить FileService mutations с `files.upload`/`videos.upload` без прямых role checks;
    - добавить Docker smoke path: AuthService выдал реальный token, resource service принял/отклонил request.
 
 2. Audit read API:

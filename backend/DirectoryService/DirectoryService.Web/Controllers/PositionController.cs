@@ -1,5 +1,7 @@
 using DirectoryService.Application.Commands.Positions.Create;
 using DirectoryService.Contracts.Requests.Positions;
+using DirectoryService.Web.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedService.Framework;
 using SharedService.Framework.ControllersResults;
@@ -9,6 +11,7 @@ namespace DirectoryService.Web.Controllers;
 public class PositionController : ApplicationController
 {
     [HttpPost("api/positions")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreatePositionRequest request,
        [FromServices] CreatePositionHandler handler,

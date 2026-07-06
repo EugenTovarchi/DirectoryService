@@ -1,6 +1,8 @@
 using DirectoryService.Application.Commands.Locations.Create;
 using DirectoryService.Application.Queries.Locations.Get;
 using DirectoryService.Contracts.Requests.Locations;
+using DirectoryService.Web.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedService.Framework;
 using SharedService.Framework.ControllersResults;
@@ -10,6 +12,7 @@ namespace DirectoryService.Web.Controllers;
 public class LocationController : ApplicationController
 {
     [HttpPost("api/locations")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreateLocationRequest request,
        [FromServices] CreateLocationHandler handler,
@@ -26,6 +29,7 @@ public class LocationController : ApplicationController
     }
 
     [HttpGet("api/locations")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetLocationsRequest request,
        [FromServices] GetLocationsHandler handler,
