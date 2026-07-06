@@ -293,7 +293,12 @@ AuthService permissions:
 
 - `users.manage`: приглашать пользователей, менять роли, активировать/деактивировать пользователей компании.
 
-Остальные permissions оставляем для следующих slices, когда появятся соответствующие workflows.
+FileService permissions:
+
+- `files.read`: читать media metadata и получать download/view data.
+- `files.upload`: выполнять multipart file upload lifecycle.
+- `files.delete`: удалять files/media assets; назначен `SystemAdmin`, `CompanyAdmin`, `Operator`.
+- `videos.read` и `videos.upload`: зарезервированы для video-specific policies; текущие generic multipart routes используют file permissions.
 
 ## Planned Endpoints
 
@@ -840,6 +845,8 @@ Audit history write-side добавлен для security-sensitive auth/user-ma
 DirectoryService permission rollout завершил защиту текущего HTTP surface. План блока: распространить authorization с первых read endpoints на остальные queries и mutations без прямых role checks. Сделано: все read actions требуют `directory.read`, все write actions требуют `directory.manage`, а отдельные integration tests проверяют read/manage separation. Влияние: изменение состава ролей остается внутри AuthService, а DirectoryService зависит только от стабильных permission capabilities.
 
 DirectoryService routes нормализованы после permission rollout. План блока: убрать случайные controller prefixes вроде `/Location/api/locations` без изменения handlers или authorization semantics. Сделано: controllers получили явные plural prefixes `/api/departments`, `/api/locations`, `/api/positions`, actions используют относительные templates, а routing tests фиксируют новый и legacy paths. Влияние: frontend и API clients получают единообразный public URL surface.
+
+FileService permission rollout разделил client-facing endpoints по capabilities. План блока: защитить оставшиеся read/upload/delete flows и не смешивать destructive delete с upload. Сделано: metadata/download требуют `files.read`, multipart lifecycle требует `files.upload`, delete получил новый `files.delete`, а internal existence check оставлен для будущей service authentication. Влияние: AuthService roles теперь управляют файловыми возможностями без role checks внутри FileService.
 
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 

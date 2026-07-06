@@ -7,20 +7,20 @@ namespace FileService.IntegrationTests.Infrastructure;
 
 public static class TestJwtTokenFactory
 {
-    public static string Create(string? permission = null) =>
-        CreateToken(permission, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(5));
+    public static string Create(params string[] permissions) =>
+        CreateToken(permissions, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(5));
 
-    public static string CreateExpired(string? permission = null) =>
-        CreateToken(permission, DateTime.UtcNow.AddMinutes(-2), DateTime.UtcNow.AddMinutes(-1));
+    public static string CreateExpired(params string[] permissions) =>
+        CreateToken(permissions, DateTime.UtcNow.AddMinutes(-2), DateTime.UtcNow.AddMinutes(-1));
 
-    private static string CreateToken(string? permission, DateTime notBefore, DateTime expires)
+    private static string CreateToken(IEnumerable<string> permissions, DateTime notBefore, DateTime expires)
     {
         List<Claim> claims =
         [
             new Claim(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString())
         ];
 
-        if (permission != null)
+        foreach (string permission in permissions)
         {
             claims.Add(new Claim("permission", permission));
         }

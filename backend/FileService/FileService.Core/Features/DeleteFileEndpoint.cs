@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Core.Abstractions;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using Microsoft.AspNetCore.Builder;
@@ -21,7 +22,8 @@ public sealed class DeleteFileEndpoint : IEndpoint
             async Task<EndpointResult<Guid>> (
                 [FromRoute] Guid mediaAssetId,
                 [FromServices] DeleteFIleHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(mediaAssetId, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(mediaAssetId, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_DELETE);
     }
 }
 

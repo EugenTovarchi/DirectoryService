@@ -57,8 +57,11 @@ JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as Au
 
 ## Authorization
 
-- `POST /files/{mediaAssetId}` requires the `files.read` policy.
-- The policy requires a valid AuthService access token containing the `permission=files.read` claim.
+- Client-facing metadata, batch-info, and download URL endpoints require `files.read`.
+- Multipart start, chunk URL, complete, and cancel endpoints require `files.upload`.
+- File deletion requires the separate destructive capability `files.delete`.
+- `SystemAdmin`, `CompanyAdmin`, and `Operator` receive `files.delete`; `Technician` and `Viewer` do not.
+- The internal `POST /files/{mediaAssetId}/exists` endpoint remains outside user permission policies until service-to-service authentication is introduced for DirectoryService calls.
 - Missing, invalid, or expired tokens return `401 Unauthorized`; an authenticated token without the permission returns `403 Forbidden`.
 - Minimal API endpoints declare policies through `.RequireAuthorization(...)`; policy names are kept in `FileAuthorizationPolicies` rather than repeated as string literals.
 - Swagger exposes Bearer JWT authorization for local verification.

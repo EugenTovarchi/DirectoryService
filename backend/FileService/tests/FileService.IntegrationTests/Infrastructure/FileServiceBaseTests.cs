@@ -23,7 +23,7 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         AppHttpClient = factory.CreateClient();
         AppHttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
-            TestJwtTokenFactory.Create("files.read"));
+            TestJwtTokenFactory.Create("files.read", "files.upload", "files.delete"));
         HttpClient = new HttpClient();
         Services = factory.Services;
         _s3Client = Services.GetRequiredService<IAmazonS3>();

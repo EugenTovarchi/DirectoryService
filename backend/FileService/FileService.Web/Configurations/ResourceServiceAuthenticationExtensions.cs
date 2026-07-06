@@ -40,9 +40,17 @@ public static class ResourceServiceAuthenticationExtensions
             });
 
         services.AddAuthorization(options =>
+        {
             options.AddPolicy(
                 FileAuthorizationPolicies.FILES_READ,
-                policy => policy.RequireClaim(PERMISSION_CLAIM, FileAuthorizationPolicies.FILES_READ)));
+                policy => policy.RequireClaim(PERMISSION_CLAIM, FileAuthorizationPolicies.FILES_READ));
+            options.AddPolicy(
+                FileAuthorizationPolicies.FILES_UPLOAD,
+                policy => policy.RequireClaim(PERMISSION_CLAIM, FileAuthorizationPolicies.FILES_UPLOAD));
+            options.AddPolicy(
+                FileAuthorizationPolicies.FILES_DELETE,
+                policy => policy.RequireClaim(PERMISSION_CLAIM, FileAuthorizationPolicies.FILES_DELETE));
+        });
 
         return services;
     }

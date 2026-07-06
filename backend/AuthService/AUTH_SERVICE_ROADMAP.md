@@ -411,12 +411,27 @@
 
 </details>
 
+<details>
+<summary>27. FileService permission rollout</summary>
+
+**Зачем:** защитить client-facing FileService endpoints и отделить destructive delete от upload capability.
+
+**Сделано:**
+- metadata, batch info и download URL требуют `files.read`;
+- multipart start/chunk/complete/cancel требуют `files.upload`;
+- добавлен `files.delete` для `SystemAdmin`, `CompanyAdmin`, `Operator`;
+- internal `/files/{mediaAssetId}/exists` оставлен для будущей service-to-service authentication;
+- integration tests отдельно проверяют read/upload/delete authorization boundaries.
+
+**Что дало:** FileService применяет permissions из AuthService roles без прямых role checks и не выдаёт delete через upload permission.
+
+</details>
+
 ## Ближайший План
 
 1. Resource-service authorization rollout:
-   - распространить permission policies на оставшиеся read/write endpoints FileService;
-   - сопоставить FileService mutations с `files.upload`/`videos.upload` без прямых role checks;
    - добавить Docker smoke path: AuthService выдал реальный token, resource service принял/отклонил request.
+   - спроектировать service-to-service authentication для DirectoryService -> FileService existence checks.
 
 2. Audit read API:
    - фильтры по company/user/action/date;

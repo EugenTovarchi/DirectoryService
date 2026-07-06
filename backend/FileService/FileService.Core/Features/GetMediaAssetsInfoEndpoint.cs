@@ -2,6 +2,7 @@
 using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain.Assets;
 using Microsoft.AspNetCore.Builder;
@@ -22,7 +23,8 @@ public sealed class GetMediaAssetsInfoEndpoint : IEndpoint
             async Task<EndpointResult<GetMediaAssetsResponse>> (
                 [FromBody] GetMediaAssetsRequest request,
                 [FromServices] GetMediaAssetsInfoHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_READ);
     }
 }
 

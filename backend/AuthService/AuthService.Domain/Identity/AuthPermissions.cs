@@ -31,6 +31,11 @@ public static class AuthPermissions
     public const string FILES_UPLOAD = "files.upload";
 
     /// <summary>
+    /// Позволяет удалять файлы и связанные media assets.
+    /// </summary>
+    public const string FILES_DELETE = "files.delete";
+
+    /// <summary>
     /// Позволяет читать метаданные видео и данные для просмотра HLS.
     /// </summary>
     public const string VIDEOS_READ = "videos.read";
