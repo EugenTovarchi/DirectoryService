@@ -64,7 +64,7 @@ JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as Au
 - MVC actions use `[Authorize(Policy = ...)]`; policy names are kept in `DirectoryAuthorizationPolicies` rather than repeated as string literals.
 - Swagger exposes Bearer JWT authorization for local verification.
 
-Current routing note: `ApplicationController` has `[Route("[controller]")]`. Action templates without a leading `/` are therefore controller-relative (for example `/Location/api/locations`), while templates beginning with `/` are absolute. Normalizing these routes requires a separate compatibility decision because it changes the public HTTP surface.
+DirectoryService controllers declare explicit plural API prefixes: `/api/departments`, `/api/locations`, and `/api/positions`. Actions use relative templates below those prefixes. Legacy controller-prefixed aliases such as `/Location/api/locations` are not supported.
 
 See [../patterns/configuration.md](../patterns/configuration.md) and [../patterns/docker-config.md](../patterns/docker-config.md).
 

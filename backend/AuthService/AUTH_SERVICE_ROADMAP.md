@@ -396,6 +396,21 @@
 
 </details>
 
+<details>
+<summary>26. DirectoryService route normalization</summary>
+
+**Зачем:** убрать случайные controller-name prefixes из public API после добавления authorization tests.
+
+**Сделано:**
+- controllers используют явные prefixes `/api/departments`, `/api/locations`, `/api/positions`;
+- action templates стали относительными к controller prefix;
+- `/api/locations` заменил фактический legacy path `/Location/api/locations`;
+- routing tests проверяют новый route и отсутствие legacy alias.
+
+**Что дало:** DirectoryService получил предсказуемые plural API routes для frontend и других clients.
+
+</details>
+
 ## Ближайший План
 
 1. Resource-service authorization rollout:

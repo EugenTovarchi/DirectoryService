@@ -8,9 +8,10 @@ using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 
+[Route("api/positions")]
 public class PositionController : ApplicationController
 {
-    [HttpPost("api/positions")]
+    [HttpPost]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreatePositionRequest request,

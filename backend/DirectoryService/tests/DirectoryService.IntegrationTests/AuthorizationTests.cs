@@ -100,7 +100,7 @@ public class AuthorizationTests : DirectoryBaseTests
         CreateLocationRequest request = CreateValidLocationRequest();
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/Location/api/locations", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/locations", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -117,7 +117,7 @@ public class AuthorizationTests : DirectoryBaseTests
         CreateLocationRequest request = CreateValidLocationRequest();
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/Location/api/locations", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/locations", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -134,7 +134,7 @@ public class AuthorizationTests : DirectoryBaseTests
         CreateLocationRequest request = CreateValidLocationRequest();
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/Location/api/locations", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/locations", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

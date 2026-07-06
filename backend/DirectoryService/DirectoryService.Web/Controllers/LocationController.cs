@@ -9,9 +9,10 @@ using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 
+[Route("api/locations")]
 public class LocationController : ApplicationController
 {
-    [HttpPost("api/locations")]
+    [HttpPost]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreateLocationRequest request,
@@ -28,7 +29,7 @@ public class LocationController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpGet("api/locations")]
+    [HttpGet]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetLocationsRequest request,

@@ -15,9 +15,10 @@ using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 
+[Route("api/departments")]
 public class DepartmentController : ApplicationController
 {
-    [HttpPost("api/departments")]
+    [HttpPost]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreateDepartmentRequest request,
@@ -34,7 +35,7 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPatch("api/departments/{departmentId:guid}/locations")]
+    [HttpPatch("{departmentId:guid}/locations")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateLocations(
        [FromRoute] Guid departmentId,
@@ -52,7 +53,7 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPut("api/departments/{departmentId}/parent")]
+    [HttpPut("{departmentId}/parent")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> MoveDepartment(
        [FromRoute] Guid departmentId,
@@ -70,7 +71,7 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpGet("api/departments/top-positions")]
+    [HttpGet("top-positions")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetDepartmentsRequest request,
@@ -84,7 +85,7 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpGet("/api/departments/roots")]
+    [HttpGet("roots")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentsWithChildren(
        [FromQuery] GetDepartmentsWithChildrenRequest request,
@@ -98,7 +99,7 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpGet("/api/departments/{parentId:guid}/children")]
+    [HttpGet("{parentId:guid}/children")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentChildren(
        [FromRoute] Guid parentId,
@@ -112,7 +113,7 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpDelete("/api/departments/soft/{departmentId:guid}")]
+    [HttpDelete("soft/{departmentId:guid}")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> SoftDelete(
         [FromRoute] Guid departmentId,
@@ -125,7 +126,7 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPatch("api/departments/{departmentId:guid}/video")]
+    [HttpPatch("{departmentId:guid}/video")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateDepartmentVideo(
         [FromRoute] Guid departmentId,
