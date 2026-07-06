@@ -53,6 +53,16 @@ See [../patterns/video-processing.md](../patterns/video-processing.md), [../rule
 - S3 keys, DB passwords, RabbitMQ credentials, and NuGet credentials must stay out of appsettings and images.
 - Build-time NuGet credentials are passed as BuildKit secrets only.
 
+JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as AuthService. The signing key must come from User Secrets, environment variables, or a secret manager; committed `appsettings` keeps it empty. FileService validates access tokens locally and does not call AuthService for every request.
+
+## Authorization
+
+- `POST /files/{mediaAssetId}` requires the `files.read` policy.
+- The policy requires a valid AuthService access token containing the `permission=files.read` claim.
+- Missing, invalid, or expired tokens return `401 Unauthorized`; an authenticated token without the permission returns `403 Forbidden`.
+- Minimal API endpoints declare policies through `.RequireAuthorization(...)`; policy names are kept in `FileAuthorizationPolicies` rather than repeated as string literals.
+- Swagger exposes Bearer JWT authorization for local verification.
+
 See [../patterns/configuration.md](../patterns/configuration.md) and [../patterns/docker-config.md](../patterns/docker-config.md).
 
 ## Important Domain Flows

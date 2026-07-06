@@ -365,15 +365,28 @@
 
 </details>
 
+<details>
+<summary>24. Resource-service JWT validation foundation</summary>
+
+**Зачем:** доказать, что access tokens AuthService реально защищают FileService и DirectoryService без обращения к AuthService на каждый API request.
+
+**Сделано:**
+- FileService и DirectoryService валидируют issuer, audience, symmetric signing key, lifetime и 30-second clock skew.
+- `POST /files/{mediaAssetId}` требует `files.read`.
+- `GET /api/departments/roots` и `GET /api/departments/{parentId}/children` требуют `directory.read`.
+- Swagger обоих resource services поддерживает Bearer access token.
+- Integration tests отдельно проверяют missing, malformed, expired, forbidden и accepted JWT cases.
+
+**Что дало:** permissions, полученные пользователем через роль в AuthService, начали применяться на первых реальных resource-service endpoints с ожидаемыми `401/403`.
+
+</details>
+
 ## Ближайший План
 
-1. Downstream JWT validation and permission integration:
-   - настроить проверку текущих AuthService JWT access tokens в FileService и DirectoryService;
-   - выбрать первые реальные protected endpoints в FileService и DirectoryService;
-   - добавить permission policies на базе текущих `permission` claims;
-   - проверить `401` без token, `401` с invalid/expired token и `403` при нехватке permission;
-   - настроить Swagger auth для защищенных downstream endpoints;
-   - покрыть сквозные cases integration tests: AuthService выдал token, downstream service принял/отклонил request.
+1. Resource-service authorization rollout:
+   - распространить permission policies на оставшиеся read/write endpoints FileService и DirectoryService;
+   - сопоставить mutations с `files.upload`, `videos.upload` и `directory.manage` без прямых role checks;
+   - добавить Docker smoke path: AuthService выдал реальный token, resource service принял/отклонил request.
 
 2. Audit read API:
    - фильтры по company/user/action/date;

@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Amazon.S3;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
@@ -20,6 +21,9 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
     protected FileServiceBaseTests(FileServiceTestWebFactory factory)
     {
         AppHttpClient = factory.CreateClient();
+        AppHttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwtTokenFactory.Create("files.read"));
         HttpClient = new HttpClient();
         Services = factory.Services;
         _s3Client = Services.GetRequiredService<IAmazonS3>();

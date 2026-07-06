@@ -7,6 +7,8 @@ using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
 using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Web.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedService.Framework;
 using SharedService.Framework.ControllersResults;
@@ -79,6 +81,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpGet("/api/departments/roots")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentsWithChildren(
        [FromQuery] GetDepartmentsWithChildrenRequest request,
        [FromServices] GetDepartmentsWithChildrenHandler handler,
@@ -92,6 +95,7 @@ public class DepartmentController : ApplicationController
     }
 
     [HttpGet("/api/departments/{parentId:guid}/children")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentChildren(
        [FromRoute] Guid parentId,
        [FromQuery] GetDepartmentChildrenRequest request,

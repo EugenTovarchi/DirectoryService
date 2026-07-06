@@ -34,7 +34,7 @@ public class Program
 
             builder.Services.AddConfiguration(builder.Configuration);
 
-            builder.Services.AddAuthorization();
+            builder.Services.AddResourceServiceAuthentication(builder.Configuration);
 
             builder.Services.AddDirectoryServiceInfrastructure(builder.Configuration)
                             .AddDirectoryServiceApplication(builder.Configuration);

@@ -53,6 +53,16 @@ See [../rules/coding-style.md](../rules/coding-style.md) and [../rules/domain-ru
 - Docker runtime uses `DirectoryService.Development.env` through compose `env_file`.
 - Secrets must stay out of appsettings and image layers.
 
+JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as AuthService. The signing key must come from User Secrets, environment variables, or a secret manager; committed `appsettings` keeps it empty. DirectoryService validates access tokens locally and does not call AuthService for every request.
+
+## Authorization
+
+- `GET /api/departments/roots` and `GET /api/departments/{parentId}/children` require the `directory.read` policy.
+- The policy requires a valid AuthService access token containing the `permission=directory.read` claim.
+- Missing, invalid, or expired tokens return `401 Unauthorized`; an authenticated token without the permission returns `403 Forbidden`.
+- MVC actions use `[Authorize(Policy = ...)]`; policy names are kept in `DirectoryAuthorizationPolicies` rather than repeated as string literals.
+- Swagger exposes Bearer JWT authorization for local verification.
+
 See [../patterns/configuration.md](../patterns/configuration.md) and [../patterns/docker-config.md](../patterns/docker-config.md).
 
 ## Important Domain Flows
