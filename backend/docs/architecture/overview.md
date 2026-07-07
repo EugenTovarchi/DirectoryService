@@ -15,6 +15,7 @@ This backend workspace is a .NET 9 multi-service system. Current services are Di
 See:
 
 - [services.md](services.md)
+- [auth-flows.md](auth-flows.md)
 - [shared-kernel.md](shared-kernel.md)
 - [how-to-add-service.md](how-to-add-service.md)
 - [../services/directory-service.md](../services/directory-service.md)
