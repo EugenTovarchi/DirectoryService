@@ -427,10 +427,25 @@
 
 </details>
 
+<details>
+<summary>28. Local Viewer seed</summary>
+
+**Зачем:** дать локальному Docker окружению безопасную opt-in учетную запись для ручной проверки login и downstream permissions.
+
+**Сделано:**
+- Добавлен `LocalViewerSeed`, выключенный по умолчанию и разрешенный только в `Development`/`Docker` environment.
+- Email/password приходят только из runtime configuration; committed config содержит пустые значения.
+- Seeder идемпотентно создаёт active user с минимальной ролью `Viewer` и не меняет password существующего пользователя.
+
+**Что дало:** после явного включения seed можно получить реальный JWT через Swagger и вручную проверить `200/401/403` в resource services без отдельного PowerShell runner.
+
+**Проверено в Docker:** AuthService login `200`, DirectoryService anonymous `401`, `directory.read` `200`, missing `directory.manage` `403`, FileService принял `files.read` и вернул domain `404` для отсутствующего asset, missing `files.delete` `403`.
+
+</details>
+
 ## Ближайший План
 
 1. Resource-service authorization rollout:
-   - добавить Docker smoke path: AuthService выдал реальный token, resource service принял/отклонил request.
    - спроектировать service-to-service authentication для DirectoryService -> FileService existence checks.
 
 2. Audit read API:

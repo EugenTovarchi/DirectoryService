@@ -1,4 +1,5 @@
 using AuthService.Core.Options;
+using AuthService.Web.Swagger;
 using SharedService.Framework.Logging;
 using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
@@ -30,6 +31,7 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "AuthService");
         services.AddOpenApiSpec("AuthService");
+        services.AddSwaggerGen(options => options.SchemaFilter<LoginRequestSchemaFilter>());
         services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "AuthService");
         services.AddEmailOptions(configuration);
 

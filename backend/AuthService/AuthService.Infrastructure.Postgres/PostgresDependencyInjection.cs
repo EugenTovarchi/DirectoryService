@@ -27,6 +27,9 @@ public static class PostgresDependencyInjection
             .AddIdentityStores()
             .AddRepositories();
 
+        services.Configure<LocalViewerSeedOptions>(
+            configuration.GetSection(LocalViewerSeedOptions.SECTION_NAME));
+
         return services;
     }
 

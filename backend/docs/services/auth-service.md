@@ -791,6 +791,26 @@ Business checks остаются внутри сервисов-владельц�
 - Media ownership и доступ к file/video проверяются в `FileService`.
 - AuthService не должен ходить в FileService storage или DirectoryService hierarchy во время обычной API authorization.
 
+### Ручной Docker Smoke Flow
+
+Для локальной проверки можно явно включить development-only `Viewer` seed через `AuthService.Development.env`:
+
+```dotenv
+LocalViewerSeed__Enabled=true
+LocalViewerSeed__Email=<local viewer email>
+LocalViewerSeed__Password=<local strong password>
+```
+
+Значения credentials не коммитятся. Seed разрешен только для `Development`/`Docker`, идемпотентен и не меняет password существующего пользователя.
+
+Проверка через Swagger:
+
+1. Выполнить `POST /api/auth/login` в AuthService и скопировать `result.accessToken`.
+2. Передать token как Bearer в Swagger DirectoryService/FileService.
+3. `GET /api/departments/roots` должен вернуть `200` для `Viewer`.
+4. Тот же request без token должен вернуть `401`.
+5. `POST /api/departments` и `DELETE /files/{id}` должны вернуть `403`, потому что у `Viewer` нет `directory.manage` и `files.delete`.
+
 Первый protected flow для интеграции:
 
 - `FileService`: защитить чтение media metadata/download metadata через `files.read`.
@@ -848,6 +868,10 @@ DirectoryService routes нормализованы после permission rollout
 
 FileService permission rollout разделил client-facing endpoints по capabilities. План блока: защитить оставшиеся read/upload/delete flows и не смешивать destructive delete с upload. Сделано: metadata/download требуют `files.read`, multipart lifecycle требует `files.upload`, delete получил новый `files.delete`, а internal existence check оставлен для будущей service authentication. Влияние: AuthService roles теперь управляют файловыми возможностями без role checks внутри FileService.
 
+Development `Viewer` seed добавлен для понятной ручной проверки межсервисного auth path. План блока: подготовить минимально привилегированного пользователя без committed credentials и получить его access token через Swagger. Сделано: opt-in seed работает только в `Development`/`Docker`, читает email/password из runtime configuration и не сбрасывает существующий password. Влияние: `200/401/403` можно проверить через Swagger без отдельного PowerShell runner.
+
+Ручной Docker smoke flow выполнен на пересобранных AuthService, DirectoryService и FileService. AuthService выдал реальный token, DirectoryService вернул `401/200/403`, FileService принял `files.read` и вернул domain `404` для отсутствующего asset, а delete без `files.delete` вернул `403`. Влияние: shared issuer/audience/signing key и permission claims проверены на реальной Docker-конфигурации; следующий security boundary — service identity для DirectoryService -> FileService.
+
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 
 ### Конспект По Сегодняшним AuthService Шагам
@@ -897,9 +921,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- Настроить JWT validation в FileService и DirectoryService для текущих AuthService access tokens.
-- Добавить первый защищенный downstream flow в FileService/DirectoryService через permission policies.
-- Покрыть `401` без token, `401` с invalid/expired token и `403` при нехватке permission.
+- Спроектировать service-to-service authentication для DirectoryService -> FileService existence check.
 - Добавить audit read API с фильтрами по company/user/action/date и pagination.
 - Добавить rate limiting/temporary throttling для public auth endpoints: login, refresh, request password reset, invite resend.
 - После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
@@ -964,7 +986,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Последние проверки проходили: build `0 warnings / 0 errors`, AuthAudit integration `3/3`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `90/90`.
 
-Следующий ближайший AuthService блок: downstream JWT validation и permission integration в FileService/DirectoryService. После него идут audit read API и hardening public auth endpoints. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: спроектировать service-to-service authentication для DirectoryService -> FileService existence check. После него идут audit read API и hardening public auth endpoints. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 
