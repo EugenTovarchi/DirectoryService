@@ -303,9 +303,8 @@ flowchart TD
 
 ## Открытые Security Шаги
 
-1. Реальный Docker smoke path: AuthService выдаёт token, DirectoryService/FileService принимают или отклоняют request.
-2. Service-to-service authentication для DirectoryService → FileService existence check.
-3. Private/public key signing и key distribution вместо общего symmetric secret.
-4. Rate limiting и login throttling/lockout.
-5. Email outbox/retry для invite и password reset delivery.
-6. OAuth 2.0/OpenID Connect authorization server через OpenIddict после доказанного JWT/permission path.
+1. Реальный Docker smoke path: AuthService выдаёт user token и service token, DirectoryService/FileService принимают или отклоняют request.
+2. Private/public key signing и key distribution вместо общего symmetric secret.
+3. Rate limiting и login throttling/lockout.
+4. Email outbox/retry для invite и password reset delivery.
+5. OAuth 2.0/OpenID Connect authorization server через OpenIddict после доказанного JWT/permission path.
