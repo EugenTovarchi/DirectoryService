@@ -28,6 +28,8 @@ public static class AppExtensions
 
         app.UseSerilogRequestLogging();
 
+        app.MapFileGrpcServices();
+
         app.MapEndpoints();
 
         return app;

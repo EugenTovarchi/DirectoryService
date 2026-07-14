@@ -36,6 +36,8 @@ public partial class Program
 
             builder.Services.AddResourceServiceAuthentication(builder.Configuration);
 
+            builder.Services.AddFileGrpc();
+
             builder.Services.AddCore()
                 .AddS3(builder.Configuration)
                 .AddVideoProcessing(builder.Configuration)

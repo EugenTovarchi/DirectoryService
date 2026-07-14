@@ -1,13 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>IstredDev.FileService.Contracts</PackageId>
-    <Version>0.0.6</Version>
+    <Version>0.1.0</Version>
     <Authors>Istred</Authors>
     <Company>Istred</Company>
     <PackageDescription>Framework</PackageDescription>
     <RepositoryUrl>https://gitlab.com/yudjineist/directory-service</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
+    <Protobuf Include="Grpc\Protos\file_internal.proto" GrpcServices="Both" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Core.Api" />
+    <PackageReference Include="Grpc.Net.ClientFactory" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
     <PackageReference Include="istreddev.framework" />
     <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

@@ -16,6 +16,7 @@ See:
 
 - [services.md](services.md)
 - [auth-flows.md](auth-flows.md)
+- [service-communication-grpc-rabbitmq.md](service-communication-grpc-rabbitmq.md)
 - [shared-kernel.md](shared-kernel.md)
 - [how-to-add-service.md](how-to-add-service.md)
 - [../services/directory-service.md](../services/directory-service.md)
@@ -27,7 +28,7 @@ Do not cross service storage boundaries:
 
 - DirectoryService must not read FileService database, S3, or internals.
 - FileService must not write DirectoryService database.
-- Cross-service communication is by HTTP for direct checks/queries and RabbitMQ/Wolverine for async events.
+- Cross-service communication is by HTTP/gRPC for direct checks/queries and RabbitMQ/Wolverine for async events.
 
 See [../patterns/configuration.md](../patterns/configuration.md), [../patterns/docker-config.md](../patterns/docker-config.md), and [../patterns/observability.md](../patterns/observability.md) for runtime configuration, Docker rules, and backend metrics setup.
 

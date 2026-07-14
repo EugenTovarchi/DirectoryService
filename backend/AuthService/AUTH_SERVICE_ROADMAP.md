@@ -461,6 +461,7 @@
 4. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
+   - production provider candidate: UniSender Go, если он подтвердит нужные SMTP/API delivery capabilities, DKIM/SPF setup, delivery statuses/webhooks и подходящие условия хранения данных;
    - не хранить raw invite/reset token отдельно от delivery payload дольше нужного срока;
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
@@ -487,3 +488,4 @@
 - Какой минимальный seed нужен для первого `SystemAdmin`, company и первого `CompanyAdmin`.
 - Нужен ли отдельный generic token hashing service вместо текущего refresh-token-oriented naming.
 - Какой audit/event model брать для security history.
+- Берем ли UniSender Go как production email provider для invite/password-reset/security notifications после проверки SMTP/API, delivery callbacks, DKIM/SPF и data residency/compliance условий.

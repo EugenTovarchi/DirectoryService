@@ -4,6 +4,7 @@
     <UserSecretsId>file-service-web-local</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" />
     <PackageReference Include="istreddev.core" />
     <PackageReference Include="istreddev.sharedkernel" />
     <PackageReference Include="istreddev.framework" />

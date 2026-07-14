@@ -48,6 +48,7 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
                 ["Jwt:Audience"] = TEST_JWT_AUDIENCE,
                 ["Jwt:SigningKey"] = TEST_JWT_SIGNING_KEY,
                 ["FileServiceOptions:Url"] = "http://localhost:9003/",
+                ["FileServiceOptions:GrpcUrl"] = "http://localhost:50051/",
                 ["FileServiceOptions:TimeoutSeconds"] = "10",
                 ["OpenTelemetry:Enabled"] = "false"
             };

@@ -23,6 +23,7 @@ This file is the service index. For implementation detail, read only the affecte
 Related docs:
 
 - [overview.md](overview.md)
+- [service-communication-grpc-rabbitmq.md](service-communication-grpc-rabbitmq.md)
 - [shared-kernel.md](shared-kernel.md)
 - [../patterns/configuration.md](../patterns/configuration.md)
 - [../patterns/docker-config.md](../patterns/docker-config.md)
