@@ -241,7 +241,35 @@ FileService использует Minimal API `.RequireAuthorization(policy)` и 
 
 ### Internal Existence Check
 
-`POST /files/{mediaAssetId}/exists` вызывается DirectoryService и пока не защищён user permission policy. Назначать ему `files.read` недостаточно: это internal service-to-service boundary. Следующий security design должен определить service identity, credential/token issuing, audience и rotation; до этого endpoint остаётся явно отмеченным исключением.
+`DirectoryService -> FileService` internal gRPC contract защищен service-to-service token flow.
+
+1. `DirectoryService` использует service client credentials из runtime configuration.
+2. `FileService.Contracts` запрашивает у AuthService `POST /api/auth/service-token`.
+3. AuthService проверяет `clientId/clientSecret` и выпускает короткоживущий service JWT.
+4. `FileService.Contracts` кэширует token до expiration и добавляет его в gRPC metadata:
+   `Authorization: Bearer <service-token>`.
+5. `FileService` валидирует JWT обычным JwtBearer middleware.
+6. gRPC service требует policy `file-service.internal`, которая проверяет claim
+   `service_permission=file-service.internal`.
+
+User permissions вроде `files.read` здесь не используются: это не пользовательский frontend request,
+а internal service identity.
+
+```mermaid
+sequenceDiagram
+    participant DS as DirectoryService
+    participant C as FileService.Contracts adapter
+    participant Auth as AuthService
+    participant FS as FileService gRPC
+
+    DS->>C: IFileCommunicationService.CheckMediaAssetExists
+    C->>Auth: POST /api/auth/service-token
+    Auth-->>C: service access JWT
+    C->>FS: gRPC + Authorization metadata
+    FS->>FS: Validate JWT + service_permission policy
+    FS-->>C: gRPC reply
+    C-->>DS: C# Response DTO
+```
 
 ## Межсервисный Request Flow
 
