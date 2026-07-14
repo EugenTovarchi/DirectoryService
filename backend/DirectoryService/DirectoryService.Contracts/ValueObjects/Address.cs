@@ -4,7 +4,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record Address
+public sealed record Address
 {
     public const int COUNTRY_MAX_LENGTH = 100;
     public const int CITY_MAX_LENGTH = 100;
