@@ -86,11 +86,11 @@ services:
         - nuget_password
     ports:
       - "8002:8080"
+      - "50051:50051"
     env_file:
       - FileService.Development.env
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
-      ASPNETCORE_URLS: http://+:8080
     depends_on:
       - postgres
       - redis

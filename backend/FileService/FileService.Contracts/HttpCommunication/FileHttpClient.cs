@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
@@ -8,6 +8,9 @@ using SharedService.SharedKernel;
 
 namespace FileService.Contracts.HttpCommunication;
 
+/// <summary>
+/// HTTP-only adapter оставлен для сравнения с gRPC-вариантом и возможного fallback.
+/// </summary>
 internal sealed class FileHttpClient : IFileCommunicationService
 {
     private readonly HttpClient _httpClient;

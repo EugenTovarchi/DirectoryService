@@ -1024,6 +1024,7 @@ Implementation notes:
 - Rate limiting перед публичным stage лучше добавить обязательно: OWASP API Security относит отсутствие resource/rate limiting к отдельному классу API risks.
 - MFA/step-up auth лучше добавлять после стабильной базовой модели users, sessions и refresh token rotation.
 - Approximate location показывать только как "примерное местоположение", не использовать как security proof.
+- UniSender Go можно рассматривать как production email provider для invite, password reset и security notifications, потому что текущая реализация уже завязана на SMTP abstraction. Перед выбором нужно отдельно подтвердить SMTP/API возможности, DKIM/SPF настройку домена, delivery statuses/webhooks, rate limits, стоимость, data residency/compliance и отсутствие логирования raw invite/reset links на нашей стороне.
 
 ## Research References
 
@@ -1036,3 +1037,4 @@ Implementation notes:
 - Microsoft sign out everywhere: https://support.microsoft.com/en-gb/account-billing/how-to-sign-out-of-your-microsoft-account-everywhere-58da4a74-a719-43a6-9dd0-74a7e613229f
 - OWASP forgot password/security email guidance: https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html
 - NIST Digital Identity Guidelines: https://pages.nist.gov/800-63-4/
+- UniSender Go: https://www.unisender.com/

@@ -2,6 +2,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
+EXPOSE 50051
 
 # ffmpeg/ffprobe выполняют HLS-транскодирование и извлечение метаданных внутри контейнера.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -63,6 +64,5 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 FROM base AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:8080
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "FileService.Web.dll"]
