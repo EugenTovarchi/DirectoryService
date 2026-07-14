@@ -8,4 +8,7 @@ public static class AuthClaimTypes
     public const string COMPANY_ID = "company_id";
     public const string ROLE = "role";
     public const string PERMISSION = "permission";
+    public const string CLIENT_ID = "client_id";
+    public const string SERVICE_NAME = "service_name";
+    public const string SERVICE_PERMISSION = "service_permission";
 }

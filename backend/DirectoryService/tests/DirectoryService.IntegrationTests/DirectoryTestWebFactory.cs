@@ -49,6 +49,9 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
                 ["Jwt:SigningKey"] = TEST_JWT_SIGNING_KEY,
                 ["FileServiceOptions:Url"] = "http://localhost:9003/",
                 ["FileServiceOptions:GrpcUrl"] = "http://localhost:50051/",
+                ["FileServiceOptions:AuthServiceUrl"] = "http://localhost:8003/",
+                ["FileServiceOptions:ServiceClientId"] = "directory-service",
+                ["FileServiceOptions:ServiceClientSecret"] = "test-directory-service-client-secret-value",
                 ["FileServiceOptions:TimeoutSeconds"] = "10",
                 ["OpenTelemetry:Enabled"] = "false"
             };

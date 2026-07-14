@@ -1,3 +1,4 @@
+using FileService.Core.Authorization;
 using FileService.Core.Grpc;
 
 namespace FileService.Web.Configurations;
@@ -15,7 +16,8 @@ public static class GrpcExtensions
     public static IEndpointRouteBuilder MapFileGrpcServices(this IEndpointRouteBuilder app)
     {
         // MapGrpcService публикует internal gRPC endpoint FileService.
-        app.MapGrpcService<FileInternalGrpcService>();
+        app.MapGrpcService<FileInternalGrpcService>()
+            .RequireAuthorization(FileAuthorizationPolicies.FILE_SERVICE_INTERNAL);
 
         return app;
     }

@@ -16,13 +16,16 @@ namespace FileService.Contracts.HttpCommunication;
 internal sealed class FileCommunicationClient : IFileCommunicationService
 {
     private readonly FileInternal.FileInternalClient _grpcClient;
+    private readonly IServiceTokenProvider _serviceTokenProvider;
     private readonly ILogger<FileCommunicationClient> _logger;
 
     public FileCommunicationClient(
         FileInternal.FileInternalClient grpcClient,
+        IServiceTokenProvider serviceTokenProvider,
         ILogger<FileCommunicationClient> logger)
     {
         _grpcClient = grpcClient;
+        _serviceTokenProvider = serviceTokenProvider;
         _logger = logger;
     }
 
@@ -31,11 +34,16 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
     {
         try
         {
+            var headersResult = await CreateServiceHeaders(cancellationToken).ConfigureAwait(false);
+            if (headersResult.IsFailure)
+                return headersResult.Error;
+
             var call = _grpcClient.GetMediaAssetInfoAsync(
                 new GetMediaAssetInfoRequest
                 {
                     MediaAssetId = mediaAssetId.ToString()
                 },
+                headers: headersResult.Value,
                 cancellationToken: cancellationToken);
 
             var reply = await call.ResponseAsync.ConfigureAwait(false);
@@ -70,10 +78,17 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
     {
         try
         {
+            var headersResult = await CreateServiceHeaders(cancellationToken).ConfigureAwait(false);
+            if (headersResult.IsFailure)
+                return headersResult.Error;
+
             var grpcRequest = new GetMediaAssetsInfoRequest();
             grpcRequest.MediaAssetIds.AddRange(request.MediaAssetIds.Select(id => id.ToString()));
 
-            var call = _grpcClient.GetMediaAssetsInfoAsync(grpcRequest, cancellationToken: cancellationToken);
+            var call = _grpcClient.GetMediaAssetsInfoAsync(
+                grpcRequest,
+                headers: headersResult.Value,
+                cancellationToken: cancellationToken);
             var reply = await call.ResponseAsync.ConfigureAwait(false);
 
             var mediaAssets = reply.MediaAssets.Select(mediaAsset => new GetMediaAssetDto(
@@ -104,11 +119,16 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
     {
         try
         {
+            var headersResult = await CreateServiceHeaders(cancellationToken).ConfigureAwait(false);
+            if (headersResult.IsFailure)
+                return headersResult.Error;
+
             var call = _grpcClient.CheckMediaAssetExistsAsync(
                 new CheckMediaAssetExistsRequest
                 {
                     MediaAssetId = mediaAssetId.ToString()
                 },
+                headers: headersResult.Value,
                 cancellationToken: cancellationToken);
 
             var reply = await call.ResponseAsync.ConfigureAwait(false);
@@ -125,5 +145,17 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
             _logger.LogError(ex, "Error checking media asset {MediaAssetId}", mediaAssetId);
             return Error.Failure("server.internal", "Failed to check media asset").ToFailure();
         }
+    }
+
+    private async Task<Result<Metadata, Failure>> CreateServiceHeaders(CancellationToken cancellationToken)
+    {
+        var tokenResult = await _serviceTokenProvider.GetAccessToken(cancellationToken).ConfigureAwait(false);
+        if (tokenResult.IsFailure)
+            return tokenResult.Error;
+
+        return new Metadata
+        {
+            { "Authorization", $"Bearer {tokenResult.Value}" }
+        };
     }
 }

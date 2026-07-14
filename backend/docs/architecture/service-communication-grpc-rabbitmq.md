@@ -1468,6 +1468,9 @@ DevOps/infra часть понадобится позже, когда будем
 - `FileService.Contracts/HttpCommunication/FileHttpClient.cs` - старый HTTP-only adapter оставлен для сравнения.
 - `FileService.Core/Grpc/FileInternalGrpcService.cs` - server-side gRPC service, который переиспользует текущие handlers FileService.
 - `FileService.Web/Configurations/GrpcExtensions.cs` - registration extension для `AddGrpc` и `MapGrpcService`.
+- `AuthService` выдает service token через `POST /api/auth/service-token`.
+- `FileService.Contracts` получает service token, кэширует его и добавляет Bearer token в gRPC metadata.
+- `FileService` защищает gRPC service policy `file-service.internal`.
 
 Почему через extension classes:
 
@@ -1482,6 +1485,299 @@ DevOps/infra часть понадобится позже, когда будем
 - это сохраняет application layer независимым от транспорта;
 - transport можно менять внутри contracts adapter: HTTP, gRPC или fallback;
 - это практический пример Adapter pattern.
+
+## Service-to-service token для gRPC
+
+После базового gRPC-вызова мы добавили отдельную авторизацию для внутренних вызовов.
+Главная идея: `DirectoryService` не должен ходить в `FileService` как анонимный internal client.
+Даже если сервисы находятся в одной Docker/network/VM-сети, `FileService` должен понимать, кто именно его вызывает
+и какое внутреннее право у этого caller service есть.
+
+Для этого используется отдельный service JWT:
+
+```mermaid
+sequenceDiagram
+    participant DS as DirectoryService
+    participant Adapter as FileService.Contracts
+    participant Auth as AuthService
+    participant FS as FileService gRPC
+
+    DS->>Adapter: IFileCommunicationService.CheckMediaAssetExists(videoId)
+    Adapter->>Auth: POST /api/auth/service-token
+    Auth->>Auth: Validate clientId/clientSecret
+    Auth-->>Adapter: service access token
+    Adapter->>FS: gRPC call + Authorization metadata
+    FS->>FS: JwtBearer validation
+    FS->>FS: Require service_permission=file-service.internal
+    FS-->>Adapter: CheckMediaAssetExistsReply
+    Adapter-->>DS: CheckMediaAssetExistResponse
+```
+
+### Почему не используем пользовательский JWT
+
+Пользовательский JWT отвечает на вопрос:
+
+```text
+Какой пользователь делает запрос и какие user permissions у него есть?
+```
+
+Service JWT отвечает на другой вопрос:
+
+```text
+Какой backend-сервис делает internal request и какие service permissions у него есть?
+```
+
+Это разные identities. В нашем случае `DirectoryService` вызывает `FileService` не потому, что frontend напрямую вызвал
+`FileService`, а потому что внутри команды `DirectoryService` нужно проверить media asset.
+Поэтому мы не прокидываем user permission `files.read`, а выдаем отдельное service permission:
+
+```text
+service_permission = file-service.internal
+```
+
+Так проще поддерживать границу:
+
+- user endpoints проверяют `permission`;
+- internal service endpoints проверяют `service_permission`;
+- роли пользователя не смешиваются с правами backend-сервиса;
+- `FileService` может разрешить только конкретные internal gRPC methods, не открывая весь файловый API.
+
+### Какие claims есть в service JWT
+
+Service token выпускается AuthService через `ITokenService.CreateServiceAccessToken`.
+В token кладутся claims:
+
+| Claim | Пример | Зачем нужен |
+| --- | --- | --- |
+| `sub` | `directory-service` | Основная identity service client. |
+| `jti` | random guid | Уникальный id JWT. Полезен для логов, аудита и будущего revoke/deny-list. |
+| `client_id` | `directory-service` | Технический id клиента из конфигурации. |
+| `service_name` | `DirectoryService` | Читаемое имя сервиса для логов и диагностики. |
+| `service_permission` | `file-service.internal` | Право на конкретный internal capability. |
+
+Важно: service token не содержит user claim `permission`.
+Это намеренное разделение. Если в будущем появятся другие внутренние права, они добавляются как новые
+`service_permission`, например:
+
+```text
+directory-service.internal
+notification-service.internal
+incident-service.internal
+```
+
+### Где лежат client credentials
+
+В `AuthService` есть конфигурация `ServiceClients`.
+Она описывает список сервисов, которым можно получить service token:
+
+```json
+"ServiceClients": {
+  "Clients": [
+    {
+      "ClientId": "directory-service",
+      "ClientSecret": "local-dev-directory-service-client-secret-change-before-production",
+      "ServiceName": "DirectoryService",
+      "ServicePermissions": [
+        "file-service.internal"
+      ]
+    }
+  ]
+}
+```
+
+Смысл полей:
+
+- `ClientId` - стабильный технический id вызывающего сервиса;
+- `ClientSecret` - shared secret, которым сервис доказывает AuthService, что он имеет право получить token;
+- `ServiceName` - человекочитаемое имя для логов;
+- `ServicePermissions` - список internal capabilities, которые будут добавлены в JWT.
+
+Для local/dev эти значения можно держать в development env/config.
+Для production secret нельзя коммитить в репозиторий: он должен приходить из secret storage, CI/CD variables,
+Docker secrets, Kubernetes secrets или другого безопасного runtime-хранилища.
+
+### Как DirectoryService получает token
+
+Сам `DirectoryService` напрямую не знает про HTTP-вызов в AuthService.
+Он как раньше работает с интерфейсом:
+
+```csharp
+IFileCommunicationService
+```
+
+Token получает adapter внутри пакета `FileService.Contracts`.
+Для этого там есть:
+
+- `IServiceTokenProvider` - маленький интерфейс получения access token;
+- `AuthServiceTokenProvider` - реализация, которая ходит в AuthService;
+- `FileCommunicationClient` - gRPC adapter, который перед вызовом добавляет Bearer token в metadata.
+
+Схема:
+
+```mermaid
+flowchart LR
+    DS[DirectoryService handler] --> I[IFileCommunicationService]
+    I --> Adapter[FileCommunicationClient]
+    Adapter --> TokenProvider[AuthServiceTokenProvider]
+    TokenProvider --> Auth[AuthService /api/auth/service-token]
+    Adapter --> Grpc[FileInternal gRPC client]
+    Grpc --> FS[FileService]
+```
+
+Такой подход оставляет application layer чистым:
+
+- handler не знает про JWT;
+- handler не знает про gRPC metadata;
+- handler не знает URL AuthService;
+- вся transport/security обвязка находится в infrastructure/adapter layer.
+
+### Как token добавляется в gRPC request
+
+В gRPC нет обычных HTTP headers в том виде, как в `HttpClient`, но есть metadata.
+Для авторизации ASP.NET Core gRPC понимает metadata key `Authorization`:
+
+```csharp
+var headers = new Metadata
+{
+    { "Authorization", $"Bearer {accessToken}" }
+};
+```
+
+После этого gRPC call уходит так:
+
+```csharp
+await _grpcClient.CheckMediaAssetExistsAsync(
+    request,
+    headers: headers,
+    cancellationToken: cancellationToken);
+```
+
+Для `FileService` это выглядит как обычный authenticated request:
+
+1. `JwtBearer` достает token из `Authorization`;
+2. проверяет подпись, issuer, audience и lifetime;
+3. создает `ClaimsPrincipal`;
+4. authorization policy проверяет нужный claim.
+
+### Почему token кэшируется
+
+Если перед каждым gRPC-вызовом заново ходить в AuthService, получится лишняя нагрузка:
+
+```text
+DirectoryService -> AuthService -> FileService
+DirectoryService -> AuthService -> FileService
+DirectoryService -> AuthService -> FileService
+```
+
+Для частых internal вызовов это плохо:
+
+- больше latency;
+- лишняя нагрузка на AuthService;
+- больше точек отказа;
+- сложнее читать traces.
+
+Поэтому `AuthServiceTokenProvider` кэширует token до expiration.
+Перед истечением срока он обновляет token заранее с небольшим запасом:
+
+```text
+refresh skew = 30 seconds
+```
+
+То есть если token истекает через 10 секунд, provider уже считает его почти истекшим и запрашивает новый.
+Это снижает шанс отправить в `FileService` token, который истек прямо во время network call.
+
+### Почему нужен SemaphoreSlim
+
+Если одновременно придет несколько запросов и token еще не получен или почти истек,
+без синхронизации каждый request может пойти в AuthService за новым token.
+
+`SemaphoreSlim` делает refresh последовательным:
+
+```text
+Request A получает lock и обновляет token
+Request B ждет
+Request C ждет
+Request A сохранил token
+Request B/C используют уже обновленный token
+```
+
+Это не business-lock, а маленькая техническая защита от лишних одновременных запросов в AuthService.
+
+### Как FileService защищает gRPC endpoint
+
+В `FileService` policy добавлена отдельно от пользовательских policies:
+
+```csharp
+options.AddPolicy(FileAuthorizationPolicies.FILE_SERVICE_INTERNAL, policy =>
+{
+    policy.RequireAuthenticatedUser();
+    policy.RequireClaim("service_permission", "file-service.internal");
+});
+```
+
+gRPC service подключается так:
+
+```csharp
+app.MapGrpcService<FileInternalGrpcService>()
+    .RequireAuthorization(FileAuthorizationPolicies.FILE_SERVICE_INTERNAL);
+```
+
+Смысл:
+
+- endpoint нельзя вызвать без JWT;
+- обычного user JWT с `files.read` недостаточно;
+- нужен именно service JWT с `service_permission=file-service.internal`;
+- проверка находится на границе `FileService`, а не внутри handler.
+
+### Что происходит при ошибках
+
+Основные варианты:
+
+| Ситуация | Где падает | Ожидаемый смысл |
+| --- | --- | --- |
+| `ClientId` или `ClientSecret` неверный | AuthService `/api/auth/service-token` | `DirectoryService` не может получить service token. |
+| AuthService недоступен | `AuthServiceTokenProvider` | Internal call не может быть авторизован. |
+| Token истек или неверно подписан | FileService JwtBearer | `401 Unauthorized`. |
+| Token валиден, но нет `service_permission` | FileService authorization policy | `403 Forbidden`. |
+| gRPC endpoint недоступен | gRPC client | `RpcException`, adapter переводит в `Failure`. |
+
+На application layer `DirectoryService` продолжает видеть `Result<T, Failure>`.
+Это важно: transport exception не должен протекать в бизнес-логику.
+
+### Как это повторить для другого service-to-service вызова
+
+Порядок действий:
+
+1. Решить, нужен ли sync-вызов. Если нужен ответ прямо сейчас - подходит gRPC/internal HTTP.
+2. В provider service создать отдельную internal permission, например `incident-service.internal`.
+3. В AuthService добавить service client config с этим permission.
+4. В Contracts package provider service добавить/обновить `.proto`.
+5. В consumer-side adapter добавить получение service token.
+6. В gRPC metadata добавлять `Authorization: Bearer <service-token>`.
+7. В provider service повесить `.RequireAuthorization(...)` на gRPC endpoint.
+8. Добавить integration tests:
+   - валидный service client получает token;
+   - неверный secret не получает token;
+   - endpoint принимает token с правильным `service_permission`;
+   - endpoint отклоняет token без нужного `service_permission`.
+
+### Почему это нормальный production-подход
+
+В реальных проектах часто разделяют:
+
+- user authentication;
+- service-to-service authentication;
+- authorization policies на resource service boundary.
+
+RabbitMQ при этом не исчезает. Он остается для событий.
+Service token нужен именно там, где есть синхронный internal request и принимающий сервис должен проверить caller identity.
+
+Для нашего проекта это разумный следующий шаг после gRPC:
+
+- `DirectoryService` остается consumer;
+- `FileService` остается owner файловых данных;
+- `AuthService` становится issuer service tokens;
+- `FileService.Contracts` скрывает transport/auth детали от application handlers.
 
 ## Как опубликовать Contracts NuGet после изменения proto
 

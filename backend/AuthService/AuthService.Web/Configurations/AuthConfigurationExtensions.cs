@@ -14,6 +14,7 @@ public static class AuthConfigurationExtensions
         IConfiguration configuration)
     {
         services.AddJwtOptions(configuration);
+        services.AddServiceClientOptions(configuration);
 
         var jwtOptions = configuration
             .GetSection(JwtOptions.SECTION_NAME)
@@ -62,6 +63,26 @@ public static class AuthConfigurationExtensions
                 $"Jwt:SigningKey must be at least {JwtOptions.MIN_SIGNING_KEY_LENGTH} characters")
             .Validate(options => options.AccessTokenLifetimeMinutes > 0, "Jwt:AccessTokenLifetimeMinutes must be positive")
             .Validate(options => options.RefreshTokenLifetimeDays > 0, "Jwt:RefreshTokenLifetimeDays must be positive")
+            .ValidateOnStart();
+
+        return services;
+    }
+
+    private static IServiceCollection AddServiceClientOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services
+            .AddOptions<ServiceClientOptions>()
+            .Bind(configuration.GetSection(ServiceClientOptions.SECTION_NAME))
+            .Validate(
+                options => options.Clients.All(client =>
+                    !string.IsNullOrWhiteSpace(client.ClientId) &&
+                    !string.IsNullOrWhiteSpace(client.ClientSecret) &&
+                    client.ClientSecret.Length >= ServiceClientOptions.MIN_CLIENT_SECRET_LENGTH &&
+                    !string.IsNullOrWhiteSpace(client.ServiceName) &&
+                    client.ServicePermissions.Count > 0),
+                "Each service client must have ClientId, ClientSecret, ServiceName and at least one ServicePermission")
             .ValidateOnStart();
 
         return services;

@@ -53,7 +53,11 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["Jwt:Audience"] = "24eye.backend.tests",
                 ["Jwt:SigningKey"] = "test-auth-service-signing-key-with-enough-length",
                 ["Jwt:AccessTokenLifetimeMinutes"] = "15",
-                ["Jwt:RefreshTokenLifetimeDays"] = "30"
+                ["Jwt:RefreshTokenLifetimeDays"] = "30",
+                ["ServiceClients:Clients:0:ClientId"] = "directory-service",
+                ["ServiceClients:Clients:0:ClientSecret"] = "test-directory-service-client-secret-value",
+                ["ServiceClients:Clients:0:ServiceName"] = "DirectoryService",
+                ["ServiceClients:Clients:0:ServicePermissions:0"] = "file-service.internal"
             };
 
             config.AddInMemoryCollection(settings);

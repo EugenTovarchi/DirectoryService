@@ -443,22 +443,35 @@
 
 </details>
 
+<details>
+<summary>29. Service-to-service token foundation</summary>
+
+**Зачем:** защитить внутренний gRPC contract `DirectoryService -> FileService`, чтобы FileService принимал не любой внутренний вызов, а только вызов с service identity.
+
+**Сделано:**
+- `POST /api/auth/service-token` выдает короткоживущий service access JWT по client credentials.
+- Service clients конфигурируются через `ServiceClients` options; local-dev секреты лежат в `.env`, а не в committed appsettings.
+- Service token содержит `client_id`, `service_name` и `service_permission`.
+- `DirectoryService` через `FileService.Contracts 0.2.0` получает service token у AuthService и добавляет `Authorization: Bearer ...` в gRPC metadata.
+- `FileService` защищает internal gRPC service policy `file-service.internal` через claim `service_permission`.
+
+**Что дало:** internal gRPC вызов получил отдельную service-to-service authentication boundary без смешивания с user permissions вроде `files.read`.
+
+</details>
+
 ## Ближайший План
 
-1. Resource-service authorization rollout:
-   - спроектировать service-to-service authentication для DirectoryService -> FileService existence checks.
-
-2. Audit read API:
+1. Audit read API:
    - фильтры по company/user/action/date;
    - safe response без raw token/link/credential metadata;
    - pagination для admin/security UI.
 
-3. Public auth endpoint hardening:
+2. Public auth endpoint hardening:
    - rate limiting для login, refresh, request password reset и invite resend;
    - account lockout или temporary throttling после серии неудачных login attempts;
    - сохранить security-safe public responses без user/token enumeration.
 
-4. Invite/password reset email outbox/retry hardening:
+3. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
    - production provider candidate: UniSender Go, если он подтвердит нужные SMTP/API delivery capabilities, DKIM/SPF setup, delivery statuses/webhooks и подходящие условия хранения данных;
@@ -466,7 +479,7 @@
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
 
-5. OAuth 2.0/OpenID Connect AuthService MVP:
+4. OAuth 2.0/OpenID Connect AuthService MVP:
    - внедрить OpenIddict как authorization server поверх существующего ASP.NET Core Identity user store;
    - добавить discovery endpoint `/.well-known/openid-configuration`, JWKS, authorization endpoint и token endpoint;
    - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;

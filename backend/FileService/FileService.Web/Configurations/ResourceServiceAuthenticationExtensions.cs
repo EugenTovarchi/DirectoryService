@@ -10,6 +10,7 @@ public static class ResourceServiceAuthenticationExtensions
 {
     private const string JWT_SECTION_NAME = "Jwt";
     private const string PERMISSION_CLAIM = "permission";
+    private const string SERVICE_PERMISSION_CLAIM = "service_permission";
     private const int MIN_SIGNING_KEY_LENGTH = 32;
 
     public static IServiceCollection AddResourceServiceAuthentication(
@@ -50,6 +51,11 @@ public static class ResourceServiceAuthenticationExtensions
             options.AddPolicy(
                 FileAuthorizationPolicies.FILES_DELETE,
                 policy => policy.RequireClaim(PERMISSION_CLAIM, FileAuthorizationPolicies.FILES_DELETE));
+            options.AddPolicy(
+                FileAuthorizationPolicies.FILE_SERVICE_INTERNAL,
+                policy => policy.RequireClaim(
+                    SERVICE_PERMISSION_CLAIM,
+                    FileAuthorizationPolicies.FILE_SERVICE_INTERNAL));
         });
 
         return services;

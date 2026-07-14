@@ -4,5 +4,8 @@ public record FileServiceOptions
 {
     public string Url { get; init; } = string.Empty;
     public string GrpcUrl { get; init; } = string.Empty;
+    public string AuthServiceUrl { get; init; } = string.Empty;
+    public string ServiceClientId { get; init; } = string.Empty;
+    public string ServiceClientSecret { get; init; } = string.Empty;
     public int TimeoutSeconds { get; init; } = 10;
 }
