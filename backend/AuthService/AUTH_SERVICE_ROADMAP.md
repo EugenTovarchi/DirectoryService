@@ -452,10 +452,13 @@
 - `POST /api/auth/service-token` выдает короткоживущий service access JWT по client credentials.
 - Service clients конфигурируются через `ServiceClients` options; local-dev секреты лежат в `.env`, а не в committed appsettings.
 - Service token содержит `client_id`, `service_name` и `service_permission`.
-- `DirectoryService` через `FileService.Contracts 0.2.0` получает service token у AuthService и добавляет `Authorization: Bearer ...` в gRPC metadata.
+- `DirectoryService` через `FileService.Contracts 0.2.1` получает service token у AuthService и добавляет `Authorization: Bearer ...` в gRPC metadata.
 - `FileService` защищает internal gRPC service policy `file-service.internal` через claim `service_permission`.
+- `FileService.Contracts` читает service token из общего response envelope AuthService: `result.accessToken`.
 
 **Что дало:** internal gRPC вызов получил отдельную service-to-service authentication boundary без смешивания с user permissions вроде `files.read`.
+
+**Проверено в Docker:** `DirectoryService` получил service token через AuthService, вызвал `FileService` по gRPC `file.v1.FileInternal/CheckMediaAssetExists`, `FileService` принял service JWT с `service_permission=file-service.internal`, а отсутствующий `videoId` вернул ожидаемый business `404`, не `500`.
 
 </details>
 
@@ -493,7 +496,7 @@
 ## Открытые Решения
 
 - Используем OpenIddict как основной OAuth 2.0/OpenID Connect stack или нужен отдельный provider/managed IdP.
-- Какие exact endpoints в FileService и DirectoryService защищаем первыми.
+- Какие следующие endpoints в новых сервисах защищаем permissions/service permissions первыми.
 - Какие permissions считаем минимальными для первого downstream slice: `directory.read/manage`, `files.read/upload`, `videos.read/upload`.
 - Какие dev clients нужны для MVP: Swagger, Postman/manual client, будущий SPA client.
 - Какие scopes/resources считать минимальными: `openid`, `profile`, `email`, `offline_access`, `directory`, `files`, `auth`.

@@ -870,7 +870,7 @@ FileService permission rollout разделил client-facing endpoints по cap
 
 Development `Viewer` seed добавлен для понятной ручной проверки межсервисного auth path. План блока: подготовить минимально привилегированного пользователя без committed credentials и получить его access token через Swagger. Сделано: opt-in seed работает только в `Development`/`Docker`, читает email/password из runtime configuration и не сбрасывает существующий password. Влияние: `200/401/403` можно проверить через Swagger без отдельного PowerShell runner.
 
-Ручной Docker smoke flow выполнен на пересобранных AuthService, DirectoryService и FileService. AuthService выдал реальный token, DirectoryService вернул `401/200/403`, FileService принял `files.read` и вернул domain `404` для отсутствующего asset, а delete без `files.delete` вернул `403`. Влияние: shared issuer/audience/signing key и permission claims проверены на реальной Docker-конфигурации; следующий security boundary — service identity для DirectoryService -> FileService.
+Ручной Docker smoke flow выполнен на пересобранных AuthService, DirectoryService и FileService. AuthService выдал реальный user token и service token, DirectoryService вернул ожидаемые `401/200/403`, FileService отклонил обычный user JWT на internal path через `403`, а `DirectoryService -> AuthService -> FileService gRPC` завершился ожидаемым business `404` для отсутствующего `videoId`. Влияние: shared issuer/audience/signing key, permission claims, service client credentials, service JWT cache и `service_permission=file-service.internal` проверены на реальной Docker-конфигурации.
 
 Security-sensitive command handlers используют явные EF transactions по FS/DS-style паттерну: `BeginTransactionAsync(...)`, `using ITransactionScope`, `SaveChangeAsync(...)`, затем `transactionScope.Commit()`. Это применяется там, где один use case меняет несколько связанных сущностей или таблиц: user + role + invite token, password + activation + invite accepted, refresh token rotation/reuse handling, logout/session revocation, status/role changes. Callback-wrapper transaction API не используем, чтобы граница transaction была видна прямо в handler-е.
 
@@ -913,7 +913,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 ## Открытые Вопросы
 
-- Какие exact endpoints в текущих FileService и DirectoryService будут первыми защищены permissions?
+- Какие следующие endpoints в новых сервисах будут первыми защищены permissions/service permissions?
 - Какой минимальный seed нужен для первого `SystemAdmin`, company и первого `CompanyAdmin`?
 - Когда переводим JWT signing с symmetric key на private/public key?
 
@@ -921,7 +921,6 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- Спроектировать service-to-service authentication для DirectoryService -> FileService existence check.
 - Добавить audit read API с фильтрами по company/user/action/date и pagination.
 - Добавить rate limiting/temporary throttling для public auth endpoints: login, refresh, request password reset, invite resend.
 - После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
@@ -967,6 +966,7 @@ Security-sensitive command handlers используют явные EF transacti
 - User role management MVP: `PATCH /api/users/{userId}/change-role` заменяет текущую роль Identity user на одну существующую роль; `CompanyAdmin` ограничен своей company и не может назначать `SystemAdmin`, self-role-change запрещен.
 - Admin session management MVP: `POST /api/users/{userId}/revoke-sessions` отзывает active refresh sessions другого пользователя через `users.manage`; self-flow остается на `/api/auth/revoke-all-sessions`.
 - Admin user sessions list MVP: `GET /api/users/{userId}/sessions` возвращает active sessions другого пользователя через `users.manage`; self-flow остается на `/api/auth/sessions`.
+- Service-to-service token foundation: `POST /api/auth/service-token` выдает короткоживущий service JWT по client credentials; `DirectoryService` использует его для internal gRPC вызова `FileService`, а `FileService` проверяет `service_permission=file-service.internal`.
 - Legacy user management: `/auth/users`, `AuthUser`, `PasswordHash`, legacy repository/contracts/tests and the `auth_users` runtime model are removed; `DropLegacyAuthUsers` drops the old table.
 - Auth failure shape централизован в AuthService-local `AuthFailures` helper для login, refresh и current-user flows.
 - Refresh token session создается через `RefreshToken.Create(...)` с доменными инвариантами.
@@ -986,7 +986,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Последние проверки проходили: build `0 warnings / 0 errors`, AuthAudit integration `3/3`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `90/90`.
 
-Следующий ближайший AuthService блок: спроектировать service-to-service authentication для DirectoryService -> FileService existence check. После него идут audit read API и hardening public auth endpoints. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: audit read API с фильтрами по company/user/action/date и pagination. После него идут hardening public auth endpoints: rate limiting, temporary throttling/login lockout и email delivery outbox/retry. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
 
 ## Post-MVP Backlog
 
