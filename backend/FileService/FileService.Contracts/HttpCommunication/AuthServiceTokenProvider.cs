@@ -53,10 +53,11 @@ internal sealed class AuthServiceTokenProvider : IServiceTokenProvider, IDisposa
                 return Error.Failure("auth.service_token.failed", "Failed to request service access token").ToFailure();
             }
 
-            ServiceTokenResponse? tokenResponse = await response.Content
-                .ReadFromJsonAsync<ServiceTokenResponse>(cancellationToken)
+            ServiceTokenEnvelope? tokenEnvelope = await response.Content
+                .ReadFromJsonAsync<ServiceTokenEnvelope>(cancellationToken)
                 .ConfigureAwait(false);
 
+            ServiceTokenResponse? tokenResponse = tokenEnvelope?.Result;
             if (tokenResponse is null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
             {
                 return Error.Failure("auth.service_token.invalid_response", "Service token response is invalid")
@@ -84,6 +85,8 @@ internal sealed class AuthServiceTokenProvider : IServiceTokenProvider, IDisposa
         _accessTokenExpiresAt > DateTime.UtcNow.Add(RefreshSkew);
 
     private sealed record ServiceTokenRequest(string ClientId, string ClientSecret);
+
+    private sealed record ServiceTokenEnvelope(ServiceTokenResponse? Result);
 
     private sealed record ServiceTokenResponse(string AccessToken, DateTime AccessTokenExpiresAt);
 

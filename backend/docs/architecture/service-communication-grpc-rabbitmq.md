@@ -1471,6 +1471,8 @@ DevOps/infra часть понадобится позже, когда будем
 - `AuthService` выдает service token через `POST /api/auth/service-token`.
 - `FileService.Contracts` получает service token, кэширует его и добавляет Bearer token в gRPC metadata.
 - `FileService` защищает gRPC service policy `file-service.internal`.
+- Docker smoke path подтвержден: `DirectoryService` получает service token, вызывает
+  `file.v1.FileInternal/CheckMediaAssetExists`, а `FileService` принимает internal gRPC request.
 
 Почему через extension classes:
 
@@ -1505,7 +1507,7 @@ sequenceDiagram
     DS->>Adapter: IFileCommunicationService.CheckMediaAssetExists(videoId)
     Adapter->>Auth: POST /api/auth/service-token
     Auth->>Auth: Validate clientId/clientSecret
-    Auth-->>Adapter: service access token
+    Auth-->>Adapter: response envelope with result.accessToken
     Adapter->>FS: gRPC call + Authorization metadata
     FS->>FS: JwtBearer validation
     FS->>FS: Require service_permission=file-service.internal
@@ -1630,6 +1632,20 @@ flowchart LR
 - handler не знает про gRPC metadata;
 - handler не знает URL AuthService;
 - вся transport/security обвязка находится в infrastructure/adapter layer.
+
+AuthService возвращает service token в общем response envelope:
+
+```json
+{
+  "result": {
+    "accessToken": "...",
+    "accessTokenExpiresAt": "..."
+  }
+}
+```
+
+Поэтому `AuthServiceTokenProvider` сначала читает envelope, потом берет `Result`.
+Если читать JSON как прямой `ServiceTokenResponse`, token будет `null`, и gRPC-вызов не дойдет до FileService.
 
 ### Как token добавляется в gRPC request
 

@@ -61,7 +61,8 @@ JWT validation uses the same `Jwt:Issuer`, `Jwt:Audience`, and signing key as Au
 - Multipart start, chunk URL, complete, and cancel endpoints require `files.upload`.
 - File deletion requires the separate destructive capability `files.delete`.
 - `SystemAdmin`, `CompanyAdmin`, and `Operator` receive `files.delete`; `Technician` and `Viewer` do not.
-- The internal `POST /files/{mediaAssetId}/exists` endpoint remains outside user permission policies until service-to-service authentication is introduced for DirectoryService calls.
+- Internal `DirectoryService -> FileService` existence checks use gRPC and require a service JWT with `service_permission=file-service.internal`.
+- The older HTTP exists endpoint is kept only as a comparison/backward path; it is not the preferred DirectoryService integration path.
 - Missing, invalid, or expired tokens return `401 Unauthorized`; an authenticated token without the permission returns `403 Forbidden`.
 - Minimal API endpoints declare policies through `.RequireAuthorization(...)`; policy names are kept in `FileAuthorizationPolicies` rather than repeated as string literals.
 - Swagger exposes Bearer JWT authorization for local verification.

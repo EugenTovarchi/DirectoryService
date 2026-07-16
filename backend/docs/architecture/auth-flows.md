@@ -301,10 +301,25 @@ flowchart TD
 - Company boundary проверяется server-side, а не доверяется request body.
 - Sensitive multi-table commands используют explicit transaction и audit event.
 
+## Проверенный Docker Smoke Path
+
+Проверено в Docker на `dev-for-auth`:
+
+1. `DirectoryService` без JWT возвращает `401`.
+2. `DirectoryService` с валидным user JWT и `directory.read` возвращает `200`.
+3. `FileService` internal check с обычным user JWT возвращает `403`.
+4. `DirectoryService` создает location и department с user JWT и `directory.manage`.
+5. `DirectoryService` при `PATCH /api/departments/{id}/video` запрашивает service token у AuthService.
+6. `DirectoryService` вызывает `FileService` по gRPC `file.v1.FileInternal/CheckMediaAssetExists`.
+7. `FileService` принимает service JWT с `service_permission=file-service.internal`.
+8. Для случайного `videoId` возвращается ожидаемый business `404`, а не transport/auth `500`.
+
+Важная деталь реализации: `POST /api/auth/service-token` возвращает общий response envelope,
+поэтому `FileService.Contracts` читает `result.accessToken`, а не raw `ServiceTokenResponse` из корня JSON.
+
 ## Открытые Security Шаги
 
-1. Реальный Docker smoke path: AuthService выдаёт user token и service token, DirectoryService/FileService принимают или отклоняют request.
-2. Private/public key signing и key distribution вместо общего symmetric secret.
-3. Rate limiting и login throttling/lockout.
-4. Email outbox/retry для invite и password reset delivery.
-5. OAuth 2.0/OpenID Connect authorization server через OpenIddict после доказанного JWT/permission path.
+1. Private/public key signing и key distribution вместо общего symmetric secret.
+2. Rate limiting и login throttling/lockout.
+3. Email outbox/retry для invite и password reset delivery.
+4. OAuth 2.0/OpenID Connect authorization server через OpenIddict после доказанного JWT/permission path.
