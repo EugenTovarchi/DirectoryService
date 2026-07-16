@@ -23,6 +23,7 @@ Use this after root [../AGENTS.md](../AGENTS.md).
 - Do not log passwords, password hashes, JWTs, refresh tokens, or other credentials.
 - Do not store real secrets in appsettings or committed config.
 - Keep auth documentation updated in [../docs/services/auth-service.md](../docs/services/auth-service.md) when changing AuthService boundaries, token lifecycle, roles, permissions, invites, or sessions.
+- AuthService code comments and explanatory documentation notes should be in Russian. Keep framework/API identifiers in English, but explain unclear English terms in Russian on first use, for example `rate limiting (ограничение частоты запросов)`.
 
 ## Error Rules
 
