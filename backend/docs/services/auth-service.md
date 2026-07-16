@@ -417,7 +417,8 @@ Current audit history MVP behavior:
 - Stored fields are intentionally safe: company id, target user id, email, action, actor user id, created time, IP/user agent when available, and small JSON metadata.
 - Raw access tokens, refresh tokens, invite tokens, password reset tokens, invite links, reset links, password hashes, and SMTP credentials are never written to audit.
 - Current audited actions include invite created/resent/accepted, password reset requested/completed, profile/status/role changes, session revoke, revoke-all-sessions, and logout.
-- Audit read APIs are not exposed yet; this slice creates the write-side history needed by future admin/security UI.
+- `GET /api/auth/audit-events` exposes a safe admin/security read model with filters by company/user/action/date and pagination.
+- The read response intentionally excludes metadata JSON, IP address and user agent; those fields remain stored for server-side investigation and future dedicated exports.
 
 Current `PATCH /api/users/{userId}/change-status` MVP behavior:
 
@@ -921,8 +922,8 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- Добавить audit read API с фильтрами по company/user/action/date и pagination.
 - Добавить rate limiting/temporary throttling для public auth endpoints: login, refresh, request password reset, invite resend.
+- Добавить account lockout или temporary throttling после серии неудачных login attempts.
 - После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
 
 ## Учебный Backlog
@@ -959,7 +960,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
 - User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
-- Audit history write-side MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials.
+- Audit history MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials; `GET /api/auth/audit-events` возвращает safe paged read model с фильтрами `companyId`, `userId`, `action`, `createdFromUtc`, `createdToUtc`.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
 - User details MVP: `GET /api/users/{userId}` возвращает `CompanyUserDetailsResponse` для admin UI; `CompanyAdmin` получает только пользователей своей company, `SystemAdmin` получает пользователей из любой company.
 - User status management MVP: `PATCH /api/users/{userId}/change-status` активирует или деактивирует Identity user через `users.manage`; deactivate также отзывает active refresh sessions; `CompanyAdmin` ограничен своей company, `SystemAdmin` может менять users из любой company, self-deactivation запрещен.
@@ -984,9 +985,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, AuthAudit integration `3/3`, UpdateUserProfile integration `7/7`, PasswordReset integration `6/6`, InviteUser integration `11/11`, unit `6/6`, integration `90/90`.
+Последние проверки проходили: build `0 warnings / 0 errors`, unit `6/6`, integration `98/98`.
 
-Следующий ближайший AuthService блок: audit read API с фильтрами по company/user/action/date и pagination. После него идут hardening public auth endpoints: rate limiting, temporary throttling/login lockout и email delivery outbox/retry. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path. Invite email/password reset outbox/retry остается hardening backlog: нужен перед production-grade delivery, но не обязателен для текущего MVP.
+Следующий ближайший AuthService блок: public auth endpoint hardening - rate limiting для login/refresh/password reset/invite resend, temporary throttling или lockout после серии неудачных login attempts, с сохранением security-safe public responses. После него идет email delivery outbox/retry hardening. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path.
 
 ## Post-MVP Backlog
 
@@ -1015,7 +1016,6 @@ Enterprise/B2B:
 
 Audit/Compliance:
 
-- Отдельные audit filters по company/user/action/date.
 - Export audit events для company admins.
 - Retention policy для audit events.
 

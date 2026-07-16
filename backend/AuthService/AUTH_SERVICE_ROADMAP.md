@@ -462,19 +462,32 @@
 
 </details>
 
+<details>
+<summary>30. Audit read API</summary>
+
+**Зачем:** дать admin/security UI безопасное чтение security history без доступа к raw token/link/credential данным.
+
+**Сделано:**
+- `GET /api/auth/audit-events`.
+- Endpoint требует `users.manage`.
+- Фильтры: `companyId`, `userId`, `action`, `createdFromUtc`, `createdToUtc`.
+- Pagination через `PagedList<AuthAuditEventResponse>`.
+- `SystemAdmin` может читать все companies и фильтровать по `companyId`.
+- Non-system users с `users.manage` ограничены своей `CurrentCompanyId`.
+- Response не возвращает `metadata_json`, IP address и user agent.
+
+**Что дало:** write-side audit history стала доступна как safe read model для admin/security UI и базовых расследований.
+
+</details>
+
 ## Ближайший План
 
-1. Audit read API:
-   - фильтры по company/user/action/date;
-   - safe response без raw token/link/credential metadata;
-   - pagination для admin/security UI.
-
-2. Public auth endpoint hardening:
+1. Public auth endpoint hardening:
    - rate limiting для login, refresh, request password reset и invite resend;
    - account lockout или temporary throttling после серии неудачных login attempts;
    - сохранить security-safe public responses без user/token enumeration.
 
-3. Invite/password reset email outbox/retry hardening:
+2. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
    - production provider candidate: UniSender Go, если он подтвердит нужные SMTP/API delivery capabilities, DKIM/SPF setup, delivery statuses/webhooks и подходящие условия хранения данных;
@@ -482,7 +495,7 @@
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
 
-4. OAuth 2.0/OpenID Connect AuthService MVP:
+3. OAuth 2.0/OpenID Connect AuthService MVP:
    - внедрить OpenIddict как authorization server поверх существующего ASP.NET Core Identity user store;
    - добавить discovery endpoint `/.well-known/openid-configuration`, JWKS, authorization endpoint и token endpoint;
    - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;
