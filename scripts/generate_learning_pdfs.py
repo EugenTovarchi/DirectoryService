@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -13,8 +12,20 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = Path(r"D:\Projects\LearningDocs")
 FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
+
+DOCUMENTS = [
+    (
+        REPO_ROOT / "backend/docs/services/auth-public-hardening-summary.md",
+        "auth-public-hardening-summary.pdf",
+    ),
+    (
+        REPO_ROOT / "backend/docs/architecture/grpc-service-token-flow-summary.md",
+        "grpc-service-token-flow-summary.pdf",
+    ),
+]
 
 
 def escape(text: str) -> str:
@@ -48,6 +59,17 @@ def build_styles():
     )
     styles.add(
         ParagraphStyle(
+            name="H2Ru",
+            parent=styles["Heading2"],
+            fontName="Arial",
+            fontSize=12,
+            leading=15,
+            spaceBefore=8,
+            spaceAfter=4,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
             name="BodyRu",
             parent=styles["BodyText"],
             fontName="Arial",
@@ -73,8 +95,8 @@ def build_styles():
             name="CodeRu",
             parent=styles["Code"],
             fontName="Arial",
-            fontSize=8.5,
-            leading=11,
+            fontSize=8.2,
+            leading=10.5,
             backColor=colors.whitesmoke,
             borderColor=colors.lightgrey,
             borderWidth=0.5,
@@ -89,14 +111,28 @@ def paragraph(styles, text: str, style: str = "BodyRu") -> Paragraph:
     return Paragraph(escape(text), styles[style])
 
 
-def bullets(styles, items: list[str]) -> list[Paragraph]:
-    return [Paragraph("• " + escape(item), styles["BulletRu"]) for item in items]
+def code_block(styles, lines: list[str]) -> Paragraph:
+    text = "\n".join(lines)
+    return Paragraph(
+        '<font name="Arial">' + escape(text).replace("\n", "<br/>") + "</font>",
+        styles["CodeRu"],
+    )
 
 
-def add_table(styles, rows: list[list[str]]) -> Table:
+def markdown_table(styles, lines: list[str]) -> Table:
+    rows: list[list[str]] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped.startswith("|") or "---" in stripped:
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        rows.append(cells)
+
+    column_count = max(len(row) for row in rows)
+    width = 170 * mm / column_count
     table = Table(
-        [[Paragraph(escape(str(cell)), styles["BodyRu"]) for cell in row] for row in rows],
-        colWidths=[55 * mm, 110 * mm],
+        [[Paragraph(escape(cell), styles["BodyRu"]) for cell in row] for row in rows],
+        colWidths=[width] * column_count,
     )
     table.setStyle(
         TableStyle(
@@ -113,32 +149,101 @@ def add_table(styles, rows: list[list[str]]) -> Table:
     return table
 
 
-def build_pdf(file_name: str, title: str, sections: list[tuple[str, list[tuple[str, object]]]]) -> None:
-    styles = build_styles()
-    story = [Paragraph(escape(title), styles["TitleRu"]), Spacer(1, 4)]
+def flush_paragraph(story, styles, lines: list[str]) -> None:
+    if not lines:
+        return
 
-    for heading, blocks in sections:
-        story.append(Paragraph(escape(heading), styles["H1Ru"]))
-        for kind, data in blocks:
-            if kind == "p":
-                story.append(paragraph(styles, str(data)))
-            elif kind == "b":
-                story.extend(bullets(styles, list(data)))
-            elif kind == "code":
-                story.append(
-                    Paragraph(
-                        '<font name="Arial">' + escape(str(data)).replace("\n", "<br/>") + "</font>",
-                        styles["CodeRu"],
-                    )
-                )
-            elif kind == "table":
-                story.append(add_table(styles, list(data)))
+    story.append(paragraph(styles, " ".join(line.strip() for line in lines if line.strip())))
+    lines.clear()
+
+
+def parse_markdown(source: Path, styles) -> list:
+    story: list = []
+    paragraph_lines: list[str] = []
+    code_lines: list[str] = []
+    table_lines: list[str] = []
+    in_code = False
+
+    for raw_line in source.read_text(encoding="utf-8").splitlines():
+        line = raw_line.rstrip()
+
+        if line.startswith("```"):
+            flush_paragraph(story, styles, paragraph_lines)
+            if table_lines:
+                story.append(markdown_table(styles, table_lines))
                 story.append(Spacer(1, 6))
+                table_lines.clear()
+            if in_code:
+                story.append(code_block(styles, code_lines))
+                code_lines.clear()
+                in_code = False
+            else:
+                in_code = True
+            continue
+
+        if in_code:
+            code_lines.append(line)
+            continue
+
+        if line.startswith("|"):
+            flush_paragraph(story, styles, paragraph_lines)
+            table_lines.append(line)
+            continue
+
+        if table_lines:
+            story.append(markdown_table(styles, table_lines))
+            story.append(Spacer(1, 6))
+            table_lines.clear()
+
+        if not line.strip():
+            flush_paragraph(story, styles, paragraph_lines)
+            continue
+
+        if line.startswith("# "):
+            flush_paragraph(story, styles, paragraph_lines)
+            story.append(Paragraph(escape(line[2:].strip()), styles["TitleRu"]))
+            story.append(Spacer(1, 4))
+            continue
+
+        if line.startswith("## "):
+            flush_paragraph(story, styles, paragraph_lines)
+            story.append(Paragraph(escape(line[3:].strip()), styles["H1Ru"]))
+            continue
+
+        if line.startswith("### "):
+            flush_paragraph(story, styles, paragraph_lines)
+            story.append(Paragraph(escape(line[4:].strip()), styles["H2Ru"]))
+            continue
+
+        if line.startswith("- "):
+            flush_paragraph(story, styles, paragraph_lines)
+            story.append(Paragraph("• " + escape(line[2:].strip()), styles["BulletRu"]))
+            continue
+
+        if line[0].isdigit() and ". " in line[:4]:
+            flush_paragraph(story, styles, paragraph_lines)
+            story.append(Paragraph(escape(line.strip()), styles["BulletRu"]))
+            continue
+
+        paragraph_lines.append(line)
+
+    flush_paragraph(story, styles, paragraph_lines)
+    if table_lines:
+        story.append(markdown_table(styles, table_lines))
+        story.append(Spacer(1, 6))
+    if code_lines:
+        story.append(code_block(styles, code_lines))
+
+    return story
+
+
+def build_pdf(source: Path, output_name: str) -> None:
+    styles = build_styles()
+    story = parse_markdown(source, styles)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT_DIR / file_name
     SimpleDocTemplate(
-        str(path),
+        str(OUTPUT_DIR / output_name),
         pagesize=A4,
         rightMargin=16 * mm,
         leftMargin=16 * mm,
@@ -148,184 +253,8 @@ def build_pdf(file_name: str, title: str, sections: list[tuple[str, list[tuple[s
 
 
 def main() -> None:
-    auth_sections = [
-        (
-            "Что сделали",
-            [
-                ("p", "Добавили первый защитный слой вокруг публичных auth endpoints AuthService."),
-                (
-                    "b",
-                    [
-                        "Login теперь временно блокируется после 3 неверных попыток пароля.",
-                        "Публичные auth endpoints получили ограничение частоты запросов по IP.",
-                        "Публичные ошибки остались одинаковыми и не раскрывают причину отказа.",
-                    ],
-                ),
-            ],
-        ),
-        (
-            "Какие endpoints защищены",
-            [
-                (
-                    "b",
-                    [
-                        "POST /api/auth/login",
-                        "POST /api/auth/refresh",
-                        "POST /api/auth/request-password-reset",
-                        "POST /api/auth/reset-password",
-                        "POST /api/users/{userId}/resend-invite",
-                    ],
-                )
-            ],
-        ),
-        (
-            "Как работает временная блокировка входа",
-            [
-                ("p", "Это не деактивация аккаунта, а временный запрет нового login."),
-                (
-                    "b",
-                    [
-                        "AccessFailedCount увеличивается при неверном пароле.",
-                        "После 3 неверных попыток выставляется LockoutEnd.",
-                        "Блокировка длится 15 минут.",
-                        "Даже правильный пароль во время блокировки возвращает credentials.is.invalid.",
-                        "IsActive, роли, permissions и refresh tokens не меняются.",
-                    ],
-                ),
-            ],
-        ),
-        (
-            "Как работает ограничение частоты запросов",
-            [
-                (
-                    "p",
-                    "Лимит считается по IP-адресу, потому что часть auth flows анонимная.",
-                ),
-                (
-                    "table",
-                    [
-                        ["Группа", "Лимит"],
-                        ["Login", "10 запросов за 60 секунд"],
-                        ["Refresh", "30 запросов за 60 секунд"],
-                        ["Password reset", "3 запроса за 60 секунд"],
-                        ["Invite resend", "10 запросов за 60 секунд"],
-                    ],
-                ),
-                ("p", "При превышении лимита endpoint возвращает 429 Too Many Requests."),
-            ],
-        ),
-        (
-            "Что это дало",
-            [
-                (
-                    "b",
-                    [
-                        "Снизили риск перебора паролей.",
-                        "Снизили риск массовых повторных запросов к reset/invite endpoints.",
-                        "Не стали раскрывать наружу, существует ли email или заблокирован ли user.",
-                        "Сохранили текущую session model: неверные попытки login не отзывают refresh tokens.",
-                    ],
-                )
-            ],
-        ),
-        (
-            "Проверки",
-            [
-                (
-                    "code",
-                    "dotnet build AuthService.sln -> 0 warnings / 0 errors\n"
-                    "dotnet test AuthService.sln -> unit 6/6, integration 100/100",
-                )
-            ],
-        ),
-    ]
-
-    grpc_sections = [
-        (
-            "Что изменилось в картине gRPC flow",
-            [
-                (
-                    "p",
-                    "DirectoryService ходит в FileService через gRPC не анонимно, а с service JWT, который выдает AuthService.",
-                ),
-                (
-                    "b",
-                    [
-                        "DirectoryService handler работает только с IFileCommunicationService.",
-                        "FileService.Contracts adapter получает service token у AuthService.",
-                        "Token добавляется в gRPC metadata как Authorization: Bearer <token>.",
-                        "FileService проверяет JWT и claim service_permission=file-service.internal.",
-                    ],
-                ),
-            ],
-        ),
-        (
-            "Полный flow",
-            [
-                (
-                    "code",
-                    "DirectoryService handler\n"
-                    "  -> IFileCommunicationService\n"
-                    "  -> FileService.Contracts adapter\n"
-                    "  -> AuthService /api/auth/service-token\n"
-                    "  -> result.accessToken\n"
-                    "  -> gRPC metadata Authorization: Bearer <service-token>\n"
-                    "  -> FileService gRPC endpoint\n"
-                    "  -> policy service_permission=file-service.internal\n"
-                    "  -> gRPC reply\n"
-                    "  -> DirectoryService response",
-                )
-            ],
-        ),
-        (
-            "Почему не user JWT",
-            [
-                (
-                    "p",
-                    "User JWT отвечает на вопрос: какой пользователь делает запрос. Service JWT отвечает на вопрос: какой backend-сервис делает internal request.",
-                ),
-                (
-                    "b",
-                    [
-                        "Не смешиваем files.read с internal service permission.",
-                        "FileService может открыть только конкретный internal gRPC endpoint.",
-                        "DirectoryService не получает доступ ко всему FileService API как пользователь.",
-                    ],
-                ),
-            ],
-        ),
-        (
-            "Какие проблемы решились",
-            [
-                (
-                    "b",
-                    [
-                        "Internal gRPC endpoint больше не анонимный.",
-                        "Граница доступа проверяется на стороне FileService.",
-                        "Application layer DirectoryService не знает про token, headers или gRPC metadata.",
-                        "Service token кэшируется, поэтому каждый gRPC call не ходит заново в AuthService.",
-                    ],
-                )
-            ],
-        ),
-        (
-            "Что важно помнить",
-            [
-                (
-                    "b",
-                    [
-                        "AuthService возвращает service token внутри envelope: result.accessToken.",
-                        "Если clientId/clientSecret неверные, DirectoryService не получит token.",
-                        "Если token валиден, но нет service_permission, FileService вернет запрет доступа.",
-                        "RabbitMQ остается для событий, gRPC используется когда нужен ответ прямо сейчас.",
-                    ],
-                )
-            ],
-        ),
-    ]
-
-    build_pdf("auth-public-hardening-summary.pdf", "AuthService: Public Auth Hardening", auth_sections)
-    build_pdf("grpc-service-token-flow-summary.pdf", "gRPC Service-to-Service Flow", grpc_sections)
+    for source, output_name in DOCUMENTS:
+        build_pdf(source, output_name)
 
 
 if __name__ == "__main__":
