@@ -597,8 +597,9 @@ Post-MVP upgrade path:
 - Active sessions и revoke all sessions полезны для security UX: пользователь или администратор может завершить сессии после потери устройства, увольнения сотрудника или подозрения на компрометацию.
 - При массовом отзыве sessions безопаснее завершить и текущую session: если действие выполняется из-за компрометации, нельзя считать текущий refresh token доверенным.
 - Security notification по email помогает пользователю заметить подозрительное действие и соответствует привычному UX identity-продуктов.
-- Rate limiting защищает от email flooding, brute force и abuse сценариев.
-- Для первого MVP slice rate limiting можно отложить, если мы не открываем сервис наружу и работаем в local/dev окружении. Перед публичным stage это надо добавить.
+- Rate limiting (ограничение частоты запросов) защищает от email flooding (массовой отправки писем), перебора паролей и abuse (злоупотребления публичными endpoints).
+- Public auth endpoints уже имеют первый слой rate limiting: login, refresh, request/reset password и invite resend.
+- Login использует Identity lockout: 3 неверные попытки пароля включают временную блокировку входа на 15 минут без деактивации аккаунта и без отзыва refresh tokens.
 - Повторный ввод пароля перед `revoke all sessions` полезен для high-risk действий, но на MVP усложнит UX и реализацию; позже это можно заменить step-up auth/MFA.
 - Device fingerprint может давать ложную точность и добавляет privacy/complexity; для MVP достаточно IP, raw `UserAgent`, normalized device info и refresh token session id.
 - Approximate location по IP может быть полезна в session UI, но она неточная и может путать пользователей; для MVP достаточно IP/UserAgent/device metadata.
@@ -922,8 +923,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- Добавить rate limiting/temporary throttling для public auth endpoints: login, refresh, request password reset, invite resend.
-- Добавить account lockout или temporary throttling после серии неудачных login attempts.
+- Добавить outbox/retry для invite/password reset email delivery.
 - После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
 
 ## Учебный Backlog
@@ -959,6 +959,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Invite acceptance MVP: `POST /api/auth/accept-invite` принимает invite token и password, проверяет hash stored token, активирует пользователя и помечает invite accepted; unknown/expired/revoked/reused invite возвращает `invite.token.is.invalid`.
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
+- Public auth hardening MVP: login/refresh/password reset/invite resend защищены rate limiting; login после 3 неверных паролей временно блокируется через Identity lockout на 15 минут, без деактивации аккаунта и без отзыва refresh tokens.
 - User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
 - Audit history MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials; `GET /api/auth/audit-events` возвращает safe paged read model с фильтрами `companyId`, `userId`, `action`, `createdFromUtc`, `createdToUtc`.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
@@ -985,9 +986,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, unit `6/6`, integration `98/98`.
+Последние проверки проходили: build `0 warnings / 0 errors`, focused public auth hardening integration `25/25`, unit `6/6`, integration `98/98`.
 
-Следующий ближайший AuthService блок: public auth endpoint hardening - rate limiting для login/refresh/password reset/invite resend, temporary throttling или lockout после серии неудачных login attempts, с сохранением security-safe public responses. После него идет email delivery outbox/retry hardening. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path.
+Следующий ближайший AuthService блок: email delivery outbox/retry hardening для invite/password reset. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path.
 
 ## Post-MVP Backlog
 
@@ -995,8 +996,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Security hardening:
 
-- Rate limiting для login, refresh, invite resend и notification sending.
-- Account lockout / temporary throttling после серии неудачных login attempts.
+- Rate limiting для notification sending вне invite/password reset flow.
 - MFA или step-up auth для high-risk actions.
 - Re-authentication перед изменением password, email или критичных company settings.
 - Security email notification при login с нового устройства или подозрительного IP.

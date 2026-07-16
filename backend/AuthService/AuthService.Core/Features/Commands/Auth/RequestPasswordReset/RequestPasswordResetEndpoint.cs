@@ -2,6 +2,7 @@ using AuthService.Contracts.Requests;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Failures;
 using AuthService.Core.Models;
+using AuthService.Core.RateLimiting;
 using AuthService.Core.Services;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
@@ -33,7 +34,8 @@ public sealed class RequestPasswordResetEndpoint : IEndpoint
                 RequestPasswordResetCommand command = new(request);
 
                 return await handler.Handle(command, cancellationToken);
-            });
+            })
+            .RequireRateLimiting(PublicAuthRateLimitPolicies.PASSWORD_RESET);
     }
 }
 

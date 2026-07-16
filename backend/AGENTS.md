@@ -70,6 +70,11 @@ For adding future services, see [docs/architecture/how-to-add-service.md](docs/a
 
 For completed work report: plan executed, changed files, verification run, risks/manual checks.
 
+## Learning Documents
+
+- Учебные PDF-документы складывать в `D:\Projects\LearningDocs`.
+- Редактируемые markdown-источники по сервисам и архитектуре остаются в `backend/docs`.
+
 ## Communication Budget
 
 - Default to concise progress notes and final summaries. Include only what changed, why it matters, verification run, and remaining risks.

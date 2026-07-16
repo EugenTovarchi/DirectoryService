@@ -4,6 +4,7 @@ using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
 using AuthService.Core.Failures;
 using AuthService.Core.Models;
+using AuthService.Core.RateLimiting;
 using AuthService.Core.Services;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
@@ -38,7 +39,8 @@ public sealed class ResendInviteEndpoint : IEndpoint
 
                 return await handler.Handle(command, cancellationToken);
             })
-            .RequireAuthorization(AuthPolicies.USERS_MANAGE);
+            .RequireAuthorization(AuthPolicies.USERS_MANAGE)
+            .RequireRateLimiting(PublicAuthRateLimitPolicies.INVITE_RESEND);
     }
 }
 

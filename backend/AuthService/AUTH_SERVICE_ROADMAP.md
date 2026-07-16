@@ -480,14 +480,25 @@
 
 </details>
 
+<details>
+<summary>31. Public auth hardening</summary>
+
+**Зачем:** снизить риск перебора паролей и массовых повторных запросов к публичным auth endpoints без раскрытия причин отказа наружу.
+
+**Сделано:**
+- Добавлен rate limiting (ограничение частоты запросов) для `login`, `refresh`, `request-password-reset`, `reset-password` и `resend-invite`.
+- Лимиты настраиваются через `PublicAuthRateLimits`; для password reset лимит установлен в 3 запроса на окно.
+- Login теперь использует Identity lockout: 3 неверные попытки пароля включают временную блокировку входа на 15 минут.
+- Временная блокировка входа не деактивирует аккаунт, не отзывает refresh tokens и не меняет роли/permissions.
+- Public response остается security-safe: неверный пароль, locked user и inactive user не различаются наружу.
+
+**Что дало:** AuthService получил первый слой защиты публичных auth endpoints от перебора пароля и повторного spam/abuse трафика без изменения user-management semantics.
+
+</details>
+
 ## Ближайший План
 
-1. Public auth endpoint hardening:
-   - rate limiting для login, refresh, request password reset и invite resend;
-   - account lockout или temporary throttling после серии неудачных login attempts;
-   - сохранить security-safe public responses без user/token enumeration.
-
-2. Invite/password reset email outbox/retry hardening:
+1. Invite/password reset email outbox/retry hardening:
    - записывать email delivery job в той же transaction, что и invite/resend/reset token;
    - background worker отправляет SMTP и делает retry/backoff;
    - production provider candidate: UniSender Go, если он подтвердит нужные SMTP/API delivery capabilities, DKIM/SPF setup, delivery statuses/webhooks и подходящие условия хранения данных;
@@ -495,7 +506,7 @@
    - не логировать raw token, link или SMTP credentials;
    - делать перед production-grade delivery, не блокирует текущий MVP.
 
-3. OAuth 2.0/OpenID Connect AuthService MVP:
+2. OAuth 2.0/OpenID Connect AuthService MVP:
    - внедрить OpenIddict как authorization server поверх существующего ASP.NET Core Identity user store;
    - добавить discovery endpoint `/.well-known/openid-configuration`, JWKS, authorization endpoint и token endpoint;
    - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;

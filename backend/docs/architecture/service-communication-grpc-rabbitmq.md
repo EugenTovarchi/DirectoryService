@@ -1495,6 +1495,39 @@ DevOps/infra часть понадобится позже, когда будем
 Даже если сервисы находятся в одной Docker/network/VM-сети, `FileService` должен понимать, кто именно его вызывает
 и какое внутреннее право у этого caller service есть.
 
+### Короткая рабочая картина
+
+Текущий production-like flow выглядит так:
+
+```text
+DirectoryService handler
+  -> IFileCommunicationService
+  -> FileService.Contracts adapter
+  -> AuthService /api/auth/service-token
+  -> AuthService возвращает envelope: result.accessToken
+  -> adapter кладет Authorization: Bearer <service-token> в gRPC metadata
+  -> FileService gRPC endpoint проверяет JWT и service_permission=file-service.internal
+  -> FileService выполняет internal method и возвращает gRPC reply
+  -> adapter переводит reply обратно в DirectoryService contract response
+```
+
+Что важно понимать:
+
+- `DirectoryService` не знает, как именно получается token;
+- business handler `DirectoryService` не работает с gRPC metadata;
+- `FileService.Contracts` скрывает transport/auth детали за `IFileCommunicationService`;
+- `AuthService` выпускает не user token, а service token;
+- `FileService` принимает internal gRPC request только с `service_permission=file-service.internal`;
+- user permission вроде `files.read` для этого gRPC endpoint не подходит.
+
+Какие проблемы это решило:
+
+- внутренний gRPC endpoint больше не является анонимным;
+- права пользователя не смешиваются с правами backend-сервиса;
+- `FileService` сам проверяет границу доступа на своем endpoint;
+- `DirectoryService` продолжает зависеть от контракта, а не от внутренней реализации `FileService`;
+- token кэшируется, поэтому каждый gRPC-вызов не создает лишний запрос в `AuthService`.
+
 Для этого используется отдельный service JWT:
 
 ```mermaid
