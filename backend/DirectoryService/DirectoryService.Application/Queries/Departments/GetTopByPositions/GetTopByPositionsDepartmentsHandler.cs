@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using DirectoryService.Application.Cache;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
