@@ -48,6 +48,12 @@ Detailed context:
 - Use indexes for frequent filters.
 - Raw SQL must be parameterized.
 
+## Configuration DI
+
+- Keep options classes focused on values, defaults, and explanatory comments.
+- Move multiple related option checks into a named `IValidateOptions<TOptions>` located near the owning feature instead of growing inline `.Validate(...)` chains in a general DI file.
+- DI modules should register the validator, bind the configuration section, and call `ValidateOnStart()`.
+
 ## Messaging
 
 - Integration events are past tense.

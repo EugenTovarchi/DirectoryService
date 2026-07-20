@@ -52,6 +52,15 @@ New services should:
 - add a service-specific env file for Docker runtime
 - use BuildKit secrets only for build-time package restore
 
+## Options Validation
+
+- Options-класс хранит configuration values, безопасные defaults и короткие комментарии о назначении настроек. Не помещайте в него DI-регистрацию или infrastructure behavior.
+- Если options имеют несколько связанных проверок или проверка содержит business/infrastructure смысл, создавайте отдельный `IValidateOptions<TOptions>` вместо длинной inline-цепочки `.Validate(...)`.
+- Размещайте validator рядом с owning feature/options: например, email outbox validator рядом с email delivery infrastructure, а rate-limit validator рядом с rate limiting.
+- DI extension должен оставаться composition root: зарегистрировать `IValidateOptions<TOptions>`, выполнить `Bind(...)` и `ValidateOnStart()`.
+- Один короткий и очевидный guard допустимо оставить inline, но при росте набора правил переносите весь набор в один именованный validator.
+- Сообщения validation failure должны содержать полный configuration key, чтобы startup error сразу показывал, какую настройку исправить.
+
 Related docs:
 
 - [docker-config.md](docker-config.md)

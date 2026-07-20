@@ -263,7 +263,7 @@
 - В БД хранится только hash invite token.
 - `POST /api/auth/accept-invite` принимает token/password, активирует user и помечает token accepted.
 
-**Что дало:** pending user не может login до принятия invite, raw invite token не хранится, ошибки unknown/expired/reused invite остаются security-safe.
+**Что дало:** pending user не может login до принятия invite, token table хранит только hash, ошибки unknown/expired/reused invite остаются security-safe. Поздний outbox-блок отдельно ограничил временное хранение raw token внутри delivery payload.
 
 </details>
 
@@ -307,7 +307,7 @@
 - Docker local-dev получил Mailpit: SMTP `mailpit:1025`, UI `http://localhost:8025`.
 - API responses больше не содержат standalone raw invite token.
 
-**Что дало:** invite/resend стали ближе к production flow: raw token есть только в ссылке, не хранится в БД и не логируется.
+**Что дало:** invite/resend стали ближе к production flow: raw token есть только в ссылке и не логируется. На этом промежуточном этапе SMTP вызывался напрямую; поздний outbox-блок разрешил временное хранение ссылки в delivery payload ради retry после restart.
 
 </details>
 
@@ -496,17 +496,28 @@
 
 </details>
 
+<details>
+<summary>32. Transactional email outbox и retry через Quartz</summary>
+
+**Зачем:** убрать риск потери invite/password-reset письма, когда token уже сохранён, а AuthService упал или SMTP недоступен до отправки.
+
+**Сделано:**
+- `InviteUser`, `ResendInvite` и `RequestPasswordReset` сохраняют `EmailOutboxMessage` в той же EF transaction, что и Identity/token/audit изменения.
+- Добавлена таблица `email_outbox_messages` с delivery state: `next_attempt_at`, `attempt_count`, `processing_started_at`, `delivered_at`, `discarded_at`, `last_failure_code`.
+- In-memory Quartz schedule запускает `EmailOutboxDeliveryJob`; durable retry state остаётся в PostgreSQL, поэтому письма переживают restart приложения.
+- Repository резервирует готовые строки через `FOR UPDATE SKIP LOCKED`, чтобы несколько копий AuthService не выбрали одно письмо одновременно.
+- Ошибка SMTP планирует exponential backoff; после `MaxAttempts` или expiration запись отбрасывается.
+- Ссылка с raw invite/reset token очищается после успешной доставки, terminal failure или expiration и никогда не пишется в logs/audit.
+- `EmailOutboxMessage` защищает state transitions: нельзя завершить незарезервированное письмо, повторно изменить terminal state или назначить retry в прошлое; ожидаемые ошибки возвращаются через `UnitResult<Error>`.
+- Integration tests отключают Quartz timer и явно запускают тот же processor; отдельный retry test проверяет failure state и следующую успешную попытку.
+
+**Что дало:** HTTP endpoints больше не зависят от доступности SMTP, а факт необходимости отправить письмо атомарно сохраняется вместе с business change. Quartz отвечает только за периодический запуск, PostgreSQL — за очередь, retry и восстановление после падения.
+
+</details>
+
 ## Ближайший План
 
-1. Invite/password reset email outbox/retry hardening:
-   - записывать email delivery job в той же transaction, что и invite/resend/reset token;
-   - background worker отправляет SMTP и делает retry/backoff;
-   - production provider candidate: UniSender Go, если он подтвердит нужные SMTP/API delivery capabilities, DKIM/SPF setup, delivery statuses/webhooks и подходящие условия хранения данных;
-   - не хранить raw invite/reset token отдельно от delivery payload дольше нужного срока;
-   - не логировать raw token, link или SMTP credentials;
-   - делать перед production-grade delivery, не блокирует текущий MVP.
-
-2. OAuth 2.0/OpenID Connect AuthService MVP:
+1. OAuth 2.0/OpenID Connect AuthService MVP:
    - внедрить OpenIddict как authorization server поверх существующего ASP.NET Core Identity user store;
    - добавить discovery endpoint `/.well-known/openid-configuration`, JWKS, authorization endpoint и token endpoint;
    - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;

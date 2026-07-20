@@ -340,9 +340,10 @@ Current `POST /api/users/invite` MVP behavior:
 - `CompanyAdmin` can invite only into their own `CurrentCompanyId`; `SystemAdmin` can target another company for onboarding scenarios.
 - Request does not contain `InitialPassword`; the invited user sets password through `POST /api/auth/accept-invite`.
 - Creates a one-time invite token that expires after 3 days.
-- Stores only invite token hash in `user_invite_tokens`; raw invite token is sent only as part of the invite link.
+- Stores only invite token hash in `user_invite_tokens`; raw invite token temporarily exists only inside the outbox delivery link.
 - Revokes previous active invite tokens for the same user before storing the new token.
-- Sends invite email through configured SMTP; Docker local-dev routes this to Mailpit at `http://localhost:8025`.
+- Adds `email_outbox_messages` in the same transaction as user, role, invite token and audit event.
+- Returns after transaction commit; configured SMTP is called later by the Quartz-triggered outbox processor. Docker local-dev routes SMTP to Mailpit at `http://localhost:8025`.
 - User-management validation failures use explicit AuthService-local error codes such as `company.context.is.invalid`, `role.is.invalid`, `user.creation.failed`, `role.assignment.failed`, and `invite.token.creation.failed`.
 
 Current `POST /api/auth/accept-invite` MVP behavior:
@@ -362,20 +363,74 @@ Current `POST /api/users/{userId}/resend-invite` MVP behavior:
 - `CompanyAdmin` can resend invites only inside their own `CurrentCompanyId`; `SystemAdmin` can resend for users in any company.
 - Revokes active pending invite tokens for the user before creating a replacement token.
 - Creates a new one-time invite token that expires after 3 days.
-- Stores only invite token hash in `user_invite_tokens`; raw invite token is sent only as part of the invite link.
-- Sends invite email through configured SMTP and does not log raw invite token.
+- Stores only invite token hash in `user_invite_tokens`; raw invite token temporarily exists only inside the outbox delivery link.
+- Adds the replacement invite email to outbox in the same transaction and does not log the raw invite token.
 
 Current password reset MVP behavior:
 
 - `POST /api/auth/request-password-reset` is public and accepts `RequestPasswordResetRequest` with `email`.
 - Unknown email, inactive user, and user without password return the same `200 OK` response as a valid request, without sending email.
 - Valid active password-protected user gets a one-time password reset token that expires after 1 hour.
-- Stores only password reset token hash in `password_reset_tokens`; raw reset token is sent only as part of the reset link.
+- Stores only password reset token hash in `password_reset_tokens`; raw reset token temporarily exists only inside the outbox delivery link.
+- Adds reset email to `email_outbox_messages` in the same transaction as reset token and audit event.
 - New reset request revokes previous active reset tokens for the same user.
 - `POST /api/auth/reset-password` is public and accepts `ResetPasswordRequest` with `token` and `password`.
 - Unknown, expired, revoked, used, inactive-user, and no-password-user reset attempts return the same `password.reset.token.is.invalid` failure.
 - Successful reset replaces the Identity password, marks reset token used, revokes remaining active password reset tokens, and revokes active refresh sessions for the user.
 - Does not issue access/refresh tokens; after reset the user signs in through `POST /api/auth/login`.
+
+## Email Outbox И Quartz Delivery Flow
+
+Outbox закрывает окно потери письма между commit бизнес-транзакции и SMTP-вызовом. Quartz не хранит отдельную job для каждого письма: одно периодическое задание `EmailOutboxDeliveryJob` запускает `EmailOutboxProcessor`, а PostgreSQL остаётся источником истины для очереди и retry.
+
+Flow создания письма:
+
+1. Handler проверяет пользователя, company boundary и входной request.
+2. Handler открывает EF transaction через `ITransactionManager`.
+3. В той же transaction создаются или изменяются business records: Identity user, invite/reset token и audit event.
+4. Handler строит invite/reset link и добавляет `EmailOutboxMessage` через `IEmailOutboxRepository`.
+5. Один `SaveChangesAsync` сохраняет business records и outbox message атомарно.
+6. Transaction commit подтверждает, что письмо больше не может потеряться между БД и SMTP.
+7. HTTP endpoint возвращает ответ, не ожидая доступности SMTP provider.
+
+Flow доставки:
+
+1. In-memory Quartz trigger стартует сразу после запуска AuthService и затем с интервалом `PollIntervalSeconds`.
+2. `EmailOutboxDeliveryJob` вызывает `EmailOutboxProcessor.ProcessBatchAsync()`.
+3. Repository выбирает не больше `MessagesPerRun` готовых записей и временно резервирует их.
+4. При нескольких копиях AuthService PostgreSQL `FOR UPDATE SKIP LOCKED` заставляет параллельные Quartz-задания пропускать уже выбранные строки.
+5. Processor выбирает adapter по `Type`: `IInviteEmailSender` или `IPasswordResetEmailSender`.
+6. Успешная отправка заполняет `DeliveredAt`, увеличивает `AttemptCount` и очищает `DeliveryLink`.
+7. Ошибка заполняет safe `LastFailureCode`, увеличивает `AttemptCount` и планирует `NextAttemptAt` через exponential backoff.
+8. После `MaxAttempts` или истечения invite/reset token запись получает `DiscardedAt`, а `DeliveryLink` очищается.
+9. Если AuthService упал после резервирования, запись снова становится доступна после `ProcessingLeaseSeconds`.
+
+`EmailOutboxMessage` защищает переходы состояния на domain level. `MarkDelivered` требует предварительное резервирование, terminal message нельзя обработать повторно, `RegisterFailure` проверяет `maxAttempts` и будущее `nextAttemptAt`, а `DiscardExpired` нельзя вызвать до expiration. Методы возвращают `UnitResult<Error>`, поэтому ожидаемая ошибка состояния не превращается в exception.
+
+Почему Quartz store оставлен in-memory:
+
+- Quartz хранит только повторяющееся расписание, а не отдельные email jobs.
+- Durable state письма, количество попыток и время следующего retry находятся в PostgreSQL outbox.
+- После restart trigger использует `StartNow()` и снова сканирует готовые записи.
+- Persistent Quartz store потребуется, если Quartz начнёт владеть индивидуальными бизнес-задачами или точным календарным расписанием, как video processing jobs в FileService.
+
+Настройки `EmailOutbox`:
+
+- `Enabled`: регистрировать ли Quartz schedule.
+- `PollIntervalSeconds`: как часто проверять outbox.
+- `MessagesPerRun`: максимальное число писем за один запуск; это не SMTP batch, письма отправляются по одному.
+- `MaxAttempts`: максимальное число попыток доставки.
+- `InitialRetryDelaySeconds`: задержка перед первым retry.
+- `MaxRetryDelaySeconds`: верхняя граница exponential backoff.
+- `ProcessingLeaseSeconds`: сколько запись считается занятой до повторного подбора после падения процесса.
+
+Security boundary:
+
+- `user_invite_tokens` и `password_reset_tokens` по-прежнему хранят только hash.
+- Raw token временно находится только внутри `email_outbox_messages.delivery_link`, потому что повторная отправка после restart должна восстановить полную ссылку.
+- `DeliveryLink` очищается после delivery, terminal failure или token expiration.
+- Raw token/link запрещено писать в application logs, audit events и error responses.
+- Для production следует дополнительно оценить database encryption at rest, ограничение доступа к таблице и шифрование delivery payload отдельным ключом.
 
 Legacy `/auth/users` registration/read endpoints are removed from the current AuthService surface. New user creation must go through Identity-based user management, starting with `POST /api/users/invite`. The legacy `auth_users` table is dropped by the `DropLegacyAuthUsers` EF migration.
 
@@ -521,6 +576,21 @@ Identity tables предоставляет ASP.NET Core Identity. Мы каст�
   - `ReplacedByTokenId`
   - `CreatedByIp`
   - `RevokedByIp`
+- `EmailOutboxMessage`
+  - `Id`
+  - `Type`
+  - `UserId`
+  - `Email`
+  - `DisplayName`
+  - `DeliveryLink`
+  - `ExpiresAt`
+  - `CreatedAt`
+  - `NextAttemptAt`
+  - `AttemptCount`
+  - `ProcessingStartedAt`
+  - `DeliveredAt`
+  - `DiscardedAt`
+  - `LastFailureCode`
 
 `CompanyId` здесь является ссылкой на company context. Полная структура компании остается ответственностью `DirectoryService`.
 
@@ -625,7 +695,8 @@ Rules:
 - URL хранится в configuration, а не hard-coded в коде.
 - Backend генерирует cryptographically secure invite token.
 - В БД хранится только hash invite token.
-- В email отправляется raw invite token только как часть invite link.
+- В token table raw invite token не хранится; до отправки он временно существует только внутри outbox invite link.
+- После доставки, terminal failure или expiration outbox очищает invite link.
 - В logs/audit raw invite token не пишется.
 - Если invite истек, пользователь должен запросить новое приглашение у администратора.
 
@@ -650,7 +721,8 @@ Rules:
 - URL хранится в configuration, а не hard-coded в коде.
 - Backend генерирует cryptographically secure password reset token.
 - В БД хранится только hash password reset token.
-- В email отправляется raw password reset token только как часть reset link.
+- В token table raw password reset token не хранится; до отправки он временно существует только внутри outbox reset link.
+- После доставки, terminal failure или expiration outbox очищает reset link.
 - В logs/audit raw password reset token не пишется.
 - `request-password-reset` не раскрывает, существует ли email.
 
@@ -666,8 +738,7 @@ Password reset statuses:
 Rules:
 
 - Password reset token действует 1 час.
-- Raw password reset token не храним в БД и не логируем.
-- В БД храним только hash password reset token.
+- В `password_reset_tokens` храним только hash; raw token временно живёт только в outbox delivery payload и не попадает в logs/audit.
 - Новый password reset request не продлевает старый token.
 - Новый password reset request отзывает старые pending reset tokens и создает новый pending token.
 - Успешный reset отзывает active refresh sessions пользователя.
@@ -684,8 +755,7 @@ Invite statuses:
 Rules:
 
 - Invite token действует 3 дня.
-- Raw invite token не храним в БД и не логируем.
-- В БД храним только hash invite token.
+- В `user_invite_tokens` храним только hash; raw token временно живёт только в outbox delivery payload и не попадает в logs/audit.
 - Resend invite не продлевает старый token.
 - Resend invite отзывает старый pending invite и создает новый pending invite на 3 дня.
 - Invite может отправляться на любой email, если это разрешено `CompanyAdmin` или `SystemAdmin`.
@@ -854,7 +924,11 @@ Legacy `/auth/users` slice удален после появления Identity-b
 
 Invite token lifecycle заменил временный `InitialPassword` flow. План блока: сделать создание пользователя безопаснее для admin UI и подготовить email invite без хранения raw tokens. Сделано: `POST /api/users/invite` создает inactive user без password, генерирует one-time invite token на 3 дня, хранит только hash, а `POST /api/auth/accept-invite` принимает token/password, активирует пользователя и помечает token accepted. Влияние: администратор больше не задает пароль за пользователя, pending user не может login до принятия invite, а expired/unknown/reused invite возвращает одинаковую security-safe ошибку.
 
-Email delivery для invite/resend добавлен через SMTP abstraction. План блока: убрать raw invite token из API responses и доставлять secret только ссылкой. Сделано: `InviteUser` и `ResendInvite` после commit отправляют invite email, Docker local-dev получил Mailpit (`localhost:8025` UI, `mailpit:1025` SMTP), а integration tests используют fake sender и достают token из invite link. Влияние: raw invite token больше не возвращается standalone полем и не логируется; следующий production-hardening шаг - outbox/retry для email delivery.
+Email delivery для invite/resend сначала была добавлена через SMTP abstraction. План промежуточного блока: убрать raw invite token из API responses и доставлять secret только ссылкой. На том этапе `InviteUser` и `ResendInvite` вызывали SMTP после commit, Docker local-dev получил Mailpit (`localhost:8025` UI, `mailpit:1025` SMTP), а integration tests использовали fake sender. Последующий transactional outbox блок заменил прямую post-commit отправку и добавил durable retry.
+
+Transactional email outbox добавлен для invite, resend invite и password reset. План блока: исключить потерю письма после commit и сделать SMTP failures восстанавливаемыми. Сделано: handlers атомарно сохраняют `EmailOutboxMessage` вместе с user/token/audit, in-memory Quartz регулярно запускает processor, PostgreSQL хранит retry/backoff и резервирование между копиями AuthService, а secret-bearing link очищается после delivery/terminal failure/expiration. Влияние: endpoint больше не зависит от доступности SMTP, письмо переживает restart сервиса, а тесты детерминированно проверяют flow через явный запуск processor.
+
+Configuration validation приведена к модульному паттерну: `EmailOptions`, `PublicAuthRateLimitOptions` и `EmailOutboxOptions` имеют отдельные `IValidateOptions<T>` рядом с owning feature, а DI отвечает только за registration, binding и `ValidateOnStart`. Integration test infrastructure переведена с отдельного `IClassFixture` на общий `ICollectionFixture`: весь suite использует один Testcontainers PostgreSQL, а Respawn сохраняет изоляцию между тестами. Влияние: configuration rules легче находить и переиспользовать, EF больше не создаёт множество внутренних providers, а полный integration suite выполняется заметно быстрее.
 
 Password reset flow добавлен отдельным lifecycle. План блока: дать пользователю восстановление доступа без раскрытия существования email и без переиспользования invite tokens. Сделано: `POST /api/auth/request-password-reset` создает hash-only reset token на 1 час и отправляет reset link, `POST /api/auth/reset-password` заменяет Identity password, помечает token used и отзывает active refresh sessions. Влияние: AuthService получил public password recovery flow с одинаковыми failure shapes для unknown/expired/reused token и без хранения raw reset token.
 
@@ -923,8 +997,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Ближайшие implementation tasks:
 
-- Добавить outbox/retry для invite/password reset email delivery.
-- После этого вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
+- Вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
 
 ## Учебный Backlog
 
@@ -945,7 +1018,8 @@ Security-sensitive command handlers используют явные EF transacti
 - Почему roles и permissions не являются секретами и могут быть в seed-коде.
 - Зачем нужен `GET /api/auth/me`, почему frontend лучше получать self-profile через API contract, а не строить UI-state напрямую из JWT claims.
 - Почему `Program.cs` держим коротким, а JWT/options/auth wiring выносим в extension methods.
-- Как будет работать email flow через Mailpit в local/dev и real SMTP/email provider в production.
+- Как transactional outbox отделяет HTTP transaction от SMTP delivery и почему retry state хранится в PostgreSQL.
+- Почему AuthService использует in-memory Quartz schedule, а FileService video jobs требуют persistent Quartz store.
 
 ## Handoff
 
@@ -959,6 +1033,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Invite acceptance MVP: `POST /api/auth/accept-invite` принимает invite token и password, проверяет hash stored token, активирует пользователя и помечает invite accepted; unknown/expired/revoked/reused invite возвращает `invite.token.is.invalid`.
 - Invite resend MVP: `POST /api/users/{userId}/resend-invite` для inactive user без password отзывает active pending invite и отправляет новый invite link через email.
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
+- Email delivery hardening: invite/resend/password-reset handlers атомарно сохраняют `email_outbox_messages`; Quartz запускает processor, PostgreSQL хранит retry/backoff, а delivery link очищается после завершения.
 - Public auth hardening MVP: login/refresh/password reset/invite resend защищены rate limiting; login после 3 неверных паролей временно блокируется через Identity lockout на 15 минут, без деактивации аккаунта и без отзыва refresh tokens.
 - User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
 - Audit history MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials; `GET /api/auth/audit-events` возвращает safe paged read model с фильтрами `companyId`, `userId`, `action`, `createdFromUtc`, `createdToUtc`.
@@ -986,9 +1061,9 @@ Security-sensitive command handlers используют явные EF transacti
 - `dotnet test AuthService/tests/AuthService.UnitTests/AuthService.UnitTests.csproj --no-build --verbosity minimal`
 - `dotnet test AuthService/tests/AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --no-build --verbosity minimal`
 
-Последние проверки проходили: build `0 warnings / 0 errors`, focused public auth hardening integration `25/25`, unit `6/6`, integration `98/98`.
+Последние проверки проходили: build `0 warnings / 0 errors`, IDE0005 unused-using check clean, unit `12/12`, integration `101/101`.
 
-Следующий ближайший AuthService блок: email delivery outbox/retry hardening для invite/password reset. OAuth 2.0/OpenID Connect через OpenIddict остается целевым крупным этапом после доказанного сквозного JWT/permission и service-to-service path.
+Следующий ближайший AuthService блок: OAuth 2.0/OpenID Connect через OpenIddict, discovery/JWKS и Authorization Code Flow + PKCE.
 
 ## Post-MVP Backlog
 

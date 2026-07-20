@@ -1,3 +1,4 @@
+using AuthService.Domain.EmailDelivery;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Configurations;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +29,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<UserInviteToken> UserInviteTokens => Set<UserInviteToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<AuthAuditEvent> AuthAuditEvents => Set<AuthAuditEvent>();
+    public DbSet<EmailOutboxMessage> EmailOutboxMessages => Set<EmailOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -43,6 +45,7 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.ApplyConfiguration(new UserInviteTokenConfiguration());
         builder.ApplyConfiguration(new PasswordResetTokenConfiguration());
         builder.ApplyConfiguration(new AuthAuditEventConfiguration());
+        builder.ApplyConfiguration(new EmailOutboxMessageConfiguration());
     }
 
     private static void ConfigureIdentityTableNames(ModelBuilder builder)

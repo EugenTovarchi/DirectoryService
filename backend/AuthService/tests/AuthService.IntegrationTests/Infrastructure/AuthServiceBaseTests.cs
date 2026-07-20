@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace AuthService.IntegrationTests.Infrastructure;
 
 [Collection("AuthServiceCollection")]
-public abstract class AuthServiceBaseTests : IClassFixture<AuthServiceTestWebFactory>, IAsyncLifetime
+public abstract class AuthServiceBaseTests : IAsyncLifetime
 {
     private readonly Func<Task> _resetDatabase;
 

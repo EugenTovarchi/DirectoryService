@@ -18,6 +18,10 @@ FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
 
 DOCUMENTS = [
     (
+        REPO_ROOT / "backend/docs/services/auth-email-outbox-summary.md",
+        "auth-email-outbox-summary.pdf",
+    ),
+    (
         REPO_ROOT / "backend/docs/services/auth-public-hardening-summary.md",
         "auth-public-hardening-summary.pdf",
     ),

@@ -49,14 +49,10 @@ public static class DependencyInjectionExtensions
     {
         // Endpoint policies читают IOptionsMonitor во время запроса, чтобы test overrides (переопределения в тестах)
         // и config reload (перезагрузка конфигурации) влияли на новые окна.
+        services.AddSingleton<IValidateOptions<PublicAuthRateLimitOptions>, PublicAuthRateLimitOptionsValidator>();
         services
             .AddOptions<PublicAuthRateLimitOptions>()
             .Bind(configuration.GetSection(PublicAuthRateLimitOptions.SECTION_NAME))
-            .Validate(options => options.WindowSeconds > 0, "PublicAuthRateLimits:WindowSeconds must be positive")
-            .Validate(options => options.LoginPermitLimit > 0, "PublicAuthRateLimits:LoginPermitLimit must be positive")
-            .Validate(options => options.RefreshPermitLimit > 0, "PublicAuthRateLimits:RefreshPermitLimit must be positive")
-            .Validate(options => options.PasswordResetPermitLimit > 0, "PublicAuthRateLimits:PasswordResetPermitLimit must be positive")
-            .Validate(options => options.InviteResendPermitLimit > 0, "PublicAuthRateLimits:InviteResendPermitLimit must be positive")
             .ValidateOnStart();
 
         services.AddRateLimiter(options =>
@@ -122,24 +118,10 @@ public static class DependencyInjectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<IValidateOptions<EmailOptions>, EmailOptionsValidator>();
         services
             .AddOptions<EmailOptions>()
             .Bind(configuration.GetSection(EmailOptions.SECTION_NAME))
-            .Validate(
-                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.SmtpHost),
-                "Email:SmtpHost is required when Email:Enabled is true")
-            .Validate(
-                options => !options.Enabled || options.SmtpPort > 0,
-                "Email:SmtpPort must be positive when Email:Enabled is true")
-            .Validate(
-                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.FromEmail),
-                "Email:FromEmail is required when Email:Enabled is true")
-            .Validate(
-                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.InviteBaseUrl),
-                "Email:InviteBaseUrl is required when Email:Enabled is true")
-            .Validate(
-                options => !options.Enabled || !string.IsNullOrWhiteSpace(options.PasswordResetBaseUrl),
-                "Email:PasswordResetBaseUrl is required when Email:Enabled is true")
             .ValidateOnStart();
 
         return services;

@@ -54,6 +54,8 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["Jwt:SigningKey"] = "test-auth-service-signing-key-with-enough-length",
                 ["Jwt:AccessTokenLifetimeMinutes"] = "15",
                 ["Jwt:RefreshTokenLifetimeDays"] = "30",
+                ["EmailOutbox:InitialRetryDelaySeconds"] = "1",
+                ["EmailOutbox:MaxRetryDelaySeconds"] = "1",
                 ["ServiceClients:Clients:0:ClientId"] = "directory-service",
                 ["ServiceClients:Clients:0:ClientSecret"] = "test-directory-service-client-secret-value",
                 ["ServiceClients:Clients:0:ServiceName"] = "DirectoryService",
@@ -65,15 +67,13 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
 
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<AuthServiceDbContext>();
             services.RemoveAll<NpgsqlDataSource>();
             services.RemoveAll<INpgsqlConnectionFactory>();
             services.RemoveAll<IInviteEmailSender>();
             services.RemoveAll<IPasswordResetEmailSender>();
 
-            services.AddDbContext<AuthServiceDbContext>(_ =>
-                AuthServiceDbContext.Create(_dbContainer.GetConnectionString()));
-
+            // Production AddDbContext остаётся единственным. Тест подменяет только его data source,
+            // поэтому EF Core не строит отдельные внутренние service providers для каждой комбинации options.
             services.AddSingleton(sp =>
             {
                 var dataSourceBuilder = new NpgsqlDataSourceBuilder(_dbContainer.GetConnectionString())
