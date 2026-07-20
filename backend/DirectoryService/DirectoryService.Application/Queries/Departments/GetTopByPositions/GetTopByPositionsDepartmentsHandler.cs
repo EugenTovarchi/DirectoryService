@@ -36,7 +36,11 @@ public class
 
     public async Task<List<GetTopDepartmentsResponse>> Handle(GetTopDepartmentsQuery query, CancellationToken ct = default)
     {
-        string cacheKey = $"top_5_departments_by_positions: {query.SortDirection ?? "desc"}";
+        string direction = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "ASC"
+            : "DESC";
+
+        string cacheKey = $"top_5_departments_by_positions: {direction}";
 
         _logger.LogInformation("Getting departments by positions from cache");
 
@@ -45,7 +49,7 @@ public class
             factory: async _ =>
             {
                 _logger.LogInformation("Cache is empty. Getting departments by positions from database...");
-                return await GetFromDatabase(query, ct);
+                return await GetFromDatabase(direction, ct);
             },
             tags: ["departments"],
             options: new HybridCacheEntryOptions
@@ -58,14 +62,11 @@ public class
         return departments;
     }
 
-    private async Task<List<GetTopDepartmentsResponse>> GetFromDatabase(GetTopDepartmentsQuery query,
+    private async Task<List<GetTopDepartmentsResponse>> GetFromDatabase(
+        string direction,
         CancellationToken ct)
     {
         using var connection = await _connectionFactory.CreateConnectionAsync(ct);
-
-        string direction = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
-            ? "ASC"
-            : "DESC";
 
         var departments = await connection.QueryAsync<GetTopDepartmentsResponse>(
             $"""
