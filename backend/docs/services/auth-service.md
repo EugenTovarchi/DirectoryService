@@ -109,6 +109,28 @@ Refresh implementation rules:
 - Unknown, expired, revoked, reused, and inactive-user refresh attempts return the same public auth failure shape to avoid leaking token/session state.
 - The response shape remains `TokenResponse`: new access JWT, new raw refresh token, and both expiration timestamps.
 
+## Защита При Компрометации Токенов
+
+Access JWT является Bearer token: тот, кто получил его строку, может отправлять запросы от имени пользователя, пока token проходит проверку. Сейчас AuthService и resource services проверяют подпись, `issuer`, `audience`, lifetime и claims. Access JWT живет 15 минут, а `ClockSkew` добавляет до 30 секунд допустимого рассогласования времени.
+
+Текущая модель намеренно не обращается в AuthService или PostgreSQL при каждом API-запросе. Поэтому `logout`, отзыв одной session, `revoke all sessions`, смена password и деактивация пользователя отзывают refresh token sessions и запрещают выпуск новых access JWT, но не делают уже выпущенный access JWT недействительным немедленно. Такой token перестает приниматься после окончания lifetime. Claim `jti` выпускается для каждого access JWT, однако denylist (список досрочно отозванных `jti`) пока не реализован.
+
+Если скомпрометирован refresh token, rotation и reuse detection ограничивают ущерб: использованный token заменяется новым, а повторная отправка уже отозванного/replaced token отзывает все активные refresh sessions пользователя. В PostgreSQL хранится только hash refresh token, поэтому чтение таблицы не раскрывает raw tokens.
+
+Практический incident flow в текущей реализации:
+
+```text
+Пользователь или администратор замечает подозрительную session
+    -> отзывает одну session или все refresh sessions
+    -> AuthService запрещает дальнейший refresh
+    -> уже выпущенный access JWT живет до 15 минут (+ ClockSkew до 30 секунд)
+    -> для получения новых tokens требуется login
+```
+
+IP address и raw `UserAgent` сохраняются как metadata refresh session для session UI, audit и расследования. Они не входят в проверку access JWT, не привязаны криптографически к token и не являются device fingerprint. Жесткую блокировку по IP, `UserAgent` или browser fingerprint не используем: IP меняется из-за mobile networks/VPN/NAT, `UserAgent` подделывается, а browser fingerprint нестабилен и создает privacy risks. В будущем эту metadata можно использовать как risk signal для уведомления о новом устройстве, step-up auth или MFA.
+
+Если потребуется немедленный отзыв access JWT, нужно отдельно выбрать stateful механизм: Redis denylist по `jti` до `exp`, token/session version с online/cache check либо OAuth 2.0 introspection для подходящих clients. Более сильная защита от replay украденной строки token — sender-constrained tokens (например, DPoP или mTLS); это отдельный post-MVP research block. Ротация signing key нужна при компрометации ключа подписи и глобально затронет все выпущенные JWT, поэтому она не является обычным способом отзыва одного пользовательского token.
+
 Auth failure implementation rule:
 
 - Login, refresh and authenticated self-profile flows use AuthService-local `AuthFailures` helpers for public auth failure shapes.
@@ -998,6 +1020,10 @@ Security-sensitive command handlers используют явные EF transacti
 Ближайшие implementation tasks:
 
 - Вернуться к OAuth 2.0/OpenID Connect MVP через OpenIddict, discovery/JWKS и private/public key signing.
+- Для browser-based Authorization Code + PKCE добавить отдельную HttpOnly authentication cookie на страницах `/authorize`, login и consent. DirectoryService/FileService и другие resource APIs продолжают принимать Bearer JWT, а не auth cookie.
+- После OpenIddict MVP отдельно решить, нужен ли production frontend BFF flow, скрывающий access/refresh tokens от браузера за BFF cookie.
+- После protocol MVP выполнить отдельный stolen-token hardening block: выбрать необходимость немедленного отзыва access JWT, сравнить Redis `jti` denylist, token/session version и introspection, затем покрыть выбранный flow integration tests.
+- Добавить MFA/step-up auth и security notification для нового устройства или подозрительной session; IP/`UserAgent` использовать только как risk signals, без жесткой fingerprint-привязки.
 
 ## Учебный Backlog
 
@@ -1020,6 +1046,9 @@ Security-sensitive command handlers используют явные EF transacti
 - Почему `Program.cs` держим коротким, а JWT/options/auth wiring выносим в extension methods.
 - Как transactional outbox отделяет HTTP transaction от SMTP delivery и почему retry state хранится в PostgreSQL.
 - Почему AuthService использует in-memory Quartz schedule, а FileService video jobs требуют persistent Quartz store.
+- Почему отзыв refresh sessions не отзывает уже выпущенный stateless access JWT немедленно.
+- Почему IP/`UserAgent` полезны как risk signals, но не являются надежным device fingerprint.
+- Чем Redis `jti` denylist, token/session version, introspection и sender-constrained tokens отличаются по безопасности и runtime cost.
 
 ## Handoff
 
@@ -1035,6 +1064,7 @@ Security-sensitive command handlers используют явные EF transacti
 - Password reset MVP: `POST /api/auth/request-password-reset` и `POST /api/auth/reset-password` используют отдельные hash-only reset tokens на 1 час; public responses не раскрывают существование email/token state.
 - Email delivery hardening: invite/resend/password-reset handlers атомарно сохраняют `email_outbox_messages`; Quartz запускает processor, PostgreSQL хранит retry/backoff, а delivery link очищается после завершения.
 - Public auth hardening MVP: login/refresh/password reset/invite resend защищены rate limiting; login после 3 неверных паролей временно блокируется через Identity lockout на 15 минут, без деактивации аккаунта и без отзыва refresh tokens.
+- Stolen-token boundary задокументирован: access JWT является stateless Bearer token и после отзыва refresh sessions может работать до окончания 15-минутного lifetime; `jti` выпускается, но online denylist пока отсутствует; IP/`UserAgent` являются session metadata, а не fingerprint-проверкой.
 - User profile edit MVP: `PATCH /api/users/{userId}/profile` обновляет safe profile fields, сейчас только `displayName`, отдельно от role/status/password flows.
 - Audit history MVP: `auth_audit_events` хранит security-sensitive user/auth actions без raw tokens, links и credentials; `GET /api/auth/audit-events` возвращает safe paged read model с фильтрами `companyId`, `userId`, `action`, `createdFromUtc`, `createdToUtc`.
 - User directory MVP: `GET /api/users` возвращает `PagedList<CompanyUserResponse>` для admin UI; `CompanyAdmin` ограничен своей company, `SystemAdmin` видит все companies.
@@ -1063,7 +1093,7 @@ Security-sensitive command handlers используют явные EF transacti
 
 Последние проверки проходили: build `0 warnings / 0 errors`, IDE0005 unused-using check clean, unit `12/12`, integration `101/101`.
 
-Следующий ближайший AuthService блок: OAuth 2.0/OpenID Connect через OpenIddict, discovery/JWKS и Authorization Code Flow + PKCE.
+Следующий ближайший AuthService блок: OAuth 2.0/OpenID Connect через OpenIddict, discovery/JWKS, Authorization Code Flow + PKCE и отдельная защищенная browser-cookie для login/authorize/consent session. После protocol MVP — отдельное решение по BFF/token storage и немедленному отзыву украденного access JWT.
 
 ## Post-MVP Backlog
 
@@ -1075,6 +1105,8 @@ Security hardening:
 - MFA или step-up auth для high-risk actions.
 - Re-authentication перед изменением password, email или критичных company settings.
 - Security email notification при login с нового устройства или подозрительного IP.
+- Решение по немедленному отзыву access JWT: Redis `jti` denylist, token/session version или introspection с учетом дополнительного stateful check.
+- Исследование sender-constrained tokens (DPoP/mTLS) для сценариев, где одной украденной строки Bearer token не должно быть достаточно.
 
 Session UX:
 

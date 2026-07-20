@@ -515,6 +515,23 @@
 
 </details>
 
+<details>
+<summary>33. Граница защиты при краже JWT и device fingerprint</summary>
+
+**Зачем:** явно отделить уже работающую защиту refresh sessions от ограничения stateless Bearer access JWT и не считать IP/`UserAgent` полноценным доказательством устройства.
+
+**Зафиксировано:**
+- Access JWT проверяется локально по подписи, `issuer`, `audience`, lifetime и claims; lifetime сейчас 15 минут, `ClockSkew` — 30 секунд.
+- `logout`, single/all-session revoke, password reset и user deactivation запрещают дальнейший refresh, но уже выпущенный access JWT действует до истечения срока.
+- Claim `jti` уже выпускается, однако denylist или другой online revocation check пока отсутствует.
+- Refresh token хранится как hash, ротируется, а reuse отозванного/replaced token приводит к отзыву всех активных refresh sessions пользователя.
+- IP и raw `UserAgent` сохраняются как session metadata, но не участвуют в JWT validation и не являются persistent device fingerprint.
+- Fingerprint не используем для жесткой блокировки из-за изменчивости IP, подделываемого `UserAgent`, ложных срабатываний и privacy cost; metadata можно использовать как risk signal.
+
+**Что дало:** следующий security block сможет выбрать механизм немедленного отзыва access JWT и browser token storage на основе явно описанной threat model, не смешивая их с refresh rotation.
+
+</details>
+
 ## Ближайший План
 
 1. OAuth 2.0/OpenID Connect AuthService MVP:
@@ -523,10 +540,21 @@
    - поддержать Authorization Code Flow с PKCE для confidential/public dev clients;
    - выпускать JWT access tokens с текущими user/company/role/permission claims;
    - добавить ID token и `/connect/userinfo` для OpenID Connect сценария;
+   - добавить отдельную ASP.NET Core authentication cookie для browser-сессии на `/authorize`, login и consent pages; cookie хранит только защищённый authentication ticket и не заменяет Bearer JWT в resource APIs;
+   - настроить cookie security: `HttpOnly`, `Secure` в production, подходящий `SameSite`, ограниченный lifetime и явное решение по `SlidingExpiration`;
    - описать client registration seed: `client_id`, redirect URIs, allowed scopes, grant types;
    - сохранить текущие security правила: не логировать tokens/secrets, не хранить raw refresh/invite/reset tokens, держать claims небольшими;
    - без отдельного frontend сделать минимальный backend/dev surface для обучения и проверки flow: Swagger/Postman плюс minimal Razor/MVC login/consent pages внутри AuthService, если они понадобятся для `/authorize`;
    - покрыть ключевые кейсы integration tests: discovery/JWKS, authorization code + PKCE, token issuing, invalid client/redirect/scope, expired/invalid token, downstream API `401/403`.
+
+2. Stolen-token hardening после OAuth 2.0/OpenID Connect MVP:
+   - определить browser token storage: прямой SPA flow или BFF, который оставляет access/refresh tokens на backend и выдает браузеру только защищенную cookie;
+   - принять явное решение, нужен ли немедленный отзыв access JWT сверх короткого lifetime;
+   - сравнить Redis denylist по `jti`, token/session version и introspection по security guarantees, latency и доступности infrastructure;
+   - добавить MFA/step-up auth для high-risk actions и security notifications для нового устройства/подозрительной session;
+   - использовать IP/`UserAgent` только как risk signals, не вводить жесткую fingerprint-привязку;
+   - отдельно исследовать sender-constrained tokens (DPoP/mTLS) как более сильную защиту от replay украденного Bearer token;
+   - покрыть выбранный revoke/risk flow понятными integration tests через публичную API boundary.
 
 ## Открытые Решения
 
@@ -534,6 +562,10 @@
 - Какие следующие endpoints в новых сервисах защищаем permissions/service permissions первыми.
 - Какие permissions считаем минимальными для первого downstream slice: `directory.read/manage`, `files.read/upload`, `videos.read/upload`.
 - Какие dev clients нужны для MVP: Swagger, Postman/manual client, будущий SPA client.
+- Какой lifetime и `SlidingExpiration` использовать для authorization-server cookie и нужна ли persistent browser session.
+- Нужен ли будущему production frontend отдельный BFF flow, в котором tokens остаются на backend, а браузер работает только через защищённую BFF cookie.
+- Нужен ли немедленный access-token revoke или 15-минутный lifetime достаточен для текущей risk model.
+- Если нужен online revoke, что выбираем: Redis `jti` denylist, token/session version или introspection.
 - Какие scopes/resources считать минимальными: `openid`, `profile`, `email`, `offline_access`, `directory`, `files`, `auth`.
 - Когда переводить JWT signing с symmetric key на private/public key signing и как хранить signing keys/certificates.
 - Какой минимальный seed нужен для первого `SystemAdmin`, company и первого `CompanyAdmin`.
