@@ -3,7 +3,7 @@ using SharedService.SharedKernel;
 
 namespace FileService.Domain.MediaProcessing.VO;
 
-public sealed class VideoMetadata
+public sealed record VideoMetadata
 {
     public TimeSpan Duration { get; }
     public int Width { get; }
@@ -15,12 +15,7 @@ public sealed class VideoMetadata
         int width,
         int height,
         bool hasAudio)
-    {
-        Duration = duration;
-        Width = width;
-        Height = height;
-        HasAudio = hasAudio;
-    }
+        => (Duration, Width, Height, HasAudio) = (duration, width, height, hasAudio);
 
     private VideoMetadata() { }
 

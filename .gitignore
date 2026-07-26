@@ -5,7 +5,7 @@
 
 # dotenv files
 .env
-nuget.config
+nuget.local.config
 # User-specific files
 *.rsuser
 *.suo
@@ -13,16 +13,8 @@ nuget.config
 *.userosscache
 *.sln.docstates
 
-# Local Serena MCP state
-.serena/
-**/.serena/
-
 *.Development.env
 ffmpeg/
-  
-# Local Codex machine-specific config
-.codex/config.toml
-.codex/config.local.toml
 
 backend/SharedService/
 

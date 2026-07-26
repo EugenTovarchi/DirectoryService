@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Responses;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain.Assets;
 using Microsoft.AspNetCore.Builder;
@@ -20,7 +21,8 @@ public sealed class GetMediaAssetInfoEndpoint : IEndpoint
             async Task<EndpointResult<GetMediaAssetResponse>> (
                 [FromRoute] Guid mediaAssetId,
                 [FromServices] GetMediaAssetInfoHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(mediaAssetId, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(mediaAssetId, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_READ);
     }
 }
 

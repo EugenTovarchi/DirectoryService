@@ -60,6 +60,7 @@ public sealed class GetCurrentUserTests : AuthServiceBaseTests
             AuthPermissions.DIRECTORY_MANAGE,
             AuthPermissions.FILES_READ,
             AuthPermissions.FILES_UPLOAD,
+            AuthPermissions.FILES_DELETE,
             AuthPermissions.VIDEOS_READ,
             AuthPermissions.VIDEOS_UPLOAD);
     }

@@ -30,16 +30,23 @@ public sealed record FileName
         if (string.IsNullOrWhiteSpace(fileName))
             return Errors.General.ValueIsInvalid("fileName");
 
-        int lastDot = fileName.LastIndexOf('.');
+        string normalized = fileName.Trim();
+        if (normalized.Length > VALUE_MAX_LENGTH)
+            return Errors.General.ValueIsTooLarge("fileName", VALUE_MAX_LENGTH);
 
-        // Если точек нет вообще или точка явл последним символом(readme.).
-        if (lastDot == -1 || lastDot == fileName.Length - 1)
+        int extensionSeparatorIndex = normalized.LastIndexOf('.');
+        if (extensionSeparatorIndex <= 0 || extensionSeparatorIndex == normalized.Length - 1)
             return Errors.General.ValueIsInvalid("extension");
 
-        string name = fileName[..lastDot];
+        string name = normalized[..extensionSeparatorIndex];
+        string extension = normalized[(extensionSeparatorIndex + 1)..].ToLowerInvariant();
 
-        // Вырезаем все, что после последней точки.
-        string extension = fileName[(lastDot + 1)..].ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(name) || name.Length > NAME_MAX_LENGTH)
+            return Errors.General.ValueIsInvalid("fileName");
+
+        if (extension.Length > EXTENSION_MAX_LENGTH)
+            return Errors.General.ValueIsInvalid("extension");
+
         return new FileName(name, extension);
     }
 }

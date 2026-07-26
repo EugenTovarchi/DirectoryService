@@ -1,9 +1,11 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace FileService.Infrastructure.Postgres.Migrations;
 
+[DbContext(typeof(FileServiceDbContext))]
 [Migration("20260628090000_AddQuartzPersistentStore")]
 public partial class AddQuartzPersistentStore : Migration
 {

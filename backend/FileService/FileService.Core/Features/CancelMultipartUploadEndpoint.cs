@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Core.Abstractions;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -21,7 +22,8 @@ public sealed class CancelMultipartUploadEndpoint : IEndpoint
             async Task<EndpointResult> (
                 [FromBody] CancelMultipartUploadRequest request,
                 [FromServices] CancelMultipartUploadHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_UPLOAD);
     }
 }
 

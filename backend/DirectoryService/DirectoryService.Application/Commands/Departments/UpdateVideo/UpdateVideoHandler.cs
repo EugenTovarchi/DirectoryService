@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
 using FileService.Contracts.HttpCommunication;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.SharedKernel;
@@ -12,17 +13,20 @@ public class UpdateVideoHandler : ICommandHandler<Guid, UpdateVideoCommand>
     private readonly IDepartmentRepository _departmentRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IFileCommunicationService _fileCommunicationService;
+    private readonly HybridCache _cache;
     private readonly ILogger<UpdateVideoHandler> _logger;
 
     public UpdateVideoHandler(
         IDepartmentRepository departmentRepository,
         ITransactionManager transactionManager,
         IFileCommunicationService fileCommunicationService,
+        HybridCache cache,
         ILogger<UpdateVideoHandler> logger)
     {
         _departmentRepository = departmentRepository;
         _transactionManager = transactionManager;
         _fileCommunicationService = fileCommunicationService;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -48,6 +52,9 @@ public class UpdateVideoHandler : ICommandHandler<Guid, UpdateVideoCommand>
         var department = isDepartmentExistResult.Value;
 
         department.UpdateVideoId(command.Request.VideoId);
+
+        await _cache.RemoveByTagAsync("departments", cancellationToken);
+        _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
 
         await _transactionManager.SaveChangeAsync(cancellationToken);
 

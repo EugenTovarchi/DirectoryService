@@ -1,8 +1,9 @@
 using AuthService.Contracts.Requests;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Failures;
-using AuthService.Core.Models;
+using AuthService.Core.RateLimiting;
 using AuthService.Core.Services;
+using AuthService.Domain.EmailDelivery;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -11,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.Core.Validation;
 using SharedService.Framework.EndpointSettings;
@@ -33,7 +33,8 @@ public sealed class RequestPasswordResetEndpoint : IEndpoint
                 RequestPasswordResetCommand command = new(request);
 
                 return await handler.Handle(command, cancellationToken);
-            });
+            })
+            .RequireRateLimiting(PublicAuthRateLimitPolicies.PASSWORD_RESET);
     }
 }
 
@@ -57,32 +58,29 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly ITokenService _tokenService;
     private readonly PasswordResetLinkFactory _passwordResetLinkFactory;
-    private readonly IPasswordResetEmailSender _passwordResetEmailSender;
+    private readonly IEmailOutboxRepository _emailOutboxRepository;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RequestPasswordResetCommand> _validator;
-    private readonly ILogger<RequestPasswordResetHandler> _logger;
 
     public RequestPasswordResetHandler(
         UserManager<ApplicationUser> userManager,
         IPasswordResetTokenRepository passwordResetTokenRepository,
         ITokenService tokenService,
         PasswordResetLinkFactory passwordResetLinkFactory,
-        IPasswordResetEmailSender passwordResetEmailSender,
+        IEmailOutboxRepository emailOutboxRepository,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
-        IValidator<RequestPasswordResetCommand> validator,
-        ILogger<RequestPasswordResetHandler> logger)
+        IValidator<RequestPasswordResetCommand> validator)
     {
         _userManager = userManager;
         _passwordResetTokenRepository = passwordResetTokenRepository;
         _tokenService = tokenService;
         _passwordResetLinkFactory = passwordResetLinkFactory;
-        _passwordResetEmailSender = passwordResetEmailSender;
+        _emailOutboxRepository = emailOutboxRepository;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
-        _logger = logger;
     }
 
     public async Task<UnitResult<Failure>> Handle(
@@ -129,6 +127,20 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
+        Uri resetLink = _passwordResetLinkFactory.Create(resetToken.RawToken);
+        Result<EmailOutboxMessage, Error> outboxMessageResult = EmailOutboxMessage.CreatePasswordReset(
+            user.Id,
+            user.Email!,
+            user.DisplayName?.Value,
+            resetLink,
+            resetTokenExpiresAt);
+        if (outboxMessageResult.IsFailure)
+            return outboxMessageResult.Error.ToFailure();
+
+        UnitResult<Error> addOutboxResult = _emailOutboxRepository.Add(outboxMessageResult.Value);
+        if (addOutboxResult.IsFailure)
+            return addOutboxResult.Error.ToFailure();
+
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
@@ -136,23 +148,6 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         UnitResult<Error> commitResult = transactionScope.Commit();
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
-
-        Uri resetLink = _passwordResetLinkFactory.Create(resetToken.RawToken);
-        UnitResult<Error> emailResult = await _passwordResetEmailSender.SendPasswordResetAsync(
-            new PasswordResetEmailMessage(
-                user.Id,
-                user.Email!,
-                user.DisplayName?.Value,
-                resetLink,
-                resetTokenExpiresAt),
-            cancellationToken);
-
-        if (emailResult.IsFailure && _logger.IsEnabled(LogLevel.Warning))
-        {
-            _logger.LogWarning(
-                "Password reset email delivery failed after token creation for user {UserId}",
-                user.Id);
-        }
 
         return UnitResult.Success<Failure>();
     }

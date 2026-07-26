@@ -1,6 +1,7 @@
 ﻿using DirectoryService.Application.Database;
 using DirectoryService.Application.Messaging.Exceptions;
 using DirectoryService.Domain.Entities;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.SharedKernel.Messaging.Files.Events;
 
@@ -11,15 +12,18 @@ public class DepartmentFileUploadedHandler
     private readonly ILogger<DepartmentFileUploadedHandler> _logger;
     private readonly ITransactionManager _transactionManager;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly HybridCache _cache;
 
     public DepartmentFileUploadedHandler(
         ITransactionManager transactionManager,
         ILogger<DepartmentFileUploadedHandler> logger,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        HybridCache cache)
     {
         _transactionManager = transactionManager;
         _logger = logger;
         _departmentRepository = departmentRepository;
+        _cache = cache;
     }
 
     public async Task Handle(FileUploaded message, CancellationToken cancellationToken)
@@ -55,6 +59,10 @@ public class DepartmentFileUploadedHandler
                 if (department.VideoAssetId != message.AssetId)
                 {
                     department.UpdateVideoId(message.AssetId);
+
+                    await _cache.RemoveByTagAsync("departments", cancellationToken);
+                    _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
+
                     var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                     if (saveResult.IsFailure)
                     {
@@ -79,6 +87,10 @@ public class DepartmentFileUploadedHandler
                 if (department.PhotoAssetId != message.AssetId)
                 {
                     department.UpdatePhotoId(message.AssetId);
+
+                    await _cache.RemoveByTagAsync("departments", cancellationToken);
+                    _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
+
                     var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                     if (saveResult.IsFailure)
                     {

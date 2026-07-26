@@ -3,7 +3,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record Identifier
+public sealed record Identifier
 {
     public const int MAX_LENGTH = 150;
     public const int MIN_LENGTH = 3;

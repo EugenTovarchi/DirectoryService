@@ -3,6 +3,7 @@ using FileService.Contracts;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
 using FileService.Core.Abstractions;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -23,7 +24,8 @@ public sealed class StartMultipartUploadEndpoint : IEndpoint
             async Task<EndpointResult<StartMultipartUploadResponse>> (
                 [FromBody] StartMultipartUploadRequest request,
                 [FromServices] StartMultipartUploadHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_UPLOAD);
     }
 }
 

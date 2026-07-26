@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using DirectoryService.Application.Cache;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.Responses;
@@ -62,13 +62,12 @@ public class
             var parameters = new DynamicParameters();
 
             int page = query.Page > 0 ? query.Page : 1;
-            int pageSize = query.PageSize > 0 ? query.PageSize : 20;
+            int rootLimit = query.RootLimit > 0 ? query.RootLimit.Value : 3;
+            int childLimit = query.ChildLimit > 0 ? query.ChildLimit.Value : 3;
 
-            parameters.Add("page_size", pageSize);
-            parameters.Add("offset", (page - 1) * pageSize);
-
-            parameters.Add("root_limit", query.RootLimit > 0 ? query.RootLimit.Value : 3);
-            parameters.Add("child_limit", query.ChildLimit > 0 ? query.ChildLimit.Value : 3);
+            parameters.Add("offset", (page - 1) * rootLimit);
+            parameters.Add("root_limit", rootLimit);
+            parameters.Add("child_limit", childLimit);
 
             const string sql =
                 $"""
@@ -138,14 +137,12 @@ public class
     private string BuildCacheKey(GetDepartmentsWithChildrenQuery query)
     {
         int page = query.Page > 0 ? query.Page : 1;
-        int pageSize = query.PageSize > 0 ? query.PageSize : 20;
         int rootLimit = query.RootLimit > 0 ? query.RootLimit.Value : 3;
         int childLimit = query.ChildLimit > 0 ? query.ChildLimit.Value : 3;
 
-        return $"departments_with-children:" +
-               $"rl={rootLimit}:" +
-               $"cl={childLimit}:" +
-               $"p={page}:" +
-               $"ps={pageSize}";
+        return $"departments:with-children:" +
+               $"page={page}:" +
+               $"root-limit={rootLimit}:" +
+               $"child-limit={childLimit}";
     }
 }

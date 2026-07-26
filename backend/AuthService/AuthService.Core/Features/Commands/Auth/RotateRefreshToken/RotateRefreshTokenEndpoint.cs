@@ -3,6 +3,7 @@ using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Failures;
 using AuthService.Core.Options;
+using AuthService.Core.RateLimiting;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -36,7 +37,8 @@ public sealed class RotateRefreshTokenEndpoint : IEndpoint
                 string? userAgent = httpContext.Request.Headers.UserAgent.FirstOrDefault();
                 RotateRefreshTokenCommand command = new(request, ipAddress, userAgent);
                 return await handler.Handle(command, cancellationToken);
-            });
+            })
+            .RequireRateLimiting(PublicAuthRateLimitPolicies.REFRESH);
     }
 }
 

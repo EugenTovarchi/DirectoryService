@@ -8,6 +8,7 @@
     <ItemGroup>
       <PackageReference Include="AWSSDK.S3" />
       <PackageReference Include="Docker.DotNet.Enhanced" />
+      <PackageReference Include="Grpc.Core.Api" />
       <PackageReference Include="istreddev.core" />
       <PackageReference Include="istreddev.framework" />
       <PackageReference Include="istreddev.sharedkernel" />

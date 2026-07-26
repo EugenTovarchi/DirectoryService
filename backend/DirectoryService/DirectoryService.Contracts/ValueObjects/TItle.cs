@@ -4,7 +4,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record Title
+public sealed record Title
 {
     public const int MAX_LENGTH = 200;
     public string Value { get; } = string.Empty;

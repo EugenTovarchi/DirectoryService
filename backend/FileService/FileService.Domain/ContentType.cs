@@ -21,18 +21,23 @@ public sealed record ContentType
 
     public static Result<ContentType, Error> Create(string contentType)
     {
-        if (string.IsNullOrEmpty(contentType))
+        if (string.IsNullOrWhiteSpace(contentType))
             return Errors.General.ValueIsInvalid("contentType");
 
-        MediaType category = contentType switch
+        string normalized = contentType.Trim();
+
+        if (normalized.Length > VALUE_MAX_LENGTH)
+            return Errors.General.ValueIsTooLarge("contentType", VALUE_MAX_LENGTH);
+
+        MediaType category = normalized switch
         {
-            _ when contentType.Contains("audio", StringComparison.InvariantCultureIgnoreCase) => MediaType.AUDIO,
-            _ when contentType.Contains("video", StringComparison.InvariantCultureIgnoreCase) => MediaType.VIDEO,
-            _ when contentType.Contains("document", StringComparison.InvariantCultureIgnoreCase) => MediaType.DOCUMENT,
-            _ when contentType.Contains("image", StringComparison.InvariantCultureIgnoreCase) => MediaType.IMAGE,
+            _ when normalized.Contains("audio", StringComparison.InvariantCultureIgnoreCase) => MediaType.AUDIO,
+            _ when normalized.Contains("video", StringComparison.InvariantCultureIgnoreCase) => MediaType.VIDEO,
+            _ when normalized.Contains("document", StringComparison.InvariantCultureIgnoreCase) => MediaType.DOCUMENT,
+            _ when normalized.Contains("image", StringComparison.InvariantCultureIgnoreCase) => MediaType.IMAGE,
             _ => MediaType.UNKNOWN
         };
 
-        return new ContentType(contentType, category);
+        return new ContentType(normalized, category);
     }
 }

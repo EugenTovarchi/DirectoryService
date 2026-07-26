@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Core.Abstractions;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -38,7 +39,8 @@ public sealed class CompleteMultipartUploadEndpoint : IEndpoint
                 CancellationToken cancellationToken) => await handler.Handle(
                 request,
                 GetCorrelationId(httpContext),
-                cancellationToken));
+                cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_UPLOAD);
     }
 
     private static string GetCorrelationId(HttpContext httpContext)

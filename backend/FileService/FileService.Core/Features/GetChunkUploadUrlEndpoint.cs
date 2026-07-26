@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -26,7 +27,8 @@ public class GetChunkUploadUrlEndpoint : IEndpoint
             async Task<EndpointResult<GetChunkUploadUrlResponse>> (
                 [FromBody] GetChunkUploadUrlRequest request,
                 [FromServices] GetChunkUploadUrlHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_UPLOAD);
     }
 }
 

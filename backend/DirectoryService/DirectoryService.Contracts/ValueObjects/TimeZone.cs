@@ -3,7 +3,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record TimeZone
+public sealed record TimeZone
 {
     public const int MAX_LENGTH = 50;
     private TimeZone() { } // EF Core

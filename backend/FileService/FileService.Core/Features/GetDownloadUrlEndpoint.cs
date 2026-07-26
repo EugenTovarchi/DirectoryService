@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
+using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -21,7 +22,8 @@ public sealed class GetDownloadUrlEndpoint : IEndpoint
             async Task<EndpointResult<string>> (
                 [FromBody] GetDownloadUrlRequest request,
                 [FromServices] GetDownloadUrlHandler handler,
-                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken));
+                CancellationToken cancellationToken) => await handler.Handle(request, cancellationToken))
+            .RequireAuthorization(FileAuthorizationPolicies.FILES_READ);
     }
 }
 

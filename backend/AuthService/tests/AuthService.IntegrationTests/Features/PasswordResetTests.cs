@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
+using AuthService.Domain.EmailDelivery;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres;
+using AuthService.Infrastructure.Postgres.EmailDelivery;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -38,8 +40,19 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
 
         requestResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string resetToken = GetLatestPasswordResetTokenForUser(user.Id);
+        // Token и outbox message должны появиться атомарно до фактической отправки SMTP.
+        EmailOutboxMessage pendingEmail = await ExecuteInDb(dbContext => dbContext.EmailOutboxMessages
+            .SingleAsync(message => message.UserId == user.Id));
+        pendingEmail.DeliveredAt.Should().BeNull();
+        pendingEmail.DeliveryLink.Should().NotBeNull();
+
+        string resetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
         resetToken.Should().NotBeNullOrWhiteSpace();
+
+        EmailOutboxMessage deliveredEmail = await ExecuteInDb(dbContext => dbContext.EmailOutboxMessages
+            .SingleAsync(message => message.UserId == user.Id));
+        deliveredEmail.DeliveredAt.Should().NotBeNull();
+        deliveredEmail.DeliveryLink.Should().BeNull();
 
         int tokenCount = await ExecuteInDb(dbContext => dbContext.PasswordResetTokens
             .CountAsync(token => token.UserId == user.Id));
@@ -97,7 +110,7 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         await AppHttpClient.PostAsJsonAsync(
             "/api/auth/request-password-reset",
             new RequestPasswordResetRequest("password-reset-reuse@example.com"));
-        string resetToken = GetLatestPasswordResetTokenForUser(user.Id);
+        string resetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
 
         HttpResponseMessage firstResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/reset-password",
@@ -124,12 +137,12 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         await AppHttpClient.PostAsJsonAsync(
             "/api/auth/request-password-reset",
             new RequestPasswordResetRequest("password-reset-twice@example.com"));
-        string firstResetToken = GetLatestPasswordResetTokenForUser(user.Id);
+        string firstResetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
 
         await AppHttpClient.PostAsJsonAsync(
             "/api/auth/request-password-reset",
             new RequestPasswordResetRequest("password-reset-twice@example.com"));
-        string secondResetToken = GetLatestPasswordResetTokenForUser(user.Id);
+        string secondResetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
 
         secondResetToken.Should().NotBe(firstResetToken);
 
@@ -174,8 +187,15 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         await AssertUserCanLoginAsync("password-reset-expired@example.com", "password123");
     }
 
-    private string GetLatestPasswordResetTokenForUser(Guid userId)
+    /// <summary>
+    /// Integration tests запускают один проход outbox явно, чтобы не ждать Quartz trigger.
+    /// </summary>
+    private async Task<string> GetLatestPasswordResetTokenForUserAsync(Guid userId)
     {
+        await using AsyncServiceScope scope = Services.CreateAsyncScope();
+        EmailOutboxProcessor processor = scope.ServiceProvider.GetRequiredService<EmailOutboxProcessor>();
+        await processor.ProcessBatchAsync();
+
         TestPasswordResetEmailSender emailSender = Services.GetRequiredService<TestPasswordResetEmailSender>();
         Uri resetLink = emailSender.Messages
             .Where(message => message.UserId == userId)

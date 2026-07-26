@@ -9,6 +9,7 @@ public static class AppExtensions
     public static IApplicationBuilder WebConfigure(this WebApplication app)
     {
         app.UseRouting();
+        app.UseRateLimiter();
         app.UseExceptionMiddleware();
         app.UseRequestCorrelationId();
 

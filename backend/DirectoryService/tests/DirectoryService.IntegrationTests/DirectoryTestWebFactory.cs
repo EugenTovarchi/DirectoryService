@@ -19,6 +19,10 @@ namespace DirectoryService.IntegrationTests;
 
 public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string TEST_JWT_ISSUER = "24eye.auth";
+    public const string TEST_JWT_AUDIENCE = "24eye.backend";
+    public const string TEST_JWT_SIGNING_KEY = "directory-service-integration-test-signing-key";
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres")
         .WithDatabase("directory_service_tests")
@@ -40,7 +44,14 @@ public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLif
                 ["ConnectionStrings:Redis"] = "localhost:6379",
                 ["ConnectionStrings:RabbitMq"] = "amqp://localhost:5672",
                 ["Messaging:UseExternalTransports"] = "false",
+                ["Jwt:Issuer"] = TEST_JWT_ISSUER,
+                ["Jwt:Audience"] = TEST_JWT_AUDIENCE,
+                ["Jwt:SigningKey"] = TEST_JWT_SIGNING_KEY,
                 ["FileServiceOptions:Url"] = "http://localhost:9003/",
+                ["FileServiceOptions:GrpcUrl"] = "http://localhost:50051/",
+                ["FileServiceOptions:AuthServiceUrl"] = "http://localhost:8003/",
+                ["FileServiceOptions:ServiceClientId"] = "directory-service",
+                ["FileServiceOptions:ServiceClientSecret"] = "test-directory-service-client-secret-value",
                 ["FileServiceOptions:TimeoutSeconds"] = "10",
                 ["OpenTelemetry:Enabled"] = "false"
             };

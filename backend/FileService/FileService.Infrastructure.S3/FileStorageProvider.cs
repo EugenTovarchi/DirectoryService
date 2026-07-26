@@ -340,7 +340,6 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 
     public void Dispose()
     {
-        _requestsSemaphore.Release();
         _requestsSemaphore.Dispose();
     }
 }

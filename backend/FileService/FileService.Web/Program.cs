@@ -34,7 +34,9 @@ public partial class Program
 
             builder.Services.AddConfiguration(builder.Configuration);
 
-            builder.Services.AddAuthorization();
+            builder.Services.AddResourceServiceAuthentication(builder.Configuration);
+
+            builder.Services.AddFileGrpc();
 
             builder.Services.AddCore()
                 .AddS3(builder.Configuration)

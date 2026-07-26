@@ -36,8 +36,8 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
         });
 
         seedState.RoleCount.Should().Be(5);
-        seedState.PermissionCount.Should().Be(7);
-        seedState.RolePermissionCount.Should().Be(26);
+        seedState.PermissionCount.Should().Be(8);
+        seedState.RolePermissionCount.Should().Be(29);
         seedState.ViewerPermissionCodes.Should().Equal(
             AuthPermissions.DIRECTORY_READ,
             AuthPermissions.FILES_READ,
