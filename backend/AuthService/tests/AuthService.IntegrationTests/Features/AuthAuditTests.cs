@@ -5,6 +5,7 @@ using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres;
+using AuthService.Infrastructure.Postgres.EmailDelivery;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -43,7 +44,7 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
                 companyId,
                 AuthRoles.VIEWER));
 
-        string inviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
+        string inviteToken = await GetLatestInviteTokenForUserAsync(invitedUser.UserId);
         HttpResponseMessage acceptResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
             new AcceptInviteRequest(inviteToken, "password123"));
@@ -69,7 +70,7 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
             new RequestPasswordResetRequest("audit-reset-user@example.com"));
         requestResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string resetToken = GetLatestPasswordResetTokenForUser(user.Id);
+        string resetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
         HttpResponseMessage resetResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/reset-password",
             new ResetPasswordRequest(resetToken, "newpassword123"));
@@ -151,8 +152,10 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
             .ToArrayAsync());
     }
 
-    private string GetLatestInviteTokenForUser(Guid userId)
+    private async Task<string> GetLatestInviteTokenForUserAsync(Guid userId)
     {
+        await ProcessEmailOutboxAsync();
+
         TestInviteEmailSender emailSender = Services.GetRequiredService<TestInviteEmailSender>();
         Uri inviteLink = emailSender.Messages
             .Where(message => message.UserId == userId)
@@ -162,8 +165,10 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
         return ExtractToken(inviteLink);
     }
 
-    private string GetLatestPasswordResetTokenForUser(Guid userId)
+    private async Task<string> GetLatestPasswordResetTokenForUserAsync(Guid userId)
     {
+        await ProcessEmailOutboxAsync();
+
         TestPasswordResetEmailSender emailSender = Services.GetRequiredService<TestPasswordResetEmailSender>();
         Uri resetLink = emailSender.Messages
             .Where(message => message.UserId == userId)
@@ -171,6 +176,17 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
             .Last();
 
         return ExtractToken(resetLink);
+    }
+
+    /// <summary>
+    /// Quartz отключён в Testing environment, поэтому тест явно выполняет один проход фонового обработчика.
+    /// Это сохраняет production flow, но убирает ожидание таймера из теста.
+    /// </summary>
+    private async Task ProcessEmailOutboxAsync()
+    {
+        await using AsyncServiceScope scope = Services.CreateAsyncScope();
+        EmailOutboxProcessor processor = scope.ServiceProvider.GetRequiredService<EmailOutboxProcessor>();
+        await processor.ProcessBatchAsync();
     }
 
     private static string ExtractToken(Uri link)

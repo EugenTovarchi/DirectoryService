@@ -1,3 +1,4 @@
+using Microsoft.OpenApi;
 using SharedService.Framework.Logging;
 using SharedService.Framework.Observability;
 using SharedService.Framework.Swagger;
@@ -10,6 +11,20 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "DirectoryService");
         services.AddOpenApiSpec("DirectoryService");
+        services.AddSwaggerGen(options =>
+        {
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "AuthService access token"
+            });
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+        });
         services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "DirectoryService");
 
         return services;

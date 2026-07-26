@@ -62,6 +62,36 @@ public sealed class TokenService : ITokenService
         return new AccessTokenResult(_tokenHandler.WriteToken(token), expiresAt);
     }
 
+    public AccessTokenResult CreateServiceAccessToken(
+        string clientId,
+        string serviceName,
+        IReadOnlyCollection<string> servicePermissions)
+    {
+        DateTime expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenLifetimeMinutes);
+        var signingCredentials = CreateSigningCredentials();
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, clientId),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(AuthClaimTypes.CLIENT_ID, clientId),
+            new(AuthClaimTypes.SERVICE_NAME, serviceName)
+        };
+
+        claims.AddRange(servicePermissions.Select(permission =>
+            new Claim(AuthClaimTypes.SERVICE_PERMISSION, permission)));
+
+        var token = new JwtSecurityToken(
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: expiresAt,
+            signingCredentials: signingCredentials);
+
+        return new AccessTokenResult(_tokenHandler.WriteToken(token), expiresAt);
+    }
+
     public RefreshTokenResult CreateRefreshToken()
     {
         string rawToken = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(REFRESH_TOKEN_BYTES));
@@ -73,4 +103,9 @@ public sealed class TokenService : ITokenService
         byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawRefreshToken));
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
+
+    private SigningCredentials CreateSigningCredentials() =>
+        new(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SigningKey)),
+            SecurityAlgorithms.HmacSha256);
 }

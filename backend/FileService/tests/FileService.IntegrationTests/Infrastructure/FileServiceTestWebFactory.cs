@@ -25,6 +25,10 @@ namespace FileService.IntegrationTests.Infrastructure;
 
 public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string TEST_JWT_ISSUER = "24eye.auth";
+    public const string TEST_JWT_AUDIENCE = "24eye.backend";
+    public const string TEST_JWT_SIGNING_KEY = "file-service-integration-test-signing-key";
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .WithDatabase("file-service")
@@ -66,6 +70,9 @@ public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["S3Options:ForcePathStyle"] = "true",
                 ["ConnectionStrings:RabbitMq"] = "amqp://localhost:5672",
                 ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
+                ["Jwt:Issuer"] = TEST_JWT_ISSUER,
+                ["Jwt:Audience"] = TEST_JWT_AUDIENCE,
+                ["Jwt:SigningKey"] = TEST_JWT_SIGNING_KEY,
                 ["VideoProcessingOptions:FfmpegPath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffmpeg.exe",
                 ["VideoProcessingOptions:FfprobePath"] = @"D:\Projects\DirectoryService\ffmpeg\bin\ffprobe.exe",
                 ["VideoProcessingOptions:UseHardwareAcceleration"] = "false",

@@ -7,15 +7,19 @@ using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
 using DirectoryService.Contracts.Requests.Departments;
+using DirectoryService.Web.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedService.Framework;
 using SharedService.Framework.ControllersResults;
 
 namespace DirectoryService.Web.Controllers;
 
+[Route("api/departments")]
 public class DepartmentController : ApplicationController
 {
-    [HttpPost("api/departments")]
+    [HttpPost]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
        [FromBody] CreateDepartmentRequest request,
        [FromServices] CreateDepartmentHandler handler,
@@ -31,7 +35,8 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPatch("api/departments/{departmentId:guid}/locations")]
+    [HttpPatch("{departmentId:guid}/locations")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateLocations(
        [FromRoute] Guid departmentId,
        [FromBody] UpdateDepartmentLocationsRequest request,
@@ -48,7 +53,8 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPut("api/departments/{departmentId}/parent")]
+    [HttpPut("{departmentId}/parent")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> MoveDepartment(
        [FromRoute] Guid departmentId,
        [FromBody] MoveDepartmentRequest request,
@@ -65,7 +71,8 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpGet("api/departments/top-positions")]
+    [HttpGet("top-positions")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
        [FromQuery] GetDepartmentsRequest request,
        [FromServices] GetTopByPositionsDepartmentsHandler handler,
@@ -78,7 +85,8 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpGet("/api/departments/roots")]
+    [HttpGet("roots")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentsWithChildren(
        [FromQuery] GetDepartmentsWithChildrenRequest request,
        [FromServices] GetDepartmentsWithChildrenHandler handler,
@@ -91,7 +99,8 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpGet("/api/departments/{parentId:guid}/children")]
+    [HttpGet("{parentId:guid}/children")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentChildren(
        [FromRoute] Guid parentId,
        [FromQuery] GetDepartmentChildrenRequest request,
@@ -104,7 +113,8 @@ public class DepartmentController : ApplicationController
         return Ok(result);
     }
 
-    [HttpDelete("/api/departments/soft/{departmentId:guid}")]
+    [HttpDelete("soft/{departmentId:guid}")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> SoftDelete(
         [FromRoute] Guid departmentId,
         [FromServices] SoftDeleteHandler handler,
@@ -116,7 +126,8 @@ public class DepartmentController : ApplicationController
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
 
-    [HttpPatch("api/departments/{departmentId:guid}/video")]
+    [HttpPatch("{departmentId:guid}/video")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateDepartmentVideo(
         [FromRoute] Guid departmentId,
         [FromBody] UpdateVideoRequest request,

@@ -22,6 +22,7 @@ public sealed class ApplicationUser : IdentityUser<Guid>
         UserName = username.Value;
         DisplayName = displayName;
         CurrentCompanyId = currentCompanyId;
+        LockoutEnabled = true;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }

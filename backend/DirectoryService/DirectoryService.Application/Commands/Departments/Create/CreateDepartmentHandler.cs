@@ -1,4 +1,4 @@
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
@@ -75,7 +75,7 @@ public class CreateDepartmentHandler : ICommandHandler<Guid, CreateDepartmentCom
         _logger.LogInformation("Department {DepartmentId} created successfully", departmentResult.Value.Id.Value);
 
         await _cache.RemoveByTagAsync("departments", cancellationToken);
-        _logger.LogInformation("Cache with tag: 'departments' was cleaned");
+        _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
 
         return department.Id.Value;
     }

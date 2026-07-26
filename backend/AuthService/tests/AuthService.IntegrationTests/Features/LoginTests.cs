@@ -6,8 +6,11 @@ using AuthService.Contracts.Responses;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
+using AuthService.Web.Configurations;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.SharedKernel;
@@ -16,9 +19,12 @@ namespace AuthService.IntegrationTests.Features;
 
 public sealed class LoginTests : AuthServiceBaseTests
 {
+    private readonly AuthServiceTestWebFactory _factory;
+
     public LoginTests(AuthServiceTestWebFactory factory)
         : base(factory)
     {
+        _factory = factory;
     }
 
     [Fact]
@@ -86,6 +92,61 @@ public sealed class LoginTests : AuthServiceBaseTests
 
         var tokenCount = await ExecuteInDb(dbContext => dbContext.RefreshTokens.CountAsync());
         tokenCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Login_After_Three_Invalid_Passwords_Should_Temporarily_Lock_User()
+    {
+        ApplicationUser user = await CreateIdentityUserAsync(
+            "lockout@example.com",
+            "lockout",
+            "Lockout User",
+            Guid.NewGuid(),
+            AuthRoles.VIEWER);
+
+        LoginRequest invalidRequest = new("lockout@example.com", "wrong-password");
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            HttpResponseMessage invalidResponse = await AppHttpClient.PostAsJsonAsync("/api/auth/login", invalidRequest);
+            invalidResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        HttpResponseMessage validResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest("lockout@example.com", "password123"));
+
+        validResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        ApplicationUser lockedUser = await ExecuteInDb(dbContext => dbContext.Users
+            .SingleAsync(identityUser => identityUser.Id == user.Id));
+        lockedUser.LockoutEnd.Should().NotBeNull();
+        lockedUser.LockoutEnd.Should().BeAfter(DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public async Task Login_When_Rate_Limit_Is_Exceeded_Should_Return_TooManyRequests()
+    {
+        using HttpClient rateLimitedClient = _factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.PostConfigure<PublicAuthRateLimitOptions>(options =>
+                    {
+                        options.WindowSeconds = 60;
+                        options.LoginPermitLimit = 1;
+                    });
+                });
+            })
+            .CreateClient();
+
+        LoginRequest request = new("rate-limit@example.com", "wrong-password");
+
+        HttpResponseMessage firstResponse = await rateLimitedClient.PostAsJsonAsync("/api/auth/login", request);
+        HttpResponseMessage secondResponse = await rateLimitedClient.PostAsJsonAsync("/api/auth/login", request);
+
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
     }
 
     [Fact]

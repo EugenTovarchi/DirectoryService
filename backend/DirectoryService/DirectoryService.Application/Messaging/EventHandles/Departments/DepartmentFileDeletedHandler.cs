@@ -1,6 +1,7 @@
 ﻿using DirectoryService.Application.Database;
 using DirectoryService.Application.Messaging.Exceptions;
 using DirectoryService.Domain.Entities;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.SharedKernel.Messaging.Files.Events;
 
@@ -11,15 +12,18 @@ public class DepartmentFileDeletedHandler
     private readonly ILogger<DepartmentFileDeletedHandler> _logger;
     private readonly ITransactionManager _transactionManager;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly HybridCache _cache;
 
     public DepartmentFileDeletedHandler(
         ITransactionManager transactionManager,
         ILogger<DepartmentFileDeletedHandler> logger,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        HybridCache cache)
     {
         _transactionManager = transactionManager;
         _logger = logger;
         _departmentRepository = departmentRepository;
+        _cache = cache;
     }
 
     public async Task Handle(FileDeleted message, CancellationToken cancellationToken)
@@ -55,6 +59,10 @@ public class DepartmentFileDeletedHandler
                 if (department.VideoAssetId == message.AssetId)
                 {
                     department.CleanVideoId();
+
+                    await _cache.RemoveByTagAsync("departments", cancellationToken);
+                    _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
+
                     var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                     if (saveResult.IsFailure)
                     {
@@ -79,6 +87,10 @@ public class DepartmentFileDeletedHandler
                 if (department.PhotoAssetId == message.AssetId)
                 {
                     department.CleanPhotoId();
+
+                    await _cache.RemoveByTagAsync("departments", cancellationToken);
+                    _logger.LogInformation("Cache entries with tag 'departments' were invalidated");
+
                     var saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
                     if (saveResult.IsFailure)
                     {

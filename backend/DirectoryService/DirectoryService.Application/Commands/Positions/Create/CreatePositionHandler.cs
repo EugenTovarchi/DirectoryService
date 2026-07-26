@@ -1,9 +1,10 @@
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using DirectoryService.Application.Database;
 using DirectoryService.Contracts.ValueObjects;
 using DirectoryService.Contracts.ValueObjects.Ids;
 using DirectoryService.Domain.Entities;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Abstractions;
 using SharedService.Core.Validation;
@@ -16,17 +17,20 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
     private readonly IPositionRepository _positionRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<CreatePositionCommand> _validator;
+    private readonly HybridCache _cache;
     private readonly ILogger<CreatePositionHandler> _logger;
     public CreatePositionHandler(
         IPositionRepository positionRepository,
         IDepartmentRepository departmentRepository,
         IValidator<CreatePositionCommand> validator,
-        ILogger<CreatePositionHandler> logger)
+        ILogger<CreatePositionHandler> logger,
+        HybridCache cache)
     {
         _positionRepository = positionRepository;
         _departmentRepository = departmentRepository;
         _validator = validator;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<Result<Guid, Failure>> Handle(CreatePositionCommand command, CancellationToken cancellationToken)
@@ -68,6 +72,9 @@ public class CreatePositionHandler : ICommandHandler<Guid, CreatePositionCommand
         var saveResult = await _positionRepository.AddAsync(position, cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
+
+        await _cache.RemoveByTagAsync("positions", cancellationToken);
+        _logger.LogInformation("Cache entries with tag 'positions' were invalidated");
 
         _logger.LogInformation("Position {PositionId} created successfully", positionResult.Value.Id.Value);
         return positionResult.Value.Id.Value;

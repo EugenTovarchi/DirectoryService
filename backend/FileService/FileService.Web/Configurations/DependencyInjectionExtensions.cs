@@ -1,4 +1,5 @@
 using FileService.VideoProcessing;
+using Microsoft.OpenApi;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using SharedService.Framework.Logging;
@@ -13,6 +14,20 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "FileService");
         services.AddOpenApiSpec("FileService");
+        services.AddSwaggerGen(options =>
+        {
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "AuthService access token"
+            });
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+        });
         services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "FileService");
         services.ConfigureOpenTelemetryMeterProvider(builder =>
             builder.AddMeter(VideoProcessingTelemetry.METER_NAME));

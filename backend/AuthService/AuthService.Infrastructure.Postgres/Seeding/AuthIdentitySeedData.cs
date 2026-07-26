@@ -14,6 +14,7 @@ internal static class AuthIdentitySeedData
         new(AuthPermissions.DIRECTORY_MANAGE, "Создание и изменение структуры компании."),
         new(AuthPermissions.FILES_READ, "Чтение метаданных файлов и данных для скачивания."),
         new(AuthPermissions.FILES_UPLOAD, "Запуск сценариев загрузки файлов."),
+        new(AuthPermissions.FILES_DELETE, "Удаление файлов и связанных media assets."),
         new(AuthPermissions.VIDEOS_READ, "Чтение метаданных видео и HLS-данных."),
         new(AuthPermissions.VIDEOS_UPLOAD, "Запуск сценариев загрузки видео.")
     ];
@@ -37,6 +38,7 @@ internal static class AuthIdentitySeedData
                 AuthPermissions.DIRECTORY_MANAGE,
                 AuthPermissions.FILES_READ,
                 AuthPermissions.FILES_UPLOAD,
+                AuthPermissions.FILES_DELETE,
                 AuthPermissions.VIDEOS_READ,
                 AuthPermissions.VIDEOS_UPLOAD
             ],
@@ -47,6 +49,7 @@ internal static class AuthIdentitySeedData
                 AuthPermissions.DIRECTORY_MANAGE,
                 AuthPermissions.FILES_READ,
                 AuthPermissions.FILES_UPLOAD,
+                AuthPermissions.FILES_DELETE,
                 AuthPermissions.VIDEOS_READ,
                 AuthPermissions.VIDEOS_UPLOAD
             ],
@@ -55,6 +58,7 @@ internal static class AuthIdentitySeedData
                 AuthPermissions.DIRECTORY_READ,
                 AuthPermissions.FILES_READ,
                 AuthPermissions.FILES_UPLOAD,
+                AuthPermissions.FILES_DELETE,
                 AuthPermissions.VIDEOS_READ,
                 AuthPermissions.VIDEOS_UPLOAD
             ],

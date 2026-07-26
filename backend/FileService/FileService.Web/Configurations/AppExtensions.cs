@@ -12,6 +12,7 @@ public static class AppExtensions
         app.UseExceptionMiddleware();
         app.UseRequestCorrelationId();
 
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
 
@@ -26,6 +27,8 @@ public static class AppExtensions
         }
 
         app.UseSerilogRequestLogging();
+
+        app.MapFileGrpcServices();
 
         app.MapEndpoints();
 

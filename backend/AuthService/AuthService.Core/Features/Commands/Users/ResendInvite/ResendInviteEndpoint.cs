@@ -3,8 +3,9 @@ using AuthService.Core.Abstractions;
 using AuthService.Core.Authorization;
 using AuthService.Core.Extensions;
 using AuthService.Core.Failures;
-using AuthService.Core.Models;
+using AuthService.Core.RateLimiting;
 using AuthService.Core.Services;
+using AuthService.Domain.EmailDelivery;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -38,7 +39,8 @@ public sealed class ResendInviteEndpoint : IEndpoint
 
                 return await handler.Handle(command, cancellationToken);
             })
-            .RequireAuthorization(AuthPolicies.USERS_MANAGE);
+            .RequireAuthorization(AuthPolicies.USERS_MANAGE)
+            .RequireRateLimiting(PublicAuthRateLimitPolicies.INVITE_RESEND);
     }
 }
 
@@ -66,7 +68,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
     private readonly ITokenService _tokenService;
     private readonly InviteLinkFactory _inviteLinkFactory;
-    private readonly IInviteEmailSender _inviteEmailSender;
+    private readonly IEmailOutboxRepository _emailOutboxRepository;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ResendInviteCommand> _validator;
@@ -77,7 +79,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         IUserInviteTokenRepository inviteTokenRepository,
         ITokenService tokenService,
         InviteLinkFactory inviteLinkFactory,
-        IInviteEmailSender inviteEmailSender,
+        IEmailOutboxRepository emailOutboxRepository,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ResendInviteCommand> validator,
@@ -87,7 +89,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         _inviteTokenRepository = inviteTokenRepository;
         _tokenService = tokenService;
         _inviteLinkFactory = inviteLinkFactory;
-        _inviteEmailSender = inviteEmailSender;
+        _emailOutboxRepository = emailOutboxRepository;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -152,6 +154,20 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
+        Uri inviteLink = _inviteLinkFactory.Create(inviteToken.RawToken);
+        Result<EmailOutboxMessage, Error> outboxMessageResult = EmailOutboxMessage.CreateInvite(
+            targetUser.Id,
+            targetUser.Email!,
+            targetUser.DisplayName?.Value,
+            inviteLink,
+            inviteTokenExpiresAt);
+        if (outboxMessageResult.IsFailure)
+            return outboxMessageResult.Error.ToFailure();
+
+        UnitResult<Error> addOutboxResult = _emailOutboxRepository.Add(outboxMessageResult.Value);
+        if (addOutboxResult.IsFailure)
+            return addOutboxResult.Error.ToFailure();
+
         UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
         if (saveResult.IsFailure)
             return saveResult.Error.ToFailure();
@@ -159,18 +175,6 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         UnitResult<Error> commitResult = transactionScope.Commit();
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
-
-        Uri inviteLink = _inviteLinkFactory.Create(inviteToken.RawToken);
-        UnitResult<Error> emailResult = await _inviteEmailSender.SendInviteAsync(
-            new InviteEmailMessage(
-                targetUser.Id,
-                targetUser.Email!,
-                targetUser.DisplayName?.Value,
-                inviteLink,
-                inviteTokenExpiresAt),
-            cancellationToken);
-        if (emailResult.IsFailure)
-            return emailResult.Error.ToFailure();
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 

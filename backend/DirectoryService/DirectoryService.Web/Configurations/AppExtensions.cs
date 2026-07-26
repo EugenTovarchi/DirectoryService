@@ -11,6 +11,7 @@ public static class AppExtensions
         app.UseExceptionMiddleware();
         app.UseRequestCorrelationId();
 
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
 

@@ -4,8 +4,10 @@ using System.Net.Http.Json;
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
+using AuthService.Domain.EmailDelivery;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres;
+using AuthService.Infrastructure.Postgres.EmailDelivery;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -78,9 +80,20 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             .CountAsync(token => token.UserId == invitedUser.UserId));
         inviteTokenCount.Should().Be(1);
 
+        // Endpoint только фиксирует намерение отправить письмо; SMTP вызывается позже Quartz-обработчиком.
+        EmailOutboxMessage pendingEmail = await ExecuteInDb(dbContext => dbContext.EmailOutboxMessages
+            .SingleAsync(message => message.UserId == invitedUser.UserId));
+        pendingEmail.DeliveredAt.Should().BeNull();
+        pendingEmail.DeliveryLink.Should().NotBeNull();
+
         await AssertUserCannotLoginAsync("new-user@example.com", "password123");
 
-        string inviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
+        string inviteToken = await GetLatestInviteTokenForUserAsync(invitedUser.UserId);
+
+        EmailOutboxMessage deliveredEmail = await ExecuteInDb(dbContext => dbContext.EmailOutboxMessages
+            .SingleAsync(message => message.UserId == invitedUser.UserId));
+        deliveredEmail.DeliveredAt.Should().NotBeNull();
+        deliveredEmail.DeliveryLink.Should().BeNull();
         HttpResponseMessage acceptResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
             new AcceptInviteRequest(inviteToken, "password123"));
@@ -116,12 +129,12 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
         HttpResponseMessage firstResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(GetLatestInviteTokenForUser(invitedUser.UserId), "password123"));
+            new AcceptInviteRequest(await GetLatestInviteTokenForUserAsync(invitedUser.UserId), "password123"));
         firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         HttpResponseMessage secondResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/accept-invite",
-            new AcceptInviteRequest(GetLatestInviteTokenForUser(invitedUser.UserId), "password456"));
+            new AcceptInviteRequest(await GetLatestInviteTokenForUserAsync(invitedUser.UserId), "password456"));
 
         secondResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -188,7 +201,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
                 "Resend Invite User",
                 companyId,
                 AuthRoles.VIEWER));
-        string originalInviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
+        string originalInviteToken = await GetLatestInviteTokenForUserAsync(invitedUser.UserId);
 
         using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{invitedUser.UserId}/resend-invite");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
@@ -207,7 +220,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         resend.UserId.Should().Be(invitedUser.UserId);
         resend.Email.Should().Be("resend-invite-user@example.com");
         resend.InviteTokenExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(3), TimeSpan.FromMinutes(1));
-        string resentInviteToken = GetLatestInviteTokenForUser(invitedUser.UserId);
+        string resentInviteToken = await GetLatestInviteTokenForUserAsync(invitedUser.UserId);
         resentInviteToken.Should().NotBe(originalInviteToken);
 
         List<UserInviteToken> inviteTokens = await ExecuteInDb(dbContext => dbContext.UserInviteTokens
@@ -396,7 +409,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         envelope!.Result.Should().NotBeNull();
         envelope.Result!.CompanyId.Should().Be(targetCompanyId);
         envelope.Result.Roles.Should().BeEquivalentTo(AuthRoles.COMPANY_ADMIN);
-        GetLatestInviteTokenForUser(envelope.Result.UserId).Should().NotBeNullOrWhiteSpace();
+        (await GetLatestInviteTokenForUserAsync(envelope.Result.UserId)).Should().NotBeNullOrWhiteSpace();
     }
 
     private async Task AssertUserCanLoginAsync(string email, string password)
@@ -428,8 +441,16 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private string GetLatestInviteTokenForUser(Guid userId)
+    /// <summary>
+    /// Integration tests явно запускают processor вместо ожидания Quartz timer.
+    /// Такой тест детерминирован: он не зависит от скорости компьютера или фонового расписания.
+    /// </summary>
+    private async Task<string> GetLatestInviteTokenForUserAsync(Guid userId)
     {
+        await using AsyncServiceScope scope = Services.CreateAsyncScope();
+        EmailOutboxProcessor processor = scope.ServiceProvider.GetRequiredService<EmailOutboxProcessor>();
+        await processor.ProcessBatchAsync();
+
         TestInviteEmailSender emailSender = Services.GetRequiredService<TestInviteEmailSender>();
         Uri inviteLink = emailSender.Messages
             .Where(message => message.UserId == userId)

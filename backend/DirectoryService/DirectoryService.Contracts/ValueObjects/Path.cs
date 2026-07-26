@@ -3,7 +3,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record Path
+public sealed record Path
 {
     public const int MAX_LENGTH = 500;
     private const char SEPARATOR = '.';

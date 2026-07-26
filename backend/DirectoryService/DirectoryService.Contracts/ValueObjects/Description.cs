@@ -4,7 +4,7 @@ using SharedService.SharedKernel;
 
 namespace DirectoryService.Contracts.ValueObjects;
 
-public record Description
+public sealed record Description
 {
     public const int MAX_LENGTH = 1000;
     public string Value { get; } = string.Empty;
@@ -17,13 +17,18 @@ public record Description
 
     public static Result<Description, Error> Create(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length > MAX_LENGTH)
+        if (string.IsNullOrWhiteSpace(value))
         {
             return Errors.General.ValueIsInvalid("description");
         }
 
         string normalized = Regex.Replace(value.Trim(), @"\s+", " ",
             RegexOptions.Compiled,  TimeSpan.FromMilliseconds(100));
+
+        if (normalized.Length > MAX_LENGTH)
+        {
+            return Errors.General.ValueIsInvalid("description");
+        }
 
         return new Description(normalized);
     }

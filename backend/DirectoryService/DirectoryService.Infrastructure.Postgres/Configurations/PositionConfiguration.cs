@@ -38,7 +38,6 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
             desc.Property(d => d.Value)
                 .HasColumnName("description")
                 .HasMaxLength(Description.MAX_LENGTH)
-                .HasDefaultValue(string.Empty)
                 .IsRequired(false);
         });
 
