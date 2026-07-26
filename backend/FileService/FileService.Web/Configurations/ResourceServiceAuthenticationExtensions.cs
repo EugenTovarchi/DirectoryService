@@ -13,6 +13,7 @@ public static class ResourceServiceAuthenticationExtensions
     private const string SERVICE_PERMISSION_CLAIM = "service_permission";
     private const int MIN_SIGNING_KEY_LENGTH = 32;
 
+    // Проверка конфигурации при старте приложения(настройка самого FS, а не каждого JWT).
     public static IServiceCollection AddResourceServiceAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
