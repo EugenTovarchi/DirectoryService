@@ -1,4 +1,4 @@
-namespace FileService.Contracts;
+﻿namespace FileService.Contracts;
 
 public static class FileAssetTypes
 {
@@ -10,7 +10,7 @@ public static class FileAssetTypes
     {
         Video,
         Avatar,
-        Preview
+        Preview,
     };
 
     public static bool IsSupported(string? assetType)
