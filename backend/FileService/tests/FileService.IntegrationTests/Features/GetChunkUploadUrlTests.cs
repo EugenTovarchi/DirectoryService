@@ -149,7 +149,7 @@ public class GetChunkUploadUrlTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         HttpResponseMessage startMultipartUploadResponse =
-            await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+            await SendStartMultipartUploadRequestAsync(request, cancellationToken);
 
         startMultipartUploadResponse.EnsureSuccessStatusCode();
 

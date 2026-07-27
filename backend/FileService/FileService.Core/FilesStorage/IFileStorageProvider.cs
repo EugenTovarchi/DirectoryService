@@ -9,7 +9,7 @@ namespace FileService.Core.FilesStorage;
 
 public interface IFileStorageProvider
 {
-    Task<Result<string, Error>> StartMultipartUploadAsync(
+    Task<Result<MultipartUploadInfo, Error>> StartMultipartUploadAsync(
         StorageKey storageKey,
         MediaData mediaData,
         CancellationToken cancellationToken = default);
