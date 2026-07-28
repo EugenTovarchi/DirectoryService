@@ -6,9 +6,12 @@ using FileService.Contracts.Responses;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
+using FileService.Domain.Uploads;
+using FileService.Infrastructure.Postgres.Background;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using SharedService.Framework.ControllersResults;
 using SharedService.SharedKernel;
 
@@ -59,7 +62,115 @@ public class CancelMultipartUploadTests : FileServiceBaseTests
             var mediaAsset = await dbContext.MediaAssets
                 .FirstOrDefaultAsync(m => m.Id == startMultipartUploadResponse.MediaAssetId, cancellationToken);
 
-            Assert.Null(mediaAsset);
+            var uploadSession = await dbContext.MultipartUploadSessions
+                .FirstOrDefaultAsync(
+                    session => session.MediaAssetId == startMultipartUploadResponse.MediaAssetId,
+                    cancellationToken);
+
+            Assert.NotNull(mediaAsset);
+            Assert.Equal(MediaStatus.FAILED, mediaAsset.Status);
+            Assert.NotNull(uploadSession);
+            Assert.Equal(MultipartUploadStatus.ABORTED, uploadSession.Status);
+        });
+    }
+
+    [Fact]
+    public async Task CleanupExpiredUpload_ShouldAbortStorageAndKeepAuditState()
+    {
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+        StartMultipartUploadResponse startResponse = await StartMultipartUpload(fileInfo, cancellationToken);
+
+        await ExecuteInDb(dbContext => dbContext.MultipartUploadSessions
+            .Where(session => session.MediaAssetId == startResponse.MediaAssetId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    session => session.ExpiresAt,
+                    DateTime.UtcNow.AddMinutes(-1)),
+                cancellationToken));
+
+        MultipartUploadCleanupService cleanupService = _factory.Services
+            .GetServices<IHostedService>()
+            .OfType<MultipartUploadCleanupService>()
+            .Single();
+
+        // Act
+        await cleanupService.CleanupExpiredUploadsAsync(cancellationToken);
+
+        // Assert
+        List<MultipartUpload>? uploads = await CheckMultipartUploadNotExistsInS3(
+            VideoAsset.LOCATION,
+            fileInfo.Name,
+            startResponse.UploadId,
+            cancellationToken);
+
+        Assert.Empty(uploads!);
+        await ExecuteInDb(async dbContext =>
+        {
+            MediaAsset? mediaAsset = await dbContext.MediaAssets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    asset => asset.Id == startResponse.MediaAssetId,
+                    cancellationToken);
+            MultipartUploadSession? session = await dbContext.MultipartUploadSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    uploadSession => uploadSession.MediaAssetId == startResponse.MediaAssetId,
+                    cancellationToken);
+
+            Assert.NotNull(mediaAsset);
+            Assert.Equal(MediaStatus.FAILED, mediaAsset.Status);
+            Assert.NotNull(session);
+            Assert.Equal(MultipartUploadStatus.EXPIRED, session.Status);
+        });
+    }
+
+    [Fact]
+    public async Task CleanupStaleAbortClaim_ShouldResumeCleanup()
+    {
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+        StartMultipartUploadResponse startResponse = await StartMultipartUpload(fileInfo, cancellationToken);
+
+        await ExecuteInDb(dbContext => dbContext.MultipartUploadSessions
+            .Where(session => session.MediaAssetId == startResponse.MediaAssetId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(session => session.Status, MultipartUploadStatus.ABORTING)
+                    .SetProperty(session => session.ExpiresAt, DateTime.UtcNow.AddMinutes(-10))
+                    .SetProperty(session => session.UpdatedAt, DateTime.UtcNow.AddMinutes(-10)),
+                cancellationToken));
+
+        MultipartUploadCleanupService cleanupService = _factory.Services
+            .GetServices<IHostedService>()
+            .OfType<MultipartUploadCleanupService>()
+            .Single();
+
+        // Act
+        await cleanupService.CleanupExpiredUploadsAsync(cancellationToken);
+
+        // Assert
+        List<MultipartUpload>? uploads = await CheckMultipartUploadNotExistsInS3(
+            VideoAsset.LOCATION,
+            fileInfo.Name,
+            startResponse.UploadId,
+            cancellationToken);
+
+        Assert.Empty(uploads!);
+        await ExecuteInDb(async dbContext =>
+        {
+            MultipartUploadSession? session = await dbContext.MultipartUploadSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    uploadSession => uploadSession.MediaAssetId == startResponse.MediaAssetId,
+                    cancellationToken);
+
+            Assert.NotNull(session);
+            Assert.Equal(MultipartUploadStatus.EXPIRED, session.Status);
         });
     }
 
@@ -157,7 +268,7 @@ public class CancelMultipartUploadTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         HttpResponseMessage startMultipartUploadResponse =
-            await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+            await SendStartMultipartUploadRequestAsync(request, cancellationToken);
 
         startMultipartUploadResponse.EnsureSuccessStatusCode();
 

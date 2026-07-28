@@ -1,4 +1,4 @@
-using FileService.Contracts.Messaging;
+﻿using FileService.Contracts.Messaging;
 using FileService.Core;
 using FileService.Infrastructure.Postgres;
 using FileService.Infrastructure.S3;
@@ -38,7 +38,7 @@ public partial class Program
 
             builder.Services.AddFileGrpc();
 
-            builder.Services.AddCore()
+            builder.Services.AddCore(builder.Configuration)
                 .AddS3(builder.Configuration)
                 .AddVideoProcessing(builder.Configuration)
                 .AddPostgresInfrastructure(builder.Configuration);

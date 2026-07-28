@@ -6,6 +6,7 @@ using FileService.Contracts.Responses;
 using FileService.Domain;
 using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
+using FileService.Domain.Uploads;
 using FileService.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using SharedService.Framework.ControllersResults;
@@ -62,6 +63,109 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         });
     }
 
+    [Fact]
+    public async Task CompleteMultipartUpload_WhenCalledConcurrently_ShouldFinalizeOnce()
+    {
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+
+        StartMultipartUploadResponse startResponse = await StartMultipartUpload(fileInfo, cancellationToken);
+        IReadOnlyList<PartETagDto> partEtags = await UploadChunks(fileInfo, startResponse, cancellationToken);
+        var request = new CompleteMultipartUploadRequest(
+            startResponse.MediaAssetId,
+            startResponse.UploadId,
+            partEtags);
+
+        // Act
+        Task<HttpResponseMessage> firstRequest = AppHttpClient
+            .PostAsJsonAsync("/files/multipart/end", request, cancellationToken);
+        Task<HttpResponseMessage> secondRequest = AppHttpClient
+            .PostAsJsonAsync("/files/multipart/end", request, cancellationToken);
+
+        HttpResponseMessage[] responses = await Task.WhenAll(firstRequest, secondRequest);
+        UnitResult<Failure>[] results =
+        [
+            await responses[0].HandleResponseAsync(cancellationToken),
+            await responses[1].HandleResponseAsync(cancellationToken)
+        ];
+
+        HttpResponseMessage retryResponse = await AppHttpClient
+            .PostAsJsonAsync("/files/multipart/end", request, cancellationToken);
+        UnitResult<Failure> retryResult = await retryResponse.HandleResponseAsync(cancellationToken);
+
+        // Assert
+        Assert.Contains(results, result => result.IsSuccess);
+        Assert.True(retryResult.IsSuccess);
+
+        await ExecuteInDb(async dbContext =>
+        {
+            MultipartUploadSession? session = await dbContext.MultipartUploadSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    uploadSession => uploadSession.MediaAssetId == startResponse.MediaAssetId,
+                    cancellationToken);
+            int videoProcessCount = await dbContext.VideoProcesses
+                .AsNoTracking()
+                .CountAsync(
+                    process => process.VideoAssetId == startResponse.MediaAssetId,
+                    cancellationToken);
+
+            Assert.NotNull(session);
+            Assert.Equal(MultipartUploadStatus.COMPLETED, session.Status);
+            Assert.Equal(1, videoProcessCount);
+        });
+    }
+
+    [Fact]
+    public async Task StartMultipartUpload_WithSameIdempotencyKey_ShouldReuseSession()
+    {
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        FileInfo fileInfo = new(Path.Combine(AppContext.BaseDirectory, "Resources", TEST_FILE_NAME));
+        await CreateTestBucketAsync(VideoAsset.LOCATION);
+
+        string idempotencyKey = Guid.NewGuid().ToString();
+        var request = new StartMultipartUploadRequest(
+            fileInfo.Name,
+            "video",
+            "video/mp4",
+            fileInfo.Length,
+            TEST_OWNER_TYPE,
+            TEST_DEPARTMENT_ID);
+
+        // Act
+        Result<StartMultipartUploadResponse, Failure> firstResult =
+            await SendStartRequestAsync(request, idempotencyKey, cancellationToken);
+        Result<StartMultipartUploadResponse, Failure> retryResult =
+            await SendStartRequestAsync(request, idempotencyKey, cancellationToken);
+        Result<StartMultipartUploadResponse, Failure> conflictingResult =
+            await SendStartRequestAsync(
+                request with { FileName = "another-file.mp4" },
+                idempotencyKey,
+                cancellationToken);
+
+        // Assert
+        Assert.True(firstResult.IsSuccess);
+        Assert.True(retryResult.IsSuccess);
+        Assert.Equal(firstResult.Value.MediaAssetId, retryResult.Value.MediaAssetId);
+        Assert.Equal(firstResult.Value.UploadId, retryResult.Value.UploadId);
+        Assert.True(conflictingResult.IsFailure);
+
+        await ExecuteInDb(async dbContext =>
+        {
+            int sessionCount = await dbContext.MultipartUploadSessions
+                .AsNoTracking()
+                .CountAsync(
+                    session => session.IdempotencyKey == idempotencyKey,
+                    cancellationToken);
+
+            Assert.Equal(1, sessionCount);
+        });
+    }
+
     public async Task<StartMultipartUploadResponse> StartMultipartUpload(FileInfo fileInfo,
         CancellationToken cancellationToken)
     {
@@ -76,7 +180,7 @@ public class MultipartUploadFileTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         HttpResponseMessage startMultipartUploadResponse =
-            await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+            await SendStartMultipartUploadRequestAsync(request, cancellationToken);
 
         startMultipartUploadResponse.EnsureSuccessStatusCode();
 
@@ -108,7 +212,7 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         foreach (ChunkUploadUrl chunkUploadUrl in
                  startMultipartUploadResponse.ChunkUploadUrls.OrderBy(c => c.PartNumber))
         {
-            byte[] chunk = new byte [startMultipartUploadResponse.ChunkSize];
+            byte[] chunk = new byte[startMultipartUploadResponse.ChunkSize];
             int bytesRead = await fileStream.ReadAsync(chunk.AsMemory(
                 0, startMultipartUploadResponse.ChunkSize), cancellationToken);
             if (bytesRead == 0)
@@ -144,6 +248,21 @@ public class MultipartUploadFileTests : FileServiceBaseTests
         UnitResult<Failure> completeResult = await completeResponse.HandleResponseAsync(cancellationToken);
 
         return completeResult;
+    }
+
+    private async Task<Result<StartMultipartUploadResponse, Failure>> SendStartRequestAsync(
+        StartMultipartUploadRequest request,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/files/multipart/start")
+        {
+            Content = JsonContent.Create(request)
+        };
+        httpRequest.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        HttpResponseMessage response = await AppHttpClient.SendAsync(httpRequest, cancellationToken);
+        return await response.HandleResponseAsync<StartMultipartUploadResponse>(cancellationToken);
     }
 
     private async Task WaitForVideoProcessingCompletionAsync(

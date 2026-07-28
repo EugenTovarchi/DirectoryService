@@ -27,7 +27,7 @@ public class ValidationTests : FileServiceBaseTests
             Guid.Empty);
 
         // Act
-        var response = await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request);
+        var response = await SendStartMultipartUploadRequestAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -48,7 +48,7 @@ public class ValidationTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         // Act
-        var response = await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request);
+        var response = await SendStartMultipartUploadRequestAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -69,7 +69,7 @@ public class ValidationTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         // Act
-        var response = await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request);
+        var response = await SendStartMultipartUploadRequestAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -90,9 +90,29 @@ public class ValidationTests : FileServiceBaseTests
             TEST_DEPARTMENT_ID);
 
         // Act
-        var response = await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request);
+        var response = await SendStartMultipartUploadRequestAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task StartMultipartUpload_WithoutIdempotencyKey_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var request = new StartMultipartUploadRequest(
+            "test.mp4",
+            "video",
+            "video/mp4",
+            1024,
+            TEST_OWNER_TYPE,
+            TEST_DEPARTMENT_ID);
+
+        // Act
+        HttpResponseMessage response =
+            await AppHttpClient.PostAsJsonAsync("/files/multipart/start", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

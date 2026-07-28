@@ -1,6 +1,7 @@
 ﻿using FileService.Core.FilesStorage;
 using FileService.Domain.Assets;
 using FileService.Domain.MediaProcessing;
+using FileService.Domain.Uploads;
 using FileService.Infrastructure.Postgres.Configurations;
 using Microsoft.EntityFrameworkCore;
 using Wolverine.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public class FileServiceDbContext : DbContext, IFileReadDbContext
     }
 
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
+    public DbSet<MultipartUploadSession> MultipartUploadSessions => Set<MultipartUploadSession>();
     public DbSet<VideoProcess> VideoProcesses => Set<VideoProcess>();
 
     public IQueryable<MediaAsset> ReadMediaAssets => MediaAssets.AsQueryable().AsNoTracking();
@@ -32,6 +34,7 @@ public class FileServiceDbContext : DbContext, IFileReadDbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfiguration(new MediaAssetsConfiguration());
+        modelBuilder.ApplyConfiguration(new MultipartUploadSessionsConfiguration());
         modelBuilder.ApplyConfiguration(new VideoProcessesConfiguration());
         modelBuilder.MapWolverineEnvelopeStorage("public");
     }

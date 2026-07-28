@@ -234,8 +234,8 @@ public class DeleteFileTests : FileServiceBaseTests
             TEST_OWNER_TYPE,
             TEST_DEPARTMENT_ID);
 
-        HttpResponseMessage response = await AppHttpClient
-            .PostAsJsonAsync("/files/multipart/start", request, cancellationToken);
+        HttpResponseMessage response =
+            await SendStartMultipartUploadRequestAsync(request, cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
