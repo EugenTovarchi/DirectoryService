@@ -22,9 +22,8 @@ public static class ResourceServiceAuthenticationExtensions
             .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "Jwt:Issuer is required")
             .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "Jwt:Audience is required")
             .Validate(
-                options => !string.IsNullOrWhiteSpace(options.SigningKey) &&
-                    options.SigningKey.Length >= MIN_SIGNING_KEY_LENGTH,
-                $"Jwt:SigningKey must be at least {MIN_SIGNING_KEY_LENGTH} characters")
+                options => HasValidSigningSource(options),
+                $"Jwt requires MetadataAddress or SigningKey with at least {MIN_SIGNING_KEY_LENGTH} characters")
             .ValidateOnStart();
 
         services
@@ -36,7 +35,7 @@ public static class ResourceServiceAuthenticationExtensions
             .Configure<IOptions<JwtValidationOptions>>((options, jwtOptions) =>
             {
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = CreateTokenValidationParameters(jwtOptions.Value);
+                ConfigureJwtBearer(options, jwtOptions.Value);
             });
 
         services.AddAuthorization(options =>
@@ -52,6 +51,24 @@ public static class ResourceServiceAuthenticationExtensions
         return services;
     }
 
+    private static void ConfigureJwtBearer(
+        JwtBearerOptions bearerOptions,
+        JwtValidationOptions jwtOptions)
+    {
+        bearerOptions.TokenValidationParameters = CreateTokenValidationParameters(jwtOptions);
+
+        if (string.IsNullOrWhiteSpace(jwtOptions.MetadataAddress))
+        {
+            bearerOptions.TokenValidationParameters.IssuerSigningKey =
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
+            return;
+        }
+
+        // JwtBearer загружает discovery/JWKS и автоматически обновляет public signing keys.
+        bearerOptions.MetadataAddress = jwtOptions.MetadataAddress;
+        bearerOptions.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+    }
+
     private static TokenValidationParameters CreateTokenValidationParameters(JwtValidationOptions options) => new()
     {
         ValidateIssuer = true,
@@ -59,15 +76,30 @@ public static class ResourceServiceAuthenticationExtensions
         ValidateAudience = true,
         ValidAudience = options.Audience,
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)),
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromSeconds(30)
     };
+
+    private static bool HasValidSigningSource(JwtValidationOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.MetadataAddress))
+        {
+            return Uri.TryCreate(
+                options.MetadataAddress,
+                UriKind.Absolute,
+                out _);
+        }
+
+        return !string.IsNullOrWhiteSpace(options.SigningKey) &&
+            options.SigningKey.Length >= MIN_SIGNING_KEY_LENGTH;
+    }
 
     private sealed class JwtValidationOptions
     {
         public string Issuer { get; init; } = string.Empty;
         public string Audience { get; init; } = string.Empty;
         public string SigningKey { get; init; } = string.Empty;
+        public string MetadataAddress { get; init; } = string.Empty;
+        public bool RequireHttpsMetadata { get; init; } = true;
     }
 }
