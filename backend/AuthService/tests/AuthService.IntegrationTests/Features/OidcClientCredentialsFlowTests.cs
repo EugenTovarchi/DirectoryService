@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Seeding;
@@ -41,6 +42,13 @@ public sealed class OidcClientCredentialsFlowTests : AuthServiceBaseTests
             .GetString()
             ?? throw new InvalidOperationException("Access token is missing");
         var jwt = new JsonWebToken(accessToken);
+        using var currentUserRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/api/auth/me");
+        currentUserRequest.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+        using HttpResponseMessage currentUserResponse =
+            await AppHttpClient.SendAsync(currentUserRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -71,6 +79,7 @@ public sealed class OidcClientCredentialsFlowTests : AuthServiceBaseTests
             claim.Type == AuthClaimTypes.PERMISSION ||
             claim.Type == OpenIddictConstants.Claims.Role ||
             claim.Type == AuthClaimTypes.COMPANY_ID);
+        currentUserResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

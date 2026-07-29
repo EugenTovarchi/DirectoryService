@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AuthService.Contracts.Responses;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
@@ -14,6 +16,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using OpenIddict.Abstractions;
+using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
 
@@ -156,6 +159,14 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
         using JsonDocument userInfoDocument = JsonDocument.Parse(
             await userInfoResponse.Content.ReadAsStringAsync());
 
+        using HttpResponseMessage currentUserResponse = await client.GetAsync(
+            "/api/auth/me");
+        Envelope<CurrentUserResponse>? currentUserEnvelope =
+            await currentUserResponse.Content
+                .ReadFromJsonAsync<Envelope<CurrentUserResponse>>();
+        using HttpResponseMessage usersManageResponse = await client.GetAsync(
+            "/api/users");
+
         var refreshForm = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "refresh_token",
@@ -219,6 +230,13 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
                 AuthPermissions.DIRECTORY_READ,
                 AuthPermissions.FILES_READ
             });
+
+        currentUserResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        currentUserEnvelope.Should().NotBeNull();
+        currentUserEnvelope!.Result.Should().NotBeNull();
+        currentUserEnvelope.Result!.Email.Should().Be(email);
+        currentUserEnvelope.Result.Roles.Should().Contain(AuthRoles.VIEWER);
+        usersManageResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         accessJsonWebToken.Audiences.Should().Contain(new[]
         {

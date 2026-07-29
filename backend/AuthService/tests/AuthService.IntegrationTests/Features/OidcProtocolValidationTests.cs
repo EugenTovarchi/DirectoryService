@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -76,6 +77,21 @@ public sealed class OidcProtocolValidationTests : AuthServiceBaseTests
         using var request = new HttpRequestMessage(HttpMethod.Get, "/connect/userinfo");
         request.Headers.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "invalid-token");
+
+        // Act
+        using HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ProtectedApi_With_Malformed_AccessToken_Should_Return_Unauthorized()
+    {
+        // Arrange
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", "invalid-token");
 
         // Act
         using HttpResponseMessage response = await AppHttpClient.SendAsync(request);

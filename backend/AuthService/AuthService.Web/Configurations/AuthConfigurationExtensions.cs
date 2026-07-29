@@ -6,7 +6,9 @@ using AuthService.Web.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Validation.AspNetCore;
 
 namespace AuthService.Web.Configurations;
 
@@ -22,24 +24,48 @@ public static class AuthConfigurationExtensions
         var jwtOptions = configuration
             .GetSection(JwtOptions.SECTION_NAME)
             .Get<JwtOptions>() ?? new JwtOptions();
+        OidcServerOptions oidcOptions = configuration
+            .GetSection(OidcServerOptions.SECTION_NAME)
+            .Get<OidcServerOptions>() ?? new OidcServerOptions();
 
         services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+            .AddAuthentication(options =>
             {
-                options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtOptions.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtOptions.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromSeconds(30)
-                };
+                // Transitional scheme сохраняет legacy API clients до их миграции,
+                // но новые OpenIddict access tokens уже являются основным путём.
+                options.DefaultAuthenticateScheme =
+                    AuthServiceBearerAuthenticationDefaults.TRANSITIONAL_SCHEME;
+                options.DefaultChallengeScheme =
+                    AuthServiceBearerAuthenticationDefaults.TRANSITIONAL_SCHEME;
             })
+            .AddPolicyScheme(
+                AuthServiceBearerAuthenticationDefaults.TRANSITIONAL_SCHEME,
+                displayName: null,
+                options =>
+                {
+                    options.ForwardDefaultSelector = context =>
+                        SelectBearerValidator(
+                            context,
+                            jwtOptions,
+                            oidcOptions);
+                })
+            .AddJwtBearer(
+                AuthServiceBearerAuthenticationDefaults.LEGACY_JWT_SCHEME,
+                options =>
+                {
+                    options.MapInboundClaims = false;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = jwtOptions.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwtOptions.Audience,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromSeconds(30)
+                    };
+                })
             .AddCookie(OidcBrowserAuthenticationDefaults.SCHEME, options =>
             {
                 // Cookie нужна только для интерактивных login/authorize pages.
@@ -62,6 +88,67 @@ public static class AuthConfigurationExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Выбирает validator только для периода миграции.
+    /// Значение issuer читается до проверки подписи исключительно для маршрутизации:
+    /// выбранный handler затем независимо проверяет signature, issuer, audience и lifetime.
+    /// </summary>
+    private static string SelectBearerValidator(
+        HttpContext context,
+        JwtOptions legacyJwtOptions,
+        OidcServerOptions oidcOptions)
+    {
+        if (!oidcOptions.Enabled)
+        {
+            return AuthServiceBearerAuthenticationDefaults.LEGACY_JWT_SCHEME;
+        }
+
+        string? token = ReadBearerToken(context);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        }
+
+        try
+        {
+            var jsonWebToken = new JsonWebToken(token);
+            if (string.Equals(
+                    jsonWebToken.Issuer,
+                    legacyJwtOptions.Issuer,
+                    StringComparison.Ordinal))
+            {
+                return AuthServiceBearerAuthenticationDefaults.LEGACY_JWT_SCHEME;
+            }
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or SecurityTokenException)
+        {
+            // Malformed token направляется в основной validator,
+            // который вернёт стандартный authentication failure.
+        }
+
+        return OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+    }
+
+    /// <summary>
+    /// Извлекает Bearer token только для выбора authentication handler.
+    /// Значение не логируется и не считается проверенным.
+    /// </summary>
+    private static string? ReadBearerToken(HttpContext context)
+    {
+        const string bearerPrefix = "Bearer ";
+
+        string authorization = context.Request.Headers.Authorization.ToString();
+        if (!authorization.StartsWith(
+                bearerPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return authorization[bearerPrefix.Length..].Trim();
     }
 
     private static IServiceCollection AddJwtOptions(

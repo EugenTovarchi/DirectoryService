@@ -13,15 +13,18 @@ public static class OidcScopes
     public const string DIRECTORY = "directory";
     public const string FILES = "files";
     public const string AUTH = "auth";
+    public const string DIRECTORY_RESOURCE = "directory-service";
+    public const string FILES_RESOURCE = "file-service";
+    public const string AUTH_RESOURCE = "auth-service";
 
     // Это таблица маршрутизации access token:
     // requested scope определяет resource service, который увидит себя в claim aud.
     private static readonly Dictionary<string, string> ResourcesByScope =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [DIRECTORY] = "directory-service",
-            [FILES] = "file-service",
-            [AUTH] = "auth-service"
+            [DIRECTORY] = DIRECTORY_RESOURCE,
+            [FILES] = FILES_RESOURCE,
+            [AUTH] = AUTH_RESOURCE
         };
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(

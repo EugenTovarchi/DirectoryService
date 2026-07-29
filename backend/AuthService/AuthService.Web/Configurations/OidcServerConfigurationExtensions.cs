@@ -119,6 +119,20 @@ public static class OidcServerConfigurationExtensions
                 {
                     aspNetCore.DisableTransportSecurityRequirement();
                 }
+            })
+            .AddValidation(options =>
+            {
+                // AuthService API находится в том же process, что authorization server.
+                // UseLocalServer импортирует issuer и cryptographic keys напрямую,
+                // поэтому сервису не нужно обращаться к собственному discovery endpoint.
+                options.UseLocalServer();
+
+                // AuthService принимает только access token, предназначенный ему.
+                // Token с aud=directory-service или aud=file-service будет отклонён.
+                options.AddAudiences(OidcScopes.AUTH_RESOURCE);
+
+                // Подключает OpenIddict validation handler к ASP.NET Core authentication pipeline.
+                options.UseAspNetCore();
             });
 
         // Seeder создаёт только отсутствующие scopes/clients после применения migrations.
