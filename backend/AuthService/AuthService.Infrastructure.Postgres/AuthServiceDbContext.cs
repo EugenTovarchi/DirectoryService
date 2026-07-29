@@ -18,6 +18,9 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
     {
         var optionsBuilder = new DbContextOptionsBuilder<AuthServiceDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
+
+        // Подключает framework-owned OpenIddict entities к EF model при direct/test создании context.
+        optionsBuilder.UseOpenIddict();
         optionsBuilder.EnableSensitiveDataLogging();
 
         return new AuthServiceDbContext(optionsBuilder.Options);

@@ -7,20 +7,35 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace AuthService.Web.Swagger;
 
+/// <summary>
+/// Подставляет email первого включённого local user в Swagger login example.
+/// Password намеренно не добавляется в OpenAPI document.
+/// </summary>
 public sealed class LoginRequestSchemaFilter : ISchemaFilter
 {
-    private readonly LocalViewerSeedOptions _seedOptions;
+    private readonly LocalViewerSeedOptions _viewerOptions;
+    private readonly LocalUsersSeedOptions _usersOptions;
 
-    public LoginRequestSchemaFilter(IOptions<LocalViewerSeedOptions> seedOptions)
+    public LoginRequestSchemaFilter(
+        IOptions<LocalViewerSeedOptions> viewerOptions,
+        IOptions<LocalUsersSeedOptions> usersOptions)
     {
-        _seedOptions = seedOptions.Value;
+        _viewerOptions = viewerOptions.Value;
+        _usersOptions = usersOptions.Value;
     }
 
+    /// <summary>
+    /// Меняет только email example для LoginRequest и не затрагивает schema других requests.
+    /// </summary>
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
-        if (context.Type != typeof(LoginRequest) ||
-            !_seedOptions.Enabled ||
-            string.IsNullOrWhiteSpace(_seedOptions.Email))
+        if (context.Type != typeof(LoginRequest))
+        {
+            return;
+        }
+
+        string? email = FindExampleEmail();
+        if (string.IsNullOrWhiteSpace(email))
         {
             return;
         }
@@ -29,7 +44,28 @@ public sealed class LoginRequestSchemaFilter : ISchemaFilter
             schema.Properties.TryGetValue("email", out IOpenApiSchema? emailSchema) &&
             emailSchema is OpenApiSchema mutableEmailSchema)
         {
-            mutableEmailSchema.Example = JsonValue.Create(_seedOptions.Email);
+            mutableEmailSchema.Example = JsonValue.Create(email);
         }
+    }
+
+    private string? FindExampleEmail()
+    {
+        if (_usersOptions.Enabled)
+        {
+            LocalUserSeedDefinition? user = _usersOptions.Users.FirstOrDefault(
+                configuredUser => !string.IsNullOrWhiteSpace(configuredUser.Email));
+            if (user is not null)
+            {
+                return user.Email;
+            }
+        }
+
+        if (_viewerOptions.Enabled &&
+            !string.IsNullOrWhiteSpace(_viewerOptions.Email))
+        {
+            return _viewerOptions.Email;
+        }
+
+        return null;
     }
 }

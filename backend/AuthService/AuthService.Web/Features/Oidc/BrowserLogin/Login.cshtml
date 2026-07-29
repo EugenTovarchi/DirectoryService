@@ -1,0 +1,42 @@
+@model AuthService.Web.Features.Oidc.BrowserLogin.OidcLoginModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Вход в 24Eye</title>
+</head>
+<body>
+    <main>
+        <h1>Вход</h1>
+        <p>Эта сессия используется только для подтверждения OAuth/OIDC authorization request.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <p role="alert">@Model.ErrorMessage</p>
+        }
+
+        <form method="post" action="/connect/login">
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
+
+            <div>
+                <label asp-for="Email">Email</label>
+                <input asp-for="Email" autocomplete="username" />
+                <span asp-validation-for="Email"></span>
+            </div>
+
+            <div>
+                <label asp-for="Password">Пароль</label>
+                <input asp-for="Password" autocomplete="current-password" />
+                <span asp-validation-for="Password"></span>
+            </div>
+
+            <button type="submit">Войти</button>
+        </form>
+    </main>
+</body>
+</html>

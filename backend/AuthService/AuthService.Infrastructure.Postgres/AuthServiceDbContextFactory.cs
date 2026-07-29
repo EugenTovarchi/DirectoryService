@@ -16,6 +16,9 @@ public sealed class AuthServiceDbContextFactory : IDesignTimeDbContextFactory<Au
         var optionsBuilder = new DbContextOptionsBuilder<AuthServiceDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 
+        // Без этой регистрации design-time migration не увидит OpenIddict tables.
+        optionsBuilder.UseOpenIddict();
+
         return new AuthServiceDbContext(optionsBuilder.Options);
     }
 }

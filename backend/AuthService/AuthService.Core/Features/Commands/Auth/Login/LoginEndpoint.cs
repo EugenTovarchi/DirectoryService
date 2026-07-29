@@ -4,6 +4,7 @@ using AuthService.Core.Abstractions;
 using AuthService.Core.Failures;
 using AuthService.Core.Options;
 using AuthService.Core.RateLimiting;
+using AuthService.Core.Services;
 using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
@@ -59,8 +60,8 @@ public sealed class LoginValidator : AbstractValidator<LoginCommand>
 
 public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
 {
+    private readonly UserPasswordAuthenticator _passwordAuthenticator;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IRolePermissionReader _rolePermissionReader;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITransactionManager _transactionManager;
@@ -70,8 +71,8 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
     private readonly ILogger<LoginHandler> _logger;
 
     public LoginHandler(
+        UserPasswordAuthenticator passwordAuthenticator,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         IRolePermissionReader rolePermissionReader,
         IRefreshTokenRepository refreshTokenRepository,
         ITransactionManager transactionManager,
@@ -80,8 +81,8 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         IOptions<JwtOptions> jwtOptions,
         ILogger<LoginHandler> logger)
     {
+        _passwordAuthenticator = passwordAuthenticator;
         _userManager = userManager;
-        _signInManager = signInManager;
         _rolePermissionReader = rolePermissionReader;
         _refreshTokenRepository = refreshTokenRepository;
         _transactionManager = transactionManager;
@@ -99,28 +100,11 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         if (!validationResult.IsValid)
             return validationResult.ToErrors();
 
-        string normalizedEmail = command.Request.Email.Trim();
-        ApplicationUser? user = await _userManager.FindByEmailAsync(normalizedEmail);
-
-        if (user is null)
-            return AuthFailures.InvalidCredentials();
-
-        if (!user.IsActive)
-            return AuthFailures.InvalidCredentials();
-
-        // Старые пользователи могли появиться до настройки временной блокировки входа.
-        // Включаем ее лениво без изменения public error semantics (публичной формы ошибки).
-        IdentityResult lockoutEnabledResult = await EnsureLockoutEnabledAsync(user);
-        if (!lockoutEnabledResult.Succeeded)
-            return AuthFailures.InvalidCredentials();
-
-        // lockoutOnFailure увеличивает AccessFailedCount (счетчик неудачных попыток)
-        // и выставляет LockoutEnd (конец блокировки) после настроенного threshold (порога).
-        Microsoft.AspNetCore.Identity.SignInResult signInResult = await _signInManager.CheckPasswordSignInAsync(
-            user,
+        ApplicationUser? user = await _passwordAuthenticator.AuthenticateAsync(
+            command.Request.Email,
             command.Request.Password,
-            lockoutOnFailure: true);
-        if (!signInResult.Succeeded)
+            cancellationToken);
+        if (user is null)
             return AuthFailures.InvalidCredentials();
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
@@ -168,13 +152,5 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
             accessToken.ExpiresAt,
             refreshToken.RawToken,
             refreshTokenExpiresAt);
-    }
-
-    private async Task<IdentityResult> EnsureLockoutEnabledAsync(ApplicationUser user)
-    {
-        if (user.LockoutEnabled)
-            return IdentityResult.Success;
-
-        return await _userManager.SetLockoutEnabledAsync(user, enabled: true);
     }
 }

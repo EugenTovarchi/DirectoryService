@@ -32,11 +32,22 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public Guid? CurrentCompanyId { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
-    public ICollection<RefreshToken> RefreshTokens { get; } = [];
+    public ICollection<RefreshToken> RefreshTokens { get; } =
+        new List<RefreshToken>();
 
     public void ChangeDisplayName(DisplayName? displayName)
     {
         DisplayName = displayName;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Меняет текущий company context пользователя и обновляет дату изменения.
+    /// Проверка права на смену компании остаётся в application layer.
+    /// </summary>
+    public void ChangeCurrentCompany(Guid? companyId)
+    {
+        CurrentCompanyId = companyId;
         UpdatedAt = DateTime.UtcNow;
     }
 

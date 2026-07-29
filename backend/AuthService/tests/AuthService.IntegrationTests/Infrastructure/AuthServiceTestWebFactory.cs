@@ -59,7 +59,8 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
                 ["ServiceClients:Clients:0:ClientId"] = "directory-service",
                 ["ServiceClients:Clients:0:ClientSecret"] = "test-directory-service-client-secret-value",
                 ["ServiceClients:Clients:0:ServiceName"] = "DirectoryService",
-                ["ServiceClients:Clients:0:ServicePermissions:0"] = "file-service.internal"
+                ["ServiceClients:Clients:0:ServicePermissions:0"] = "file-service.internal",
+                ["ServiceClients:Clients:0:AllowedScopes:0"] = "files"
             };
 
             config.AddInMemoryCollection(settings);
@@ -125,8 +126,11 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             new RespawnerOptions
             {
                 DbAdapter = DbAdapter.Postgres,
-                SchemasToInclude = ["public"],
-                TablesToIgnore = ["__EFMigrationsHistory"]
+                SchemasToInclude = new[] { "public" },
+                TablesToIgnore = new Respawn.Graph.Table[]
+                {
+                    "__EFMigrationsHistory"
+                }
             });
     }
 }

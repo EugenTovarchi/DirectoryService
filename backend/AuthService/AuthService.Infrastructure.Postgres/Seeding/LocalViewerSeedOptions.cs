@@ -1,5 +1,10 @@
 namespace AuthService.Infrastructure.Postgres.Seeding;
 
+/// <summary>
+/// Legacy-настройки одного локального Viewer.
+/// Секция сохранена для совместимости с существующим Docker environment.
+/// Для нескольких ролей используйте <see cref="LocalUsersSeedOptions"/>.
+/// </summary>
 public sealed class LocalViewerSeedOptions
 {
     public const string SECTION_NAME = "LocalViewerSeed";

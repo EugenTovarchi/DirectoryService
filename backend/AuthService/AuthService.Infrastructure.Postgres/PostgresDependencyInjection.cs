@@ -35,6 +35,13 @@ public static class PostgresDependencyInjection
         services.Configure<LocalViewerSeedOptions>(
             configuration.GetSection(LocalViewerSeedOptions.SECTION_NAME));
 
+        services.AddSingleton<
+            IValidateOptions<LocalUsersSeedOptions>,
+            LocalUsersSeedOptionsValidator>();
+        services.AddOptions<LocalUsersSeedOptions>()
+            .Bind(configuration.GetSection(LocalUsersSeedOptions.SECTION_NAME))
+            .ValidateOnStart();
+
         return services;
     }
 
@@ -67,6 +74,9 @@ public static class PostgresDependencyInjection
             var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
 
             options.UseNpgsql(dataSource);
+
+            // Добавляет OpenIddict applications/authorizations/scopes/tokens в production EF model.
+            options.UseOpenIddict();
 
             options.LogTo(message =>
             {
