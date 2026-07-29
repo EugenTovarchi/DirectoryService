@@ -7,6 +7,7 @@ using AuthService.Infrastructure.Postgres.EmailDelivery;
 using AuthService.Infrastructure.Postgres.Queries;
 using AuthService.Infrastructure.Postgres.Repositories;
 using AuthService.Infrastructure.Postgres.Seeding;
+using AuthService.Infrastructure.Postgres.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -101,6 +102,7 @@ public static class PostgresDependencyInjection
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IOidcSessionService, OpenIddictSessionService>();
         services.AddScoped<IUserInviteTokenRepository, UserInviteTokenRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IAuthAuditRepository, AuthAuditRepository>();

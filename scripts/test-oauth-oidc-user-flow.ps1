@@ -243,6 +243,42 @@ function Assert-ProtectedEndpoint {
     }
 }
 
+# Возвращает количество активных OpenIddict sessions пользователя.
+# Response body содержит только session metadata и не содержит OAuth tokens.
+function Get-ActiveSessionCount {
+    param(
+        [System.Net.Http.HttpClient]$Client,
+        [string]$AccessToken
+    )
+
+    $request = New-AuthorizedRequest `
+        -Method ([System.Net.Http.HttpMethod]::Get) `
+        -Uri "/auth-service/api/auth/sessions" `
+        -AccessToken $AccessToken
+
+    try {
+        $response = $Client.SendAsync($request).GetAwaiter().GetResult()
+
+        try {
+            Assert-StatusCode `
+                -Response $response `
+                -Expected ([System.Net.HttpStatusCode]::OK) `
+                -Step "AuthService sessions API"
+
+            $responseJson = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            $responseBody = $responseJson | ConvertFrom-Json
+
+            return @($responseBody.result).Count
+        }
+        finally {
+            $response.Dispose()
+        }
+    }
+    finally {
+        $request.Dispose()
+    }
+}
+
 Assert-LoopbackUri -Uri $BaseUri
 
 if ($null -eq $Password) {
@@ -508,6 +544,13 @@ try {
         -Expected ([System.Net.HttpStatusCode]::NotFound) `
         -Step "FileService protected API"
 
+    $activeSessionCount = Get-ActiveSessionCount `
+        -Client $client `
+        -AccessToken $accessToken
+    if ($activeSessionCount -lt 1) {
+        throw "Current OpenIddict session is missing before refresh."
+    }
+
     $refreshResponse = Send-Form `
         -Client $client `
         -Uri "/connect/token" `
@@ -582,6 +625,14 @@ try {
     }
     finally {
         $revokedRefreshResponse.Dispose()
+    }
+
+    $activeSessionCountAfterRevocation = Get-ActiveSessionCount `
+        -Client $client `
+        -AccessToken $refreshedAccessToken
+    $expectedSessionCountAfterRevocation = $activeSessionCount - 1
+    if ($activeSessionCountAfterRevocation -ne $expectedSessionCountAfterRevocation) {
+        throw "Refresh token revocation changed an unexpected number of sessions."
     }
 
     $replayResponse = Send-Form `

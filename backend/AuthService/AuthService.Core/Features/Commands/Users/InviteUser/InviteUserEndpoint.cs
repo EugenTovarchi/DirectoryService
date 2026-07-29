@@ -216,14 +216,11 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User {UserId} invited by {InvitedByUserId} to company {CompanyId}",
-                invitedUser.Id,
-                command.InvitedByUserId,
-                command.Request.CompanyId);
-        }
+        _logger.LogInformation(
+            "User {UserId} invited by {InvitedByUserId} to company {CompanyId}",
+            invitedUser.Id,
+            command.InvitedByUserId,
+            command.Request.CompanyId);
 
         return new InviteUserResponse(
             invitedUser.Id,

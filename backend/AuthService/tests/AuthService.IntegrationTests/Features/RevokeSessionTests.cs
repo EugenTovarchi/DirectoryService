@@ -8,8 +8,8 @@ using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -24,6 +24,7 @@ public sealed class RevokeSessionTests : AuthServiceBaseTests
     [Fact]
     public async Task RevokeSession_With_Current_User_Session_Should_Revoke_Only_That_Session()
     {
+        // Arrange
         ApplicationUser user = await CreateIdentityUserAsync(
             "revoke-session-viewer@example.com",
             "revokesessionviewer",
@@ -31,33 +32,41 @@ public sealed class RevokeSessionTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse firstLogin = await LoginAsync("revoke-session-viewer@example.com", "RevokeSession/1.0");
-        await LoginAsync("revoke-session-viewer@example.com", "RevokeSession/2.0");
-
-        Guid sessionId = await GetSessionIdByUserAgentAsync(user.Id, "RevokeSession/2.0");
+        TokenResponse login = await LoginAsync(
+            "revoke-session-viewer@example.com",
+            "RevokeSession/Access");
+        OpenIddictTestSession preservedSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, user.Id);
+        OpenIddictTestSession revokedSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, user.Id);
 
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/revoke-session")
         {
-            Content = JsonContent.Create(new RevokeSessionRequest(sessionId))
+            Content = JsonContent.Create(
+                new RevokeSessionRequest(revokedSession.AuthorizationId))
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", firstLogin.AccessToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+        OpenIddictTestSessionStatus revokedStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, revokedSession);
+        OpenIddictTestSessionStatus preservedStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, preservedSession);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        List<RefreshToken> savedTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens.ToListAsync());
-        savedTokens.Single(token => token.Id == sessionId).RevokedAt.Should().NotBeNull();
-        savedTokens.Single(token => string.Equals(token.UserAgent, "RevokeSession/1.0", StringComparison.Ordinal))
-            .RevokedAt
-            .Should()
-            .BeNull();
+        revokedStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        revokedStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        preservedStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
+        preservedStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
     }
 
     [Fact]
     public async Task RevokeSession_With_Other_User_Session_Should_Return_Ok_And_Not_Revoke_It()
     {
-        await CreateIdentityUserAsync(
+        // Arrange
+        ApplicationUser currentUser = await CreateIdentityUserAsync(
             "revoke-session-current@example.com",
             "revokesessioncurrent",
             "Revoke Session Current",
@@ -71,32 +80,42 @@ public sealed class RevokeSessionTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse currentLogin = await LoginAsync("revoke-session-current@example.com", "RevokeSession/Current");
-        await LoginAsync("revoke-session-other@example.com", "RevokeSession/Other");
-
-        Guid otherSessionId = await GetSessionIdByUserAgentAsync(otherUser.Id, "RevokeSession/Other");
+        TokenResponse currentLogin = await LoginAsync(
+            "revoke-session-current@example.com",
+            "RevokeSession/Current");
+        await OpenIddictSessionTestHelper.CreateSessionAsync(Services, currentUser.Id);
+        OpenIddictTestSession otherSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, otherUser.Id);
 
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/revoke-session")
         {
-            Content = JsonContent.Create(new RevokeSessionRequest(otherSessionId))
+            Content = JsonContent.Create(
+                new RevokeSessionRequest(otherSession.AuthorizationId))
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentLogin.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+        OpenIddictTestSessionStatus otherSessionStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, otherSession);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        RefreshToken otherSession = await ExecuteInDb(dbContext => dbContext.RefreshTokens.SingleAsync(token => token.Id == otherSessionId));
-        otherSession.RevokedAt.Should().BeNull();
+        otherSessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
+        otherSessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
     }
 
     [Fact]
     public async Task RevokeSession_Without_Access_Token_Should_Return_Unauthorized()
     {
+        // Arrange
+
+        // Act
         HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/revoke-session",
             new RevokeSessionRequest(Guid.NewGuid()));
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
@@ -118,14 +137,6 @@ public sealed class RevokeSessionTests : AuthServiceBaseTests
         envelope!.Result.Should().NotBeNull();
 
         return envelope.Result!;
-    }
-
-    private Task<Guid> GetSessionIdByUserAgentAsync(Guid userId, string userAgent)
-    {
-        return ExecuteInDb(dbContext => dbContext.RefreshTokens
-            .Where(token => token.UserId == userId && token.UserAgent == userAgent)
-            .Select(token => token.Id)
-            .SingleAsync());
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

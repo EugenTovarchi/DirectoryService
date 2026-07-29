@@ -173,10 +173,7 @@ public sealed class RotateRefreshTokenHandler : ICommandHandler<TokenResponse, R
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Refresh token rotated for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("Refresh token rotated for user {UserId}", user.Id);
 
         return new TokenResponse(
             accessToken.Token,

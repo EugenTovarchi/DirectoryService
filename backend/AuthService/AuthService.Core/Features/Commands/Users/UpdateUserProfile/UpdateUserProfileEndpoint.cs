@@ -142,13 +142,10 @@ public sealed class UpdateUserProfileHandler : ICommandHandler<CompanyUserDetail
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User {UserId} profile changed by {RequestedByUserId}",
-                targetUser.Id,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "User {UserId} profile changed by {RequestedByUserId}",
+            targetUser.Id,
+            command.RequestedByUserId);
 
         return new CompanyUserDetailsResponse(
             targetUser.Id,

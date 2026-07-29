@@ -140,10 +140,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
 
         return UnitResult.Success<Failure>();
     }

@@ -138,10 +138,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Invite accepted for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("Invite accepted for user {UserId}", user.Id);
 
         return new AcceptInviteResponse(
             user.Id,

@@ -165,6 +165,11 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
                 .ReadFromJsonAsync<Envelope<CurrentUserResponse>>();
         using HttpResponseMessage usersManageResponse = await client.GetAsync(
             "/api/users");
+        using HttpResponseMessage currentSessionsResponse = await client.GetAsync(
+            "/api/auth/sessions");
+        Envelope<IReadOnlyList<AuthSessionResponse>>? currentSessionsEnvelope =
+            await currentSessionsResponse.Content
+                .ReadFromJsonAsync<Envelope<IReadOnlyList<AuthSessionResponse>>>();
 
         var refreshForm = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -203,6 +208,11 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
             new FormUrlEncodedContent(revokedRefreshForm));
         using JsonDocument revokedRefreshTokenDocument = JsonDocument.Parse(
             await revokedRefreshTokenResponse.Content.ReadAsStringAsync());
+        using HttpResponseMessage sessionsAfterRevocationResponse = await client.GetAsync(
+            "/api/auth/sessions");
+        Envelope<IReadOnlyList<AuthSessionResponse>>? sessionsAfterRevocationEnvelope =
+            await sessionsAfterRevocationResponse.Content
+                .ReadFromJsonAsync<Envelope<IReadOnlyList<AuthSessionResponse>>>();
 
         using HttpResponseMessage reusedRefreshTokenResponse = await client.PostAsync(
             "/connect/token",
@@ -262,6 +272,10 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
         currentUserEnvelope.Result!.Email.Should().Be(email);
         currentUserEnvelope.Result.Roles.Should().Contain(AuthRoles.VIEWER);
         usersManageResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        currentSessionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        currentSessionsEnvelope.Should().NotBeNull();
+        currentSessionsEnvelope!.Result.Should().ContainSingle();
+        currentSessionsEnvelope.Result!.Single().Id.Should().NotBeEmpty();
 
         accessJsonWebToken.Audiences.Should().Contain(new[]
         {
@@ -304,6 +318,9 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
         revokedRefreshTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         revokedRefreshTokenDocument.RootElement.GetProperty("error").GetString()
             .Should().Be("invalid_grant");
+        sessionsAfterRevocationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        sessionsAfterRevocationEnvelope.Should().NotBeNull();
+        sessionsAfterRevocationEnvelope!.Result.Should().BeEmpty();
 
         reusedRefreshTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         reusedRefreshTokenDocument.RootElement.GetProperty("error").GetString()

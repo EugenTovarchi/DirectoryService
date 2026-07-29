@@ -110,10 +110,7 @@ public sealed class LogoutHandler : ICommandHandler<LogoutCommand>
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("User {UserId} logged out", refreshToken.UserId);
-        }
+        _logger.LogInformation("User {UserId} logged out", refreshToken.UserId);
 
         return UnitResult.Success<Failure>();
     }

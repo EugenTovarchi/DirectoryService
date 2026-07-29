@@ -178,13 +178,10 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Invite resent for user {UserId} by {RequestedByUserId}",
-                targetUser.Id,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "Invite resent for user {UserId} by {RequestedByUserId}",
+            targetUser.Id,
+            command.RequestedByUserId);
 
         return new ResendInviteResponse(
             targetUser.Id,

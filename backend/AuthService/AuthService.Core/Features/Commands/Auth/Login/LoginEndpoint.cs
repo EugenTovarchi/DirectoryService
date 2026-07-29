@@ -142,10 +142,7 @@ public sealed class LoginHandler : ICommandHandler<TokenResponse, LoginCommand>
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("User {UserId} logged in", user.Id);
-        }
+        _logger.LogInformation("User {UserId} logged in", user.Id);
 
         return new TokenResponse(
             accessToken.Token,

@@ -147,13 +147,26 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
                 return UserManagementFailures.RoleChangeFailed();
         }
 
-        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+        string metadataJson =
+            $$"""
+              {
+                "role": "{{role}}"
+              }
+              """;
+
+        Result<AuthAuditEvent, Error> auditEventResult = AuthAuditEvent.Create(
             targetUser.CurrentCompanyId,
             targetUser.Id,
             targetUser.Email,
             AuthAuditActions.USER_ROLE_CHANGED,
             command.RequestedByUserId,
-            metadataJson: $$"""{"role":"{{role}}"}""").Value);
+            metadataJson: metadataJson);
+        if (auditEventResult.IsFailure)
+        {
+            return auditEventResult.Error.ToFailure();
+        }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(auditEventResult.Value);
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
@@ -167,14 +180,11 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<CompanyUserDetailsRe
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User {UserId} role changed to {Role} by {RequestedByUserId}",
-                targetUser.Id,
-                role,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "User {UserId} role changed to {Role} by {RequestedByUserId}",
+            targetUser.Id,
+            role,
+            command.RequestedByUserId);
 
         return new CompanyUserDetailsResponse(
             targetUser.Id,

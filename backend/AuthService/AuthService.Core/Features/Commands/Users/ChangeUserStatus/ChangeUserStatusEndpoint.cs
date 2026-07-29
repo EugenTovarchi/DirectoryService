@@ -134,13 +134,26 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         if (!updateResult.Succeeded)
             return UserManagementFailures.UserStatusChangeFailed();
 
-        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+        string metadataJson =
+            $$"""
+              {
+                "isActive": {{targetUser.IsActive.ToString().ToLowerInvariant()}}
+              }
+              """;
+
+        Result<AuthAuditEvent, Error> auditEventResult = AuthAuditEvent.Create(
             targetUser.CurrentCompanyId,
             targetUser.Id,
             targetUser.Email,
             AuthAuditActions.USER_STATUS_CHANGED,
             command.RequestedByUserId,
-            metadataJson: $$"""{"isActive":{{targetUser.IsActive.ToString().ToLowerInvariant()}}}""").Value);
+            metadataJson: metadataJson);
+        if (auditEventResult.IsFailure)
+        {
+            return auditEventResult.Error.ToFailure();
+        }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(auditEventResult.Value);
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
@@ -154,14 +167,11 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User {UserId} status changed to {IsActive} by {RequestedByUserId}",
-                targetUser.Id,
-                targetUser.IsActive,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "User {UserId} status changed to {IsActive} by {RequestedByUserId}",
+            targetUser.Id,
+            targetUser.IsActive,
+            command.RequestedByUserId);
 
         return new CompanyUserDetailsResponse(
             targetUser.Id,
