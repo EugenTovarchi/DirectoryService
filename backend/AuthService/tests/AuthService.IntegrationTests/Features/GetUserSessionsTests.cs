@@ -49,7 +49,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             targetUser.Id,
             expirationDate: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-company-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-company-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
@@ -87,7 +87,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
 
         await LoginAsync("admin-sessions-other-company@example.com", "AdminSessions/Other");
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-boundary-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-boundary-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
@@ -120,7 +120,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
 
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-system-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-system-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
@@ -161,7 +161,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-sessions-viewer@example.com", "AdminSessions/Viewer");
+        OidcTestToken login = await LoginAsync("admin-sessions-viewer@example.com", "AdminSessions/Viewer");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{viewer.Id}/sessions",
             login.AccessToken);
@@ -185,7 +185,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-sessions-unknown-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-unknown-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{Guid.NewGuid()}/sessions",
             login.AccessToken);
@@ -209,7 +209,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-sessions-self-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-self-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{admin.Id}/sessions",
             login.AccessToken);
@@ -239,7 +239,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-sessions-empty-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-empty-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             login.AccessToken);
@@ -272,24 +272,9 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email, string userAgent)
+    private Task<OidcTestToken> LoginAsync(string email, string userAgent)
     {
-        using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequest(email, "password123"))
-        };
-
-        request.Headers.UserAgent.ParseAdd(userAgent);
-
-        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email, userAgent: userAgent);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

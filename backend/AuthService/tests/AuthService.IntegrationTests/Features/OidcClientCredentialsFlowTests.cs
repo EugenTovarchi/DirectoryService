@@ -4,7 +4,10 @@ using System.Text.Json;
 using AuthService.Domain.Identity;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
+using AuthService.Web.Configurations;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using OpenIddict.Abstractions;
@@ -13,9 +16,12 @@ namespace AuthService.IntegrationTests.Features;
 
 public sealed class OidcClientCredentialsFlowTests : AuthServiceBaseTests
 {
+    private readonly AuthServiceTestWebFactory _factory;
+
     public OidcClientCredentialsFlowTests(AuthServiceTestWebFactory factory)
         : base(factory)
     {
+        _factory = factory;
     }
 
     [Fact]
@@ -136,6 +142,49 @@ public sealed class OidcClientCredentialsFlowTests : AuthServiceBaseTests
             .Should().Be(OpenIddictConstants.Errors.InvalidRequest);
         responseDocument.RootElement.TryGetProperty("access_token", out _)
             .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_When_Rate_Limit_Is_Exceeded_Should_Return_TooManyRequests()
+    {
+        // Arrange
+        await SeedOidcAsync();
+        using HttpClient rateLimitedClient = _factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.PostConfigure<PublicAuthRateLimitOptions>(options =>
+                    {
+                        options.WindowSeconds = 60;
+                        options.TokenPermitLimit = 1;
+                    });
+                });
+            })
+            .CreateClient(
+                new WebApplicationFactoryClientOptions
+                {
+                    BaseAddress = new Uri("https://auth-service.tests")
+                });
+        var tokenForm = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["grant_type"] = "client_credentials",
+            ["client_id"] = "directory-service",
+            ["client_secret"] = "test-directory-service-client-secret-value",
+            ["scope"] = "files"
+        };
+
+        // Act
+        using HttpResponseMessage firstResponse = await rateLimitedClient.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(tokenForm));
+        using HttpResponseMessage secondResponse = await rateLimitedClient.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(tokenForm));
+
+        // Assert
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
     }
 
     private async Task SeedOidcAsync()

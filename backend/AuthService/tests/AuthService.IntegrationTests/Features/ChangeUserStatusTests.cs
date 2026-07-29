@@ -41,9 +41,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             AuthRoles.OPERATOR);
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
-        TokenResponse targetLogin = await LoginAsync("status-operator@example.com");
-
-        TokenResponse login = await LoginAsync("status-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-company-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-status",
             login.AccessToken,
@@ -71,10 +69,6 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
         targetSessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
         targetSessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
 
-        HttpResponseMessage refreshResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/refresh",
-            new RefreshTokenRequest(targetLogin.RefreshToken));
-        refreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -98,7 +92,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
 
-        TokenResponse login = await LoginAsync("status-boundary-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-status",
             login.AccessToken,
@@ -140,7 +134,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.TECHNICIAN);
 
-        TokenResponse login = await LoginAsync("status-system-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-system-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-status",
             login.AccessToken,
@@ -174,7 +168,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             AuthRoles.VIEWER,
             isActive: false);
 
-        TokenResponse login = await LoginAsync("status-activate-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-activate-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-status",
             login.AccessToken,
@@ -212,7 +206,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("status-viewer@example.com");
+        OidcTestToken login = await LoginAsync("status-viewer@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{viewer.Id}/change-status",
             login.AccessToken,
@@ -234,7 +228,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("status-unknown-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-unknown-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{Guid.NewGuid()}/change-status",
             login.AccessToken,
@@ -256,7 +250,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("status-self-admin@example.com");
+        OidcTestToken login = await LoginAsync("status-self-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{admin.Id}/change-status",
             login.AccessToken,
@@ -298,19 +292,9 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

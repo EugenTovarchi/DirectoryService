@@ -6,10 +6,12 @@ namespace AuthService.IntegrationTests.Infrastructure;
 [Collection("AuthServiceCollection")]
 public abstract class AuthServiceBaseTests : IAsyncLifetime
 {
+    private readonly AuthServiceTestWebFactory _factory;
     private readonly Func<Task> _resetDatabase;
 
     protected AuthServiceBaseTests(AuthServiceTestWebFactory factory)
     {
+        _factory = factory;
         AppHttpClient = factory.CreateClient();
         Services = factory.Services;
         _resetDatabase = factory.ResetDatabaseAsync;
@@ -17,6 +19,34 @@ public abstract class AuthServiceBaseTests : IAsyncLifetime
 
     protected HttpClient AppHttpClient { get; }
     protected IServiceProvider Services { get; }
+
+    /// <summary>
+    /// Получает OpenIddict access token через реальный Authorization Code + PKCE flow.
+    /// </summary>
+    protected async Task<OidcTestToken> LoginWithOidcAsync(
+        string email,
+        string password = "password123",
+        string? userAgent = null)
+    {
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password, userAgent);
+        return token ?? throw new InvalidOperationException("OIDC login was rejected");
+    }
+
+    /// <summary>
+    /// Возвращает null, когда OIDC browser login отклоняет credentials.
+    /// </summary>
+    protected Task<OidcTestToken?> TryLoginWithOidcAsync(
+        string email,
+        string password,
+        string? userAgent = null)
+    {
+        return OidcAuthorizationTestHelper.TryLoginAsync(
+            _factory,
+            Services,
+            email,
+            password,
+            userAgent);
+    }
 
     public Task InitializeAsync() => Task.CompletedTask;
 

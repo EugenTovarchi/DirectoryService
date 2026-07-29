@@ -17,8 +17,8 @@ public sealed class PublicAuthRateLimitOptionsValidator : IValidateOptions<Publi
         if (options.LoginPermitLimit <= 0)
             failures.Add("PublicAuthRateLimits:LoginPermitLimit must be positive");
 
-        if (options.RefreshPermitLimit <= 0)
-            failures.Add("PublicAuthRateLimits:RefreshPermitLimit must be positive");
+        if (options.TokenPermitLimit <= 0)
+            failures.Add("PublicAuthRateLimits:TokenPermitLimit must be positive");
 
         if (options.PasswordResetPermitLimit <= 0)
             failures.Add("PublicAuthRateLimits:PasswordResetPermitLimit must be positive");

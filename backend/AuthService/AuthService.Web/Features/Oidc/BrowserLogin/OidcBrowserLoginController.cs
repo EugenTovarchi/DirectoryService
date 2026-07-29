@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using AuthService.Core.RateLimiting;
 using AuthService.Web.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AuthService.Web.Features.Oidc.BrowserLogin;
 
@@ -37,6 +39,7 @@ public sealed class OidcLoginController : Controller
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting(PublicAuthRateLimitPolicies.LOGIN)]
     public async Task<IActionResult> Login(
         OidcLoginModel model,
         CancellationToken cancellationToken)

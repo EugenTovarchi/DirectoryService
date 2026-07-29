@@ -38,7 +38,7 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("sessions-viewer@example.com", "SessionsTest/Access");
+        OidcTestToken login = await LoginAsync("sessions-viewer@example.com", "SessionsTest/Access");
         DateTimeOffset firstSessionLastUsedAt = DateTimeOffset.UtcNow.AddMinutes(-5);
         OpenIddictTestSession firstSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(
@@ -103,24 +103,9 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<TokenResponse> LoginAsync(string email, string userAgent)
+    private Task<OidcTestToken> LoginAsync(string email, string userAgent)
     {
-        using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequest(email, "password123"))
-        };
-
-        request.Headers.UserAgent.ParseAdd(userAgent);
-
-        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email, userAgent: userAgent);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

@@ -86,15 +86,6 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         OpenIddictTestSession session =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, user.Id);
 
-        HttpResponseMessage loginResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(user.Email!, "password123"));
-        Envelope<TokenResponse> loginEnvelope =
-            await loginResponse.Content.ReadFromJsonAsync<Envelope<TokenResponse>>()
-            ?? throw new InvalidOperationException("Legacy login response is missing");
-        TokenResponse legacySession = loginEnvelope.Result
-            ?? throw new InvalidOperationException("Legacy login tokens are missing");
-
         await AppHttpClient.PostAsJsonAsync(
             "/api/auth/request-password-reset",
             new RequestPasswordResetRequest(user.Email!));
@@ -112,11 +103,6 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
             await OpenIddictSessionTestHelper.GetStatusAsync(Services, session);
         sessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
         sessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
-
-        HttpResponseMessage refreshResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/refresh",
-            new RefreshTokenRequest(legacySession.RefreshToken));
-        refreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -283,20 +269,16 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
 
     private async Task AssertUserCanLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        token.Should().NotBeNull();
     }
 
     private async Task AssertUserCannotLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        token.Should().BeNull();
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

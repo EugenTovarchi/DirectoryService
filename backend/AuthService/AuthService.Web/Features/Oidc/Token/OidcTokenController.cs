@@ -1,8 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using AuthService.Core.RateLimiting;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 
@@ -29,6 +31,7 @@ public sealed class OidcTokenController : Controller
     /// </summary>
     [HttpPost]
     [IgnoreAntiforgeryToken]
+    [EnableRateLimiting(PublicAuthRateLimitPolicies.TOKEN)]
     [SuppressMessage(
         "Security",
         "CA5391:Use antiforgery tokens in ASP.NET Core MVC controllers",

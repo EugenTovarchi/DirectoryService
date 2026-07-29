@@ -41,7 +41,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
 
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
-        TokenResponse adminLogin = await LoginAsync("admin-revoke-company-admin@example.com");
+        OidcTestToken adminLogin = await LoginAsync("admin-revoke-company-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{targetUser.Id}/revoke-sessions",
             adminLogin.AccessToken);
@@ -78,7 +78,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
 
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
-        TokenResponse adminLogin = await LoginAsync("admin-revoke-boundary-admin@example.com");
+        OidcTestToken adminLogin = await LoginAsync("admin-revoke-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{targetUser.Id}/revoke-sessions",
             adminLogin.AccessToken);
@@ -115,7 +115,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
 
         OpenIddictTestSession targetSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
-        TokenResponse adminLogin = await LoginAsync("admin-revoke-system-admin@example.com");
+        OidcTestToken adminLogin = await LoginAsync("admin-revoke-system-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{targetUser.Id}/revoke-sessions",
             adminLogin.AccessToken);
@@ -157,7 +157,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-revoke-viewer@example.com");
+        OidcTestToken login = await LoginAsync("admin-revoke-viewer@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{viewer.Id}/revoke-sessions",
             login.AccessToken);
@@ -181,7 +181,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-revoke-unknown-admin@example.com");
+        OidcTestToken login = await LoginAsync("admin-revoke-unknown-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{Guid.NewGuid()}/revoke-sessions",
             login.AccessToken);
@@ -205,7 +205,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-revoke-self-admin@example.com");
+        OidcTestToken login = await LoginAsync("admin-revoke-self-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{admin.Id}/revoke-sessions",
             login.AccessToken);
@@ -235,7 +235,7 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-revoke-empty-admin@example.com");
+        OidcTestToken login = await LoginAsync("admin-revoke-empty-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPostRequest(
             $"/api/users/{targetUser.Id}/revoke-sessions",
             login.AccessToken);
@@ -255,19 +255,9 @@ public sealed class RevokeUserSessionsTests : AuthServiceBaseTests
         return request;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

@@ -38,7 +38,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             companyId,
             AuthRoles.OPERATOR);
 
-        TokenResponse login = await LoginAsync("profile-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("profile-company-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/profile",
             login.AccessToken,
@@ -79,7 +79,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("profile-clear-admin@example.com");
+        OidcTestToken login = await LoginAsync("profile-clear-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/profile",
             login.AccessToken,
@@ -111,7 +111,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("profile-boundary-admin@example.com");
+        OidcTestToken login = await LoginAsync("profile-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/profile",
             login.AccessToken,
@@ -144,7 +144,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.TECHNICIAN);
 
-        TokenResponse login = await LoginAsync("profile-system-admin@example.com");
+        OidcTestToken login = await LoginAsync("profile-system-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/profile",
             login.AccessToken,
@@ -182,7 +182,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("profile-viewer@example.com");
+        OidcTestToken login = await LoginAsync("profile-viewer@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{viewer.Id}/profile",
             login.AccessToken,
@@ -204,7 +204,7 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("profile-unknown-admin@example.com");
+        OidcTestToken login = await LoginAsync("profile-unknown-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{Guid.NewGuid()}/profile",
             login.AccessToken,
@@ -240,19 +240,9 @@ public sealed class UpdateUserProfileTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

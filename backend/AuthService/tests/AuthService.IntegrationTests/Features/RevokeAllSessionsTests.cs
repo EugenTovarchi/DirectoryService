@@ -39,7 +39,7 @@ public sealed class RevokeAllSessionsTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("revoke-all-viewer@example.com");
+        OidcTestToken login = await LoginAsync("revoke-all-viewer@example.com");
         OpenIddictTestSession firstSession =
             await OpenIddictSessionTestHelper.CreateSessionAsync(Services, currentUser.Id);
         OpenIddictTestSession secondSession =
@@ -83,19 +83,9 @@ public sealed class RevokeAllSessionsTests : AuthServiceBaseTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

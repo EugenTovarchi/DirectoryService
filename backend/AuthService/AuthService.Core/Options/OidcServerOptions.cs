@@ -10,9 +10,10 @@ public sealed class OidcServerOptions
     public const string SECTION_NAME = "Oidc";
 
     /// <summary>
-    /// Позволяет вводить OpenIddict поэтапно, не ломая существующие custom login/refresh endpoints.
+    /// OpenIddict является единственным issuer пользовательских и service tokens.
+    /// Значение false допустимо только для специальных процессов без HTTP authentication surface.
     /// </summary>
-    public bool Enabled { get; init; }
+    public bool Enabled { get; init; } = true;
 
     /// <summary>
     /// Разрешает HTTP только для local Docker/TestServer.

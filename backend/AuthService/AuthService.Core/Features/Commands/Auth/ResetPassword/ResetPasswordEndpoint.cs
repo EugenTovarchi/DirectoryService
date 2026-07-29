@@ -59,7 +59,6 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly IOidcSessionService _sessionService;
-    private readonly IRefreshTokenRepository _legacyRefreshTokenRepository;
     private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
@@ -73,7 +72,6 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         UserManager<ApplicationUser> userManager,
         IPasswordResetTokenRepository passwordResetTokenRepository,
         IOidcSessionService sessionService,
-        IRefreshTokenRepository legacyRefreshTokenRepository,
         IOpaqueTokenService opaqueTokenService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
@@ -83,7 +81,6 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         _userManager = userManager;
         _passwordResetTokenRepository = passwordResetTokenRepository;
         _sessionService = sessionService;
-        _legacyRefreshTokenRepository = legacyRefreshTokenRepository;
         _opaqueTokenService = opaqueTokenService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
@@ -132,12 +129,6 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         await _passwordResetTokenRepository.RevokeActiveTokensForUserAsync(user.Id, cancellationToken);
         await _sessionService.RevokeAllSessionsAsync(
             user.Id,
-            cancellationToken);
-
-        // Legacy refresh tokens отзываются до удаления старого login/refresh flow.
-        await _legacyRefreshTokenRepository.RevokeActiveTokensForUserAsync(
-            user.Id,
-            revokedByIp: null,
             cancellationToken);
 
         UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(

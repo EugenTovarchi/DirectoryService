@@ -38,7 +38,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-company-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-role",
             login.AccessToken,
@@ -74,7 +74,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-boundary-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-role",
             login.AccessToken,
@@ -106,7 +106,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-system-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-system-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-role",
             login.AccessToken,
@@ -144,7 +144,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-permission-viewer@example.com");
+        OidcTestToken login = await LoginAsync("role-permission-viewer@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{viewer.Id}/change-role",
             login.AccessToken,
@@ -166,7 +166,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("role-unknown-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-unknown-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{Guid.NewGuid()}/change-role",
             login.AccessToken,
@@ -194,7 +194,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-invalid-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-invalid-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-role",
             login.AccessToken,
@@ -216,7 +216,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("role-self-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-self-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{admin.Id}/change-role",
             login.AccessToken,
@@ -247,7 +247,7 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("role-system-assign-admin@example.com");
+        OidcTestToken login = await LoginAsync("role-system-assign-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
             $"/api/users/{targetUser.Id}/change-role",
             login.AccessToken,
@@ -286,19 +286,9 @@ public sealed class ChangeUserRoleTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<IReadOnlyCollection<string>> GetUserRolesAsync(Guid userId)

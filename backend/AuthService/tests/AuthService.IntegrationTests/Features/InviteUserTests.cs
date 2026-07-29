@@ -35,7 +35,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Invite Admin",
             companyId,
             AuthRoles.COMPANY_ADMIN);
-        TokenResponse login = await LoginAsync("invite-admin@example.com");
+        OidcTestToken login = await LoginAsync("invite-admin@example.com");
 
         InviteUserRequest inviteRequest = new(
             "new-user@example.com",
@@ -116,7 +116,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Invite Reuse Admin",
             companyId,
             AuthRoles.COMPANY_ADMIN);
-        TokenResponse login = await LoginAsync("invite-reuse-admin@example.com");
+        OidcTestToken login = await LoginAsync("invite-reuse-admin@example.com");
 
         InviteUserResponse invitedUser = await InviteUserAsync(
             login.AccessToken,
@@ -191,7 +191,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Resend Invite Admin",
             companyId,
             AuthRoles.COMPANY_ADMIN);
-        TokenResponse login = await LoginAsync("resend-invite-admin@example.com");
+        OidcTestToken login = await LoginAsync("resend-invite-admin@example.com");
 
         InviteUserResponse invitedUser = await InviteUserAsync(
             login.AccessToken,
@@ -260,7 +260,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Resend Active User",
             companyId,
             AuthRoles.VIEWER);
-        TokenResponse login = await LoginAsync("resend-active-admin@example.com");
+        OidcTestToken login = await LoginAsync("resend-active-admin@example.com");
 
         using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{targetUser.Id}/resend-invite");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
@@ -286,7 +286,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Resend Other Company User",
             Guid.NewGuid(),
             AuthRoles.VIEWER);
-        TokenResponse login = await LoginAsync("resend-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("resend-company-admin@example.com");
 
         using HttpRequestMessage request = new(HttpMethod.Post, $"/api/users/{targetUser.Id}/resend-invite");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
@@ -323,7 +323,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Invite Viewer",
             companyId,
             AuthRoles.VIEWER);
-        TokenResponse login = await LoginAsync("invite-viewer@example.com");
+        OidcTestToken login = await LoginAsync("invite-viewer@example.com");
 
         InviteUserRequest inviteRequest = new(
             "viewer-invite-target@example.com",
@@ -353,7 +353,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Invite Company Admin",
             companyId,
             AuthRoles.COMPANY_ADMIN);
-        TokenResponse login = await LoginAsync("invite-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("invite-company-admin@example.com");
 
         InviteUserRequest inviteRequest = new(
             "another-company-user@example.com",
@@ -382,7 +382,7 @@ public sealed class InviteUserTests : AuthServiceBaseTests
             "Invite System Admin",
             Guid.NewGuid(),
             AuthRoles.SYSTEM_ADMIN);
-        TokenResponse login = await LoginAsync("invite-system-admin@example.com");
+        OidcTestToken login = await LoginAsync("invite-system-admin@example.com");
 
         Guid targetCompanyId = Guid.NewGuid();
         InviteUserRequest inviteRequest = new(
@@ -414,11 +414,9 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
     private async Task AssertUserCanLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        token.Should().NotBeNull();
     }
 
     private async Task<InviteUserResponse> InviteUserAsync(string accessToken, InviteUserRequest inviteRequest)
@@ -492,26 +490,14 @@ public sealed class InviteUserTests : AuthServiceBaseTests
 
     private async Task AssertUserCannotLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        token.Should().BeNull();
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

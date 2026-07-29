@@ -18,8 +18,8 @@ public sealed class PublicAuthRateLimitOptions
     /// <summary>Число login requests на один IP за окно.</summary>
     public int LoginPermitLimit { get; set; } = 10;
 
-    /// <summary>Число refresh requests на один IP за окно.</summary>
-    public int RefreshPermitLimit { get; set; } = 30;
+    /// <summary>Число OAuth token requests на один IP за окно.</summary>
+    public int TokenPermitLimit { get; set; } = 30;
 
     /// <summary>Число password-reset requests на один IP за окно.</summary>
     public int PasswordResetPermitLimit { get; set; } = 3;

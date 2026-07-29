@@ -33,7 +33,7 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
             "Audit Invite Admin",
             companyId,
             AuthRoles.COMPANY_ADMIN);
-        TokenResponse login = await LoginAsync("audit-invite-admin@example.com");
+        OidcTestToken login = await LoginAsync("audit-invite-admin@example.com");
 
         InviteUserResponse invitedUser = await InviteUserAsync(
             login.AccessToken,
@@ -99,7 +99,7 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
         await LoginAsync("audit-target@example.com");
 
-        TokenResponse login = await LoginAsync("audit-admin@example.com");
+        OidcTestToken login = await LoginAsync("audit-admin@example.com");
 
         await SendAuthorizedPatchAsync(
             $"/api/users/{targetUser.Id}/profile",
@@ -221,19 +221,9 @@ public sealed class AuthAuditTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

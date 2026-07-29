@@ -66,7 +66,6 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOidcSessionService _sessionService;
-    private readonly IRefreshTokenRepository _legacyRefreshTokenRepository;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserStatusCommand> _validator;
@@ -78,7 +77,6 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
     public ChangeUserStatusHandler(
         UserManager<ApplicationUser> userManager,
         IOidcSessionService sessionService,
-        IRefreshTokenRepository legacyRefreshTokenRepository,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ChangeUserStatusCommand> validator,
@@ -86,7 +84,6 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
     {
         _userManager = userManager;
         _sessionService = sessionService;
-        _legacyRefreshTokenRepository = legacyRefreshTokenRepository;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -139,12 +136,6 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
             targetUser.Deactivate();
             await _sessionService.RevokeAllSessionsAsync(
                 targetUser.Id,
-                cancellationToken);
-
-            // До удаления legacy login/refresh старые sessions тоже нельзя оставлять пригодными.
-            await _legacyRefreshTokenRepository.RevokeActiveTokensForUserAsync(
-                targetUser.Id,
-                revokedByIp: null,
                 cancellationToken);
         }
 
