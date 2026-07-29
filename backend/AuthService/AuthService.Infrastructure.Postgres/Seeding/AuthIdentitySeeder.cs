@@ -16,7 +16,6 @@ public sealed class AuthIdentitySeeder
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly LocalViewerSeedOptions _localViewerOptions;
     private readonly LocalUsersSeedOptions _localUsersOptions;
     private readonly ILogger<AuthIdentitySeeder> _logger;
 
@@ -25,7 +24,6 @@ public sealed class AuthIdentitySeeder
         RoleManager<ApplicationRole> roleManager,
         UserManager<ApplicationUser> userManager,
         IHostEnvironment hostEnvironment,
-        IOptions<LocalViewerSeedOptions> localViewerOptions,
         IOptions<LocalUsersSeedOptions> localUsersOptions,
         ILogger<AuthIdentitySeeder> logger)
     {
@@ -33,7 +31,6 @@ public sealed class AuthIdentitySeeder
         _roleManager = roleManager;
         _userManager = userManager;
         _hostEnvironment = hostEnvironment;
-        _localViewerOptions = localViewerOptions.Value;
         _localUsersOptions = localUsersOptions.Value;
         _logger = logger;
     }
@@ -54,25 +51,7 @@ public sealed class AuthIdentitySeeder
 
     private async Task SeedConfiguredLocalUsersAsync()
     {
-        var configuredUsers = new List<LocalUserSeedDefinition>();
-
-        if (_localViewerOptions.Enabled)
-        {
-            configuredUsers.Add(new LocalUserSeedDefinition
-            {
-                Email = _localViewerOptions.Email,
-                Password = _localViewerOptions.Password,
-                DisplayName = _localViewerOptions.DisplayName,
-                Role = AuthRoles.VIEWER
-            });
-        }
-
-        if (_localUsersOptions.Enabled)
-        {
-            configuredUsers.AddRange(_localUsersOptions.Users);
-        }
-
-        if (configuredUsers.Count == 0)
+        if (!_localUsersOptions.Enabled)
         {
             return;
         }
@@ -87,7 +66,7 @@ public sealed class AuthIdentitySeeder
 
         var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (LocalUserSeedDefinition configuredUser in configuredUsers)
+        foreach (LocalUserSeedDefinition configuredUser in _localUsersOptions.Users)
         {
             string email = configuredUser.Email.Trim();
             if (!emails.Add(email))

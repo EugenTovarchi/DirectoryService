@@ -54,7 +54,7 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
     }
 
     [Fact]
-    public async Task SeedAsync_When_Configured_Viewer_Has_No_Roles_Should_Assign_Viewer_Role()
+    public async Task SeedAsync_When_Configured_User_Has_No_Roles_Should_Assign_Configured_Role()
     {
         // Arrange
         const string email = "local-viewer-repair@tests.local";
@@ -82,17 +82,23 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
                 "Failed to create local viewer repair test user");
         }
 
-        var viewerOptions = new LocalViewerSeedOptions
+        var usersOptions = new LocalUsersSeedOptions
         {
             Enabled = true,
-            Email = email,
             Password = configuredPassword,
-            DisplayName = "Configured Viewer"
+            Users = new List<LocalUserSeedDefinition>
+            {
+                new LocalUserSeedDefinition
+                {
+                    Email = email,
+                    DisplayName = "Configured Viewer",
+                    Role = AuthRoles.VIEWER
+                }
+            }
         };
         AuthIdentitySeeder repairSeeder = CreateSeeder(
             scope.ServiceProvider,
-            viewerOptions,
-            new LocalUsersSeedOptions());
+            usersOptions);
 
         // Act
         await repairSeeder.SeedAsync();
@@ -169,7 +175,6 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
 
         AuthIdentitySeeder seeder = CreateSeeder(
             scope.ServiceProvider,
-            new LocalViewerSeedOptions(),
             new LocalUsersSeedOptions
             {
                 Enabled = true,
@@ -214,7 +219,6 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
 
     private static AuthIdentitySeeder CreateSeeder(
         IServiceProvider serviceProvider,
-        LocalViewerSeedOptions viewerOptions,
         LocalUsersSeedOptions usersOptions)
     {
         return new AuthIdentitySeeder(
@@ -222,7 +226,6 @@ public sealed class AuthIdentitySeedTests : AuthServiceBaseTests
             serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>(),
             serviceProvider.GetRequiredService<UserManager<ApplicationUser>>(),
             serviceProvider.GetRequiredService<IHostEnvironment>(),
-            Options.Create(viewerOptions),
             Options.Create(usersOptions),
             serviceProvider.GetRequiredService<ILogger<AuthIdentitySeeder>>());
     }

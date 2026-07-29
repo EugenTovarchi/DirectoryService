@@ -13,14 +13,11 @@ namespace AuthService.Web.Swagger;
 /// </summary>
 public sealed class LoginRequestSchemaFilter : ISchemaFilter
 {
-    private readonly LocalViewerSeedOptions _viewerOptions;
     private readonly LocalUsersSeedOptions _usersOptions;
 
     public LoginRequestSchemaFilter(
-        IOptions<LocalViewerSeedOptions> viewerOptions,
         IOptions<LocalUsersSeedOptions> usersOptions)
     {
-        _viewerOptions = viewerOptions.Value;
         _usersOptions = usersOptions.Value;
     }
 
@@ -58,12 +55,6 @@ public sealed class LoginRequestSchemaFilter : ISchemaFilter
             {
                 return user.Email;
             }
-        }
-
-        if (_viewerOptions.Enabled &&
-            !string.IsNullOrWhiteSpace(_viewerOptions.Email))
-        {
-            return _viewerOptions.Email;
         }
 
         return null;

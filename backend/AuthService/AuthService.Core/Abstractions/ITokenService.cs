@@ -9,11 +9,6 @@ public interface ITokenService
         IReadOnlyCollection<string> roles,
         IReadOnlyCollection<string> permissions);
 
-    AccessTokenResult CreateServiceAccessToken(
-        string clientId,
-        string serviceName,
-        IReadOnlyCollection<string> servicePermissions);
-
     RefreshTokenResult CreateRefreshToken();
 
     string HashRefreshToken(string rawRefreshToken);

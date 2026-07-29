@@ -32,9 +32,6 @@ public static class PostgresDependencyInjection
             .AddRepositories()
             .AddEmailOutbox(configuration);
 
-        services.Configure<LocalViewerSeedOptions>(
-            configuration.GetSection(LocalViewerSeedOptions.SECTION_NAME));
-
         services.AddSingleton<
             IValidateOptions<LocalUsersSeedOptions>,
             LocalUsersSeedOptionsValidator>();
