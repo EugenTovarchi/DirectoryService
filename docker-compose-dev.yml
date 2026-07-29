@@ -16,6 +16,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
+      - Jwt__Issuer=https://localhost:5001/
+      - Jwt__Audience=directory-service
+      - Jwt__MetadataAddress=http://auth-service:8003/.well-known/openid-configuration
+      - Jwt__RequireHttpsMetadata=false
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,6 +97,10 @@ services:
       - FileService.Development.env
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      Jwt__Issuer: https://localhost:5001/
+      Jwt__Audience: file-service
+      Jwt__MetadataAddress: http://auth-service:8003/.well-known/openid-configuration
+      Jwt__RequireHttpsMetadata: "false"
     depends_on:
       - postgres
       - redis
@@ -113,9 +121,14 @@ services:
         - nuget_username
         - nuget_password
     ports:
-      - "8003:8003"
+      # Direct development port доступен только с этой машины.
+      - "127.0.0.1:8003:8003"
     env_file:
       - AuthService.Development.env
+    environment:
+      # Только local Docker: AuthService принимает исходную HTTPS-схему от Nginx.
+      # Это нужно для корректных OIDC URLs и не используется как production proxy policy.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     depends_on:
       auth-service-migrator:
         condition: service_completed_successfully
@@ -251,10 +264,17 @@ services:
   nginx:
     image: nginx:1.29.4-alpine
     container_name: backend-nginx
+    profiles:
+      - proxy
     ports:
-      - "8080:80"
+      # Local reverse proxy не публикуется в локальную сеть.
+      - "127.0.0.1:8080:80"
+      # Порт совпадает с Oidc:Issuer=https://localhost:5001/.
+      - "127.0.0.1:5001:443"
     volumes:
       - D:/Projects/DirectoryService/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Development certificate и private key создаются scripts/prepare-nginx-https.ps1 вне Git.
+      - D:/docker-data/backend/nginx/certificates:/etc/nginx/certificates:ro
       - D:/docker-data/backend/nginx/logs:/var/log/nginx
 
 
