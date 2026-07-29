@@ -59,31 +59,44 @@ public sealed class ChangeUserStatusValidator : AbstractValidator<ChangeUserStat
     }
 }
 
+/// <summary>
+/// Изменяет статус пользователя и отзывает его OAuth/OIDC sessions при деактивации.
+/// </summary>
 public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetailsResponse, ChangeUserStatusCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
+    private readonly IRefreshTokenRepository _legacyRefreshTokenRepository;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserStatusCommand> _validator;
     private readonly ILogger<ChangeUserStatusHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler изменения статуса пользователя.
+    /// </summary>
     public ChangeUserStatusHandler(
         UserManager<ApplicationUser> userManager,
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
+        IRefreshTokenRepository legacyRefreshTokenRepository,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ChangeUserStatusCommand> validator,
         ILogger<ChangeUserStatusHandler> logger)
     {
         _userManager = userManager;
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
+        _legacyRefreshTokenRepository = legacyRefreshTokenRepository;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Активирует или деактивирует пользователя в допустимой company boundary.
+    /// При деактивации отзывает все его OpenIddict authorizations и tokens.
+    /// </summary>
     public async Task<Result<CompanyUserDetailsResponse, Failure>> Handle(
         ChangeUserStatusCommand command,
         CancellationToken cancellationToken)
@@ -124,7 +137,12 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         else
         {
             targetUser.Deactivate();
-            await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+            await _sessionService.RevokeAllSessionsAsync(
+                targetUser.Id,
+                cancellationToken);
+
+            // До удаления legacy login/refresh старые sessions тоже нельзя оставлять пригодными.
+            await _legacyRefreshTokenRepository.RevokeActiveTokensForUserAsync(
                 targetUser.Id,
                 revokedByIp: null,
                 cancellationToken);

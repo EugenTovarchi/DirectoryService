@@ -13,6 +13,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -70,6 +71,52 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
 
         await AssertUserCannotLoginAsync("password-reset-user@example.com", "password123");
         await AssertUserCanLoginAsync("password-reset-user@example.com", "newpassword123");
+    }
+
+    [Fact]
+    public async Task ResetPassword_With_Active_Oidc_Session_Should_Revoke_Session()
+    {
+        // Arrange
+        ApplicationUser user = await CreateIdentityUserAsync(
+            "password-reset-session@example.com",
+            "passwordresetsession",
+            "Password Reset Session",
+            Guid.NewGuid(),
+            AuthRoles.VIEWER);
+        OpenIddictTestSession session =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, user.Id);
+
+        HttpResponseMessage loginResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(user.Email!, "password123"));
+        Envelope<TokenResponse> loginEnvelope =
+            await loginResponse.Content.ReadFromJsonAsync<Envelope<TokenResponse>>()
+            ?? throw new InvalidOperationException("Legacy login response is missing");
+        TokenResponse legacySession = loginEnvelope.Result
+            ?? throw new InvalidOperationException("Legacy login tokens are missing");
+
+        await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/request-password-reset",
+            new RequestPasswordResetRequest(user.Email!));
+        string resetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
+
+        // Act
+        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/reset-password",
+            new ResetPasswordRequest(resetToken, "newpassword123"));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        OpenIddictTestSessionStatus sessionStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, session);
+        sessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        sessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+
+        HttpResponseMessage refreshResponse = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(legacySession.RefreshToken));
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

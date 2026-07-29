@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -24,6 +25,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
     [Fact]
     public async Task ChangeUserStatus_By_CompanyAdmin_Should_Deactivate_Own_Company_User()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
             "status-company-admin@example.com",
@@ -37,6 +39,8 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             "Status Operator",
             companyId,
             AuthRoles.OPERATOR);
+        OpenIddictTestSession targetSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
         TokenResponse targetLogin = await LoginAsync("status-operator@example.com");
 
         TokenResponse login = await LoginAsync("status-company-admin@example.com");
@@ -45,8 +49,10 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             login.AccessToken,
             new ChangeUserStatusRequest(false));
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         CompanyUserDetailsResponse changedUser = await ReadUserDetailsAsync(response);
@@ -60,10 +66,10 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             .SingleAsync());
         savedUserIsActive.Should().BeFalse();
 
-        List<RefreshToken> targetTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens
-            .Where(token => token.UserId == targetUser.Id)
-            .ToListAsync());
-        targetTokens.Should().OnlyContain(token => token.RevokedAt != null);
+        OpenIddictTestSessionStatus targetSessionStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, targetSession);
+        targetSessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        targetSessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
 
         HttpResponseMessage refreshResponse = await AppHttpClient.PostAsJsonAsync(
             "/api/auth/refresh",
@@ -74,6 +80,7 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
     [Fact]
     public async Task ChangeUserStatus_By_CompanyAdmin_For_Another_Company_User_Should_Return_NotFound()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         Guid anotherCompanyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
@@ -88,7 +95,8 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             "Status Other Company",
             anotherCompanyId,
             AuthRoles.VIEWER);
-        await LoginAsync("status-other-company@example.com");
+        OpenIddictTestSession targetSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
 
         TokenResponse login = await LoginAsync("status-boundary-admin@example.com");
         using HttpRequestMessage request = CreateAuthorizedPatchRequest(
@@ -96,8 +104,10 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             login.AccessToken,
             new ChangeUserStatusRequest(false));
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         bool savedUserIsActive = await ExecuteInDb(dbContext => dbContext.Users
@@ -106,10 +116,10 @@ public sealed class ChangeUserStatusTests : AuthServiceBaseTests
             .SingleAsync());
         savedUserIsActive.Should().BeTrue();
 
-        List<RefreshToken> targetTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens
-            .Where(token => token.UserId == targetUser.Id)
-            .ToListAsync());
-        targetTokens.Should().OnlyContain(token => token.RevokedAt == null);
+        OpenIddictTestSessionStatus targetSessionStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, targetSession);
+        targetSessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
+        targetSessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
     }
 
     [Fact]
