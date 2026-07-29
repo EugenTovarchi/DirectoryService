@@ -60,7 +60,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly IOidcSessionService _sessionService;
     private readonly IRefreshTokenRepository _legacyRefreshTokenRepository;
-    private readonly ITokenService _tokenService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ResetPasswordCommand> _validator;
@@ -74,7 +74,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         IPasswordResetTokenRepository passwordResetTokenRepository,
         IOidcSessionService sessionService,
         IRefreshTokenRepository legacyRefreshTokenRepository,
-        ITokenService tokenService,
+        IOpaqueTokenService opaqueTokenService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ResetPasswordCommand> validator,
@@ -84,7 +84,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         _passwordResetTokenRepository = passwordResetTokenRepository;
         _sessionService = sessionService;
         _legacyRefreshTokenRepository = legacyRefreshTokenRepository;
-        _tokenService = tokenService;
+        _opaqueTokenService = opaqueTokenService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -109,7 +109,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        string tokenHash = _tokenService.HashRefreshToken(command.Request.Token);
+        string tokenHash = _opaqueTokenService.HashToken(command.Request.Token);
         PasswordResetToken? resetToken = await _passwordResetTokenRepository.GetByHashAsync(
             tokenHash,
             cancellationToken);

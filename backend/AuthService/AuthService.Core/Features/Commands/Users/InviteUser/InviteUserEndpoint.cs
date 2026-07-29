@@ -72,6 +72,9 @@ public sealed class InviteUserValidator : AbstractValidator<InviteUserCommand>
     }
 }
 
+/// <summary>
+/// Создаёт pending пользователя и одноразовое приглашение без использования JWT token service.
+/// </summary>
 public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, InviteUserCommand>
 {
     private const int INVITE_TOKEN_LIFETIME_DAYS = 3;
@@ -79,7 +82,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
-    private readonly ITokenService _tokenService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly InviteLinkFactory _inviteLinkFactory;
     private readonly IEmailOutboxRepository _emailOutboxRepository;
     private readonly IAuthAuditRepository _auditRepository;
@@ -87,11 +90,14 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
     private readonly IValidator<InviteUserCommand> _validator;
     private readonly ILogger<InviteUserHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler приглашения пользователя.
+    /// </summary>
     public InviteUserHandler(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         IUserInviteTokenRepository inviteTokenRepository,
-        ITokenService tokenService,
+        IOpaqueTokenService opaqueTokenService,
         InviteLinkFactory inviteLinkFactory,
         IEmailOutboxRepository emailOutboxRepository,
         IAuthAuditRepository auditRepository,
@@ -102,7 +108,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         _userManager = userManager;
         _roleManager = roleManager;
         _inviteTokenRepository = inviteTokenRepository;
-        _tokenService = tokenService;
+        _opaqueTokenService = opaqueTokenService;
         _inviteLinkFactory = inviteLinkFactory;
         _emailOutboxRepository = emailOutboxRepository;
         _auditRepository = auditRepository;
@@ -111,6 +117,9 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
         _logger = logger;
     }
 
+    /// <summary>
+    /// Проверяет company boundary, создаёт пользователя, opaque invite token и outbox message.
+    /// </summary>
     public async Task<Result<InviteUserResponse, Failure>> Handle(
         InviteUserCommand command,
         CancellationToken cancellationToken)
@@ -165,7 +174,7 @@ public sealed class InviteUserHandler : ICommandHandler<InviteUserResponse, Invi
 
         await _inviteTokenRepository.RevokeActiveTokensForUserAsync(invitedUser.Id, cancellationToken);
 
-        RefreshTokenResult inviteToken = _tokenService.CreateRefreshToken();
+        OpaqueToken inviteToken = _opaqueTokenService.CreateToken();
         DateTime inviteTokenExpiresAt = DateTime.UtcNow.AddDays(INVITE_TOKEN_LIFETIME_DAYS);
         Result<UserInviteToken, Error> inviteTokenResult = UserInviteToken.Create(
             invitedUser.Id,

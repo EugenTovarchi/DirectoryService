@@ -477,11 +477,11 @@ public sealed class InviteUserTests : AuthServiceBaseTests
         await using AsyncServiceScope scope = Services.CreateAsyncScope();
 
         AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        ITokenService tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        IOpaqueTokenService opaqueTokenService = scope.ServiceProvider.GetRequiredService<IOpaqueTokenService>();
         UserInviteToken inviteToken = UserInviteToken.Create(
             userId,
             createdByUserId,
-            tokenService.HashRefreshToken(rawInviteToken),
+            opaqueTokenService.HashToken(rawInviteToken),
             DateTime.UtcNow.AddSeconds(1)).Value;
 
         dbContext.UserInviteTokens.Add(inviteToken);

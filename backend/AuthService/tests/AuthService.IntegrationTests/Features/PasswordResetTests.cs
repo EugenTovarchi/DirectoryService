@@ -269,10 +269,10 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         await using AsyncServiceScope scope = Services.CreateAsyncScope();
 
         AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        ITokenService tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        IOpaqueTokenService opaqueTokenService = scope.ServiceProvider.GetRequiredService<IOpaqueTokenService>();
         PasswordResetToken resetToken = PasswordResetToken.Create(
             userId,
-            tokenService.HashRefreshToken(rawResetToken),
+            opaqueTokenService.HashToken(rawResetToken),
             DateTime.UtcNow.AddSeconds(1)).Value;
 
         dbContext.PasswordResetTokens.Add(resetToken);
