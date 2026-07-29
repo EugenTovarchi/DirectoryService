@@ -91,8 +91,18 @@ public sealed class OidcServerSeeder
         OidcClientOptions client,
         CancellationToken cancellationToken)
     {
-        if (await _applicationManager.FindByClientIdAsync(client.ClientId, cancellationToken) is not null)
+        object? existingApplication = await _applicationManager.FindByClientIdAsync(
+            client.ClientId,
+            cancellationToken);
+
+        if (existingApplication is not null)
+        {
+            await EnsurePermissionAsync(
+                existingApplication,
+                OpenIddictConstants.Permissions.Endpoints.Revocation,
+                cancellationToken);
             return;
+        }
 
         bool isConfidential = !string.IsNullOrEmpty(client.ClientSecret);
         var descriptor = new OpenIddictApplicationDescriptor
@@ -113,6 +123,7 @@ public sealed class OidcServerSeeder
 
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
@@ -123,6 +134,32 @@ public sealed class OidcServerSeeder
         }
 
         await _applicationManager.CreateAsync(descriptor, cancellationToken);
+    }
+
+    /// <summary>
+    /// Добавляет отсутствующее protocol permission уже созданному client.
+    /// Это позволяет безопасно развивать конфигурацию без удаления client и его grants.
+    /// </summary>
+    private async Task EnsurePermissionAsync(
+        object application,
+        string permission,
+        CancellationToken cancellationToken)
+    {
+        var descriptor = new OpenIddictApplicationDescriptor();
+        await _applicationManager.PopulateAsync(
+            descriptor,
+            application,
+            cancellationToken);
+
+        if (!descriptor.Permissions.Add(permission))
+        {
+            return;
+        }
+
+        await _applicationManager.UpdateAsync(
+            application,
+            descriptor,
+            cancellationToken);
     }
 
     /// <summary>

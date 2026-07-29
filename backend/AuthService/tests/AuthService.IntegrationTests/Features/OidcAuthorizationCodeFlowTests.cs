@@ -134,8 +134,7 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
                 "access_token",
                 out JsonElement accessTokenElement))
         {
-            throw new InvalidOperationException(
-                $"Access token is missing. Token response: {tokenResponseBody}");
+            throw new InvalidOperationException("Access token is missing");
         }
 
         string accessToken = accessTokenElement
@@ -178,6 +177,32 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
             new FormUrlEncodedContent(refreshForm));
         using JsonDocument refreshDocument = JsonDocument.Parse(
             await refreshResponse.Content.ReadAsStringAsync());
+        string rotatedRefreshToken = refreshDocument.RootElement
+            .GetProperty("refresh_token")
+            .GetString()
+            ?? throw new InvalidOperationException("Rotated refresh token is missing");
+
+        var revocationForm = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["client_id"] = clientId,
+            ["token"] = rotatedRefreshToken,
+            ["token_type_hint"] = OpenIddictConstants.TokenTypeHints.RefreshToken
+        };
+        using HttpResponseMessage revocationResponse = await client.PostAsync(
+            "/connect/revoke",
+            new FormUrlEncodedContent(revocationForm));
+
+        var revokedRefreshForm = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["grant_type"] = "refresh_token",
+            ["client_id"] = clientId,
+            ["refresh_token"] = rotatedRefreshToken
+        };
+        using HttpResponseMessage revokedRefreshTokenResponse = await client.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(revokedRefreshForm));
+        using JsonDocument revokedRefreshTokenDocument = JsonDocument.Parse(
+            await revokedRefreshTokenResponse.Content.ReadAsStringAsync());
 
         using HttpResponseMessage reusedRefreshTokenResponse = await client.PostAsync(
             "/connect/token",
@@ -274,6 +299,11 @@ public sealed class OidcAuthorizationCodeFlowTests : AuthServiceBaseTests
         refreshDocument.RootElement.GetProperty("refresh_token").GetString()
             .Should().NotBeNullOrWhiteSpace()
             .And.NotBe(refreshToken);
+
+        revocationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        revokedRefreshTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        revokedRefreshTokenDocument.RootElement.GetProperty("error").GetString()
+            .Should().Be("invalid_grant");
 
         reusedRefreshTokenResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         reusedRefreshTokenDocument.RootElement.GetProperty("error").GetString()

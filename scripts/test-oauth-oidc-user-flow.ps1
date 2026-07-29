@@ -5,7 +5,8 @@
 .DESCRIPTION
 Скрипт выполняет Authorization Code Flow с PKCE через AuthService, использует один
 access token в AuthService, DirectoryService и FileService, затем проверяет ротацию
-refresh token и запрет повторного применения старого refresh token.
+refresh token, стандартный `/connect/revoke` и запрет применения отозванного
+или уже использованного refresh token.
 
 BaseUri намеренно ограничен loopback HTTPS и использует обычную системную
 проверку TLS certificate. Пароль принимается как SecureString, а полученные
@@ -536,6 +537,51 @@ try {
     }
     finally {
         $refreshResponse.Dispose()
+    }
+
+    $revocationResponse = Send-Form `
+        -Client $client `
+        -Uri "/connect/revoke" `
+        -Values @{
+            client_id = $ClientId
+            token = $rotatedRefreshToken
+            token_type_hint = "refresh_token"
+        }
+
+    try {
+        Assert-StatusCode `
+            -Response $revocationResponse `
+            -Expected ([System.Net.HttpStatusCode]::OK) `
+            -Step "Refresh token revocation"
+    }
+    finally {
+        $revocationResponse.Dispose()
+    }
+
+    $revokedRefreshResponse = Send-Form `
+        -Client $client `
+        -Uri "/connect/token" `
+        -Values @{
+            grant_type = "refresh_token"
+            client_id = $ClientId
+            refresh_token = $rotatedRefreshToken
+        }
+
+    try {
+        Assert-StatusCode `
+            -Response $revokedRefreshResponse `
+            -Expected ([System.Net.HttpStatusCode]::BadRequest) `
+            -Step "Revoked refresh token"
+
+        $revokedRefreshErrorJson = $revokedRefreshResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $revokedRefreshError = $revokedRefreshErrorJson | ConvertFrom-Json
+
+        if ([string]$revokedRefreshError.error -ne "invalid_grant") {
+            throw "Revoked refresh token did not return invalid_grant."
+        }
+    }
+    finally {
+        $revokedRefreshResponse.Dispose()
     }
 
     $replayResponse = Send-Form `

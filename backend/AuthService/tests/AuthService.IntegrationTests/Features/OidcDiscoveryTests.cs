@@ -35,6 +35,8 @@ public sealed class OidcDiscoveryTests : AuthServiceBaseTests
             .Should().Be("https://auth-service.tests/connect/authorize");
         root.GetProperty("token_endpoint").GetString()
             .Should().Be("https://auth-service.tests/connect/token");
+        root.GetProperty("revocation_endpoint").GetString()
+            .Should().Be("https://auth-service.tests/connect/revoke");
         root.GetProperty("userinfo_endpoint").GetString()
             .Should().Be("https://auth-service.tests/connect/userinfo");
         root.GetProperty("grant_types_supported")

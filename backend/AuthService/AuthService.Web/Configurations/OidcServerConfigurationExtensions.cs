@@ -60,6 +60,10 @@ public static class OidcServerConfigurationExtensions
                 options.SetIssuer(new Uri(serverOptions.Issuer, UriKind.Absolute));
                 options.SetAuthorizationEndpointUris("/connect/authorize");
                 options.SetTokenEndpointUris("/connect/token");
+
+                // Client отзывает свой refresh token через стандартный OAuth endpoint.
+                // Уже выданный JWT access token продолжает работать до окончания lifetime.
+                options.SetRevocationEndpointUris("/connect/revoke");
                 options.SetUserInfoEndpointUris("/connect/userinfo");
 
                 // Authorization Code + PKCE — основной интерактивный flow.
