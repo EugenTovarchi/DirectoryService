@@ -25,8 +25,8 @@ namespace FileService.IntegrationTests.Infrastructure;
 
 public class FileServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public const string TEST_JWT_ISSUER = "24eye.auth";
-    public const string TEST_JWT_AUDIENCE = "24eye.backend";
+    public const string TEST_JWT_ISSUER = "https://auth-service.tests/";
+    public const string TEST_JWT_AUDIENCE = "file-service";
     public const string TEST_JWT_SIGNING_KEY = "file-service-integration-test-signing-key";
 
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
