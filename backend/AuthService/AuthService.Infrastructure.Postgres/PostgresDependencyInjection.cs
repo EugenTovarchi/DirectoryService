@@ -101,7 +101,6 @@ public static class PostgresDependencyInjection
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IOidcSessionService, OpenIddictSessionService>();
         services.AddScoped<IUserInviteTokenRepository, UserInviteTokenRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();

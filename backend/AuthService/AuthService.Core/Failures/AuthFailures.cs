@@ -9,11 +9,6 @@ public static class AuthFailures
         return Errors.User.InvalidCredentials().ToFailure();
     }
 
-    public static Failure InvalidRefreshToken()
-    {
-        return InvalidCredentials();
-    }
-
     public static Failure InvalidAuthenticatedUser()
     {
         return InvalidCredentials();

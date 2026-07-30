@@ -32,8 +32,6 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public Guid? CurrentCompanyId { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
-    public ICollection<RefreshToken> RefreshTokens { get; } =
-        new List<RefreshToken>();
 
     public void ChangeDisplayName(DisplayName? displayName)
     {

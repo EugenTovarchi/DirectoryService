@@ -14,7 +14,4 @@ public static class IdentityFieldLimits
     public const int ROLE_DESCRIPTION_MAX_LENGTH = 500;
     public const int PERMISSION_CODE_MAX_LENGTH = 120;
     public const int PERMISSION_DESCRIPTION_MAX_LENGTH = 500;
-    public const int REFRESH_TOKEN_HASH_MAX_LENGTH = 512;
-    public const int IP_ADDRESS_MAX_LENGTH = 64;
-    public const int USER_AGENT_MAX_LENGTH = 512;
 }
