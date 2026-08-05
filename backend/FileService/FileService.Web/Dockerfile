@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         apt-get -o Acquire::Retries=5 -o Acquire::https::Timeout=30 \
             --fix-broken install -y \
         && apt-get -o Acquire::Retries=5 -o Acquire::https::Timeout=30 \
-            install -y --no-install-recommends ffmpeg \
+            install -y --no-install-recommends curl ffmpeg \
         && break; \
         if [ "$attempt" = 3 ]; then exit 1; fi; \
         sleep $((attempt * 5)); \

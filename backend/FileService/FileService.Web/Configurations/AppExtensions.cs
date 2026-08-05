@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 using SharedService.Framework.EndpointSettings;
 using SharedService.Framework.Middlewares;
@@ -15,6 +16,16 @@ public static class AppExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
+
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
+        {
+            Predicate = registration => registration.Tags.Contains(FileServiceHealthChecks.LIVE_TAG)
+        }).AllowAnonymous();
+
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = registration => registration.Tags.Contains(FileServiceHealthChecks.READY_TAG)
+        }).AllowAnonymous();
 
         if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
         {
