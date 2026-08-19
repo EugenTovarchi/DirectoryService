@@ -5,5 +5,5 @@ public sealed record VideoReady(
     Guid TargetEntityId,
     string TargetEntityType,
     string HlsKey,
-    string CorrelationId,
+    string? CorrelationId,
     DateTimeOffset ReadyAtUtc);
