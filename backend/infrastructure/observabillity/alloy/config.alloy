@@ -60,6 +60,7 @@ loki.process "logs" {
       json_trace_id       = "TraceId",
       json_span_id        = "SpanId",
       json_correlation_id = "CorrelationId",
+      json_video_process_id = "VideoProcessId",
       json_request_path   = "RequestPath",
       json_http_method    = "RequestMethod",
       json_status_code    = "StatusCode",
@@ -78,6 +79,7 @@ loki.process "logs" {
       property_trace_id       = "TraceId",
       property_span_id        = "SpanId",
       property_correlation_id = "CorrelationId",
+      property_video_process_id = "VideoProcessId",
       property_request_path   = "RequestPath",
       property_http_method    = "RequestMethod",
       property_status_code    = "StatusCode",
@@ -127,6 +129,11 @@ loki.process "logs" {
   }
 
   stage.template {
+    source   = "metadata_video_process_id"
+    template = "{{ if .property_video_process_id }}{{ .property_video_process_id }}{{ else if .json_video_process_id }}{{ .json_video_process_id }}{{ end }}"
+  }
+
+  stage.template {
     source   = "metadata_request_path"
     template = "{{ if .property_request_path }}{{ .property_request_path }}{{ else if .json_request_path }}{{ .json_request_path }}{{ end }}"
   }
@@ -163,6 +170,7 @@ loki.process "logs" {
       trace_id       = "metadata_trace_id",
       span_id        = "metadata_span_id",
       correlation_id = "metadata_correlation_id",
+      video_process_id = "metadata_video_process_id",
       request_path   = "metadata_request_path",
       http_method    = "metadata_http_method",
       status_code    = "metadata_status_code",
