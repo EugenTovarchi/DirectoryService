@@ -7,7 +7,7 @@ public interface IVideoProcessingScheduler
 {
     Task<UnitResult<Error>> ScheduleProcessingAsync(
         Guid videoAssetId,
-        string correlationId,
+        Guid videoProcessId,
         DateTimeOffset? startAt = null,
         CancellationToken cancellationToken = default);
 }

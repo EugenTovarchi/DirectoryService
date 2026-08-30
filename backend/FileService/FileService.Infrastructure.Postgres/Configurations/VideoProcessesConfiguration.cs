@@ -15,7 +15,6 @@ public class VideoProcessesConfiguration : IEntityTypeConfiguration<VideoProcess
 
         builder.Property(v => v.Id).HasColumnName("id");
         builder.Property(v => v.VideoAssetId).HasColumnName("video_asset_id");
-        builder.Property(v => v.CorrelationId).HasColumnName("correlation_id").HasMaxLength(128);
 
         builder.Property(m => m.RawKey)
             .HasConversion(

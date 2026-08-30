@@ -54,7 +54,7 @@ public sealed class VideoProcessingRecoveryService(
             {
                 var scheduleResult = await scheduler.ScheduleProcessingAsync(
                     process.VideoAssetId,
-                    process.CorrelationId,
+                    process.VideoProcessId,
                     process.NextRetryAt.HasValue
                         ? new DateTimeOffset(DateTime.SpecifyKind(process.NextRetryAt.Value, DateTimeKind.Utc))
                         : null,

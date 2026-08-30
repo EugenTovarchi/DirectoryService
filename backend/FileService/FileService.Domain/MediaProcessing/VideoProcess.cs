@@ -6,8 +6,6 @@ namespace FileService.Domain.MediaProcessing;
 
 public sealed class VideoProcess
 {
-    public const int MAX_CORRELATION_ID_LENGTH = 128;
-
     private static readonly (string Name, double Progress)[] _stepsProgress =
     [
         (StepNames.Initialize, 0),
@@ -29,7 +27,6 @@ public sealed class VideoProcess
 
     public Guid Id { get; private set; }
     public Guid VideoAssetId { get; private set; }
-    public string CorrelationId { get; private set; } = string.Empty;
 
     // Исходный файл в S3 хранилище.
     public StorageKey RawKey { get; private set; }
@@ -73,8 +70,7 @@ public sealed class VideoProcess
     public static Result<VideoProcess, Error> Create(
         Guid videoAssetId,
         StorageKey rawKey,
-        int maxRetries = 3,
-        string? correlationId = null)
+        int maxRetries = 3)
     {
         if (rawKey is null)
             return Error.Validation("videoProcess.rawKey.invalid", "RawKey is required");
@@ -85,20 +81,11 @@ public sealed class VideoProcess
         if (maxRetries < 0)
             return Error.Validation("processing.max.retries.invalid", "Max retries must not be negative");
 
-        if (correlationId?.Length > MAX_CORRELATION_ID_LENGTH)
-        {
-            return Error.Validation("processing.correlation.id.invalid",
-                $"Correlation id must not exceed {MAX_CORRELATION_ID_LENGTH} characters");
-        }
-
         var process = new VideoProcess
         {
             Id = Guid.NewGuid(),
             RawKey = rawKey,
             VideoAssetId = videoAssetId,
-            CorrelationId = string.IsNullOrWhiteSpace(correlationId)
-                ? Guid.NewGuid().ToString()
-                : correlationId,
             Status = VideoProcessStatus.PENDING,
             TotalProgress = 0,
             MaxRetries = maxRetries,

@@ -23,7 +23,7 @@ public class VideoProcessingScheduler : IVideoProcessingScheduler
 
     public async Task<UnitResult<Error>> ScheduleProcessingAsync(
         Guid videoAssetId,
-        string correlationId,
+        Guid videoProcessId,
         DateTimeOffset? startAt = null,
         CancellationToken cancellationToken = default)
     {
@@ -67,7 +67,7 @@ public class VideoProcessingScheduler : IVideoProcessingScheduler
                     .ForJob(jobKey)
                     .StartAt(scheduledAt)
                     .WithSimpleSchedule(schedule => schedule.WithMisfireHandlingInstructionFireNow())
-                    .UsingJobData("CorrelationId", correlationId)
+                    .UsingJobData("VideoProcessId", videoProcessId.ToString())
                     .Build();
 
                 await scheduler.ScheduleJob(recoveryTrigger, cancellationToken);
@@ -82,8 +82,8 @@ public class VideoProcessingScheduler : IVideoProcessingScheduler
             var job = JobBuilder.Create<VideoProcessingJob>()
                 .WithIdentity(jobKey)
                 .UsingJobData("VideoAssetId", videoAssetId.ToString())
+                .UsingJobData("VideoProcessId", videoProcessId.ToString())
                 .UsingJobData("AttemptNumber", "1")
-                .UsingJobData("CorrelationId", correlationId)
                 .StoreDurably() // Задача сохраняется даже без триггеров
                 .RequestRecovery() // Восстанавливать при перезапуске
                 .Build();

@@ -50,6 +50,11 @@ public class ProcessingPipeline : IProcessingPipeline
             return contextResult.Error;
 
         ProcessingContext processingContext = contextResult.Value;
+        using IDisposable? logScope = _logger.BeginScope(new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["VideoProcessId"] = processingContext.VideoProcess.Id,
+            ["VideoAssetId"] = processingContext.VideoAsset.Id,
+        });
 
         UnitResult<Error> allStepExecutionResult = await ExecuteAllStepsAsync(processingContext, cancellationToken);
         if (allStepExecutionResult.IsFailure)
@@ -192,12 +197,18 @@ public class ProcessingPipeline : IProcessingPipeline
 
             _videoProcessesRepository.Add(videoProcess);
 
-            _logger.LogInformation("Created video process for video asset {VideoAssetId}", videoAssetId);
+            _logger.LogInformation(
+                "Created video process {VideoProcessId} for video asset {VideoAssetId}",
+                videoProcess.Id,
+                videoAssetId);
         }
         else
         {
             videoProcess = processResult.Value;
-            _logger.LogInformation("Attached existing video process for video asset {VideoAssetId}", videoAssetId);
+            _logger.LogInformation(
+                "Attached existing video process {VideoProcessId} for video asset {VideoAssetId}",
+                videoProcess.Id,
+                videoAssetId);
 
             if (videoProcess.Status == VideoProcessStatus.FAILED && videoProcess.CanRetry())
             {
@@ -263,6 +274,7 @@ public class ProcessingPipeline : IProcessingPipeline
         using Activity? activity = VideoProcessingTelemetry.ActivitySource.StartActivity(
             $"video.processing.step.{step.StepName}");
         activity?.SetTag("video.asset.id", context.VideoAsset.Id);
+        activity?.SetTag("video.process.id", context.VideoProcess.Id);
         activity?.SetTag("video.processing.step", step.StepName);
 
         Result<ProcessingContext, Error> result;
@@ -342,13 +354,13 @@ public class ProcessingPipeline : IProcessingPipeline
             context.VideoAsset.OwnerId,
             context.VideoAsset.OwnerType,
             context.VideoProcess.HlsKey.Value,
-            context.VideoProcess.CorrelationId,
-            DateTimeOffset.UtcNow);
+            CorrelationId: null,
+            ReadyAtUtc: DateTimeOffset.UtcNow);
 
         _logger.LogDebug(
-            "Publishing VideoReady event for video asset {VideoAssetId} with correlation {CorrelationId}",
-            videoAssetId,
-            context.VideoProcess.CorrelationId);
+            "Publishing VideoReady event for video process {VideoProcessId} and video asset {VideoAssetId}",
+            context.VideoProcess.Id,
+            videoAssetId);
         try
         {
             await _messageBus.PublishAsync(videoReadyEvent);

@@ -21,9 +21,6 @@ namespace FileService.Core.Features;
 
 public sealed class CompleteMultipartUploadEndpoint : IEndpoint
 {
-    private const string CORRELATION_ID_HEADER_NAME = "X-Correlation-Id";
-    private const int MAX_CORRELATION_ID_LENGTH = 128;
-
     /// <summary>
     /// Завершает загрузку файла в S3.
     /// Выполняет отправку Id файла в DS сервис.
@@ -36,24 +33,10 @@ public sealed class CompleteMultipartUploadEndpoint : IEndpoint
             async Task<EndpointResult> (
                 [FromBody] CompleteMultipartUploadRequest request,
                 [FromServices] CompleteMultipartUploadHandler handler,
-                HttpContext httpContext,
                 CancellationToken cancellationToken) => await handler.Handle(
                 request,
-                GetCorrelationId(httpContext),
                 cancellationToken))
             .RequireAuthorization(FileAuthorizationPolicies.FILES_UPLOAD);
-    }
-
-    private static string GetCorrelationId(HttpContext httpContext)
-    {
-        string? headerValue = httpContext.Request.Headers[CORRELATION_ID_HEADER_NAME].FirstOrDefault();
-        string correlationId = string.IsNullOrWhiteSpace(headerValue)
-            ? httpContext.TraceIdentifier
-            : headerValue;
-
-        return correlationId.Length <= MAX_CORRELATION_ID_LENGTH
-            ? correlationId
-            : correlationId[..MAX_CORRELATION_ID_LENGTH];
     }
 }
 
@@ -93,10 +76,9 @@ public sealed class CompleteMultipartUploadHandler
 
     public async Task<UnitResult<Failure>> Handle(
         CompleteMultipartUploadRequest request,
-        string correlationId,
         CancellationToken cancellationToken)
     {
-        Guid? videoAssetIdToSchedule = null;
+        Guid? videoProcessIdToSchedule = null;
 
         Result<MediaAsset, Error> mediaAssetResult =
             await _mediaAssetsRepository.GetBy(m => m.Id == request.MediaAssetId, cancellationToken);
@@ -203,13 +185,16 @@ public sealed class CompleteMultipartUploadHandler
                 Result<VideoProcess, Error> createVideoProcessResult = VideoProcess.Create(
                     mediaAsset.Id,
                     mediaAsset.UploadKey,
-                    _videoProcessingPolicy.MaxRetries,
-                    correlationId);
+                    _videoProcessingPolicy.MaxRetries);
                 if (createVideoProcessResult.IsFailure)
                     return createVideoProcessResult.Error.ToFailure();
 
                 _videoProcessesRepository.Add(createVideoProcessResult.Value);
-                videoAssetIdToSchedule = createVideoProcessResult.Value.VideoAssetId;
+                videoProcessIdToSchedule = createVideoProcessResult.Value.Id;
+                _logger.LogInformation(
+                    "Created video process {VideoProcessId} for video asset {VideoAssetId}",
+                    createVideoProcessResult.Value.Id,
+                    mediaAsset.Id);
             }
 
             UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
@@ -230,18 +215,18 @@ public sealed class CompleteMultipartUploadHandler
             return Error.Failure("unexpected", "Unexpected error while completing multipart upload").ToFailure();
         }
 
-        if (videoAssetIdToSchedule.HasValue)
+        if (videoProcessIdToSchedule.HasValue)
         {
             UnitResult<Error> scheduleResult = await _videoProcessingScheduler.ScheduleProcessingAsync(
-                videoAssetIdToSchedule.Value,
-                correlationId,
+                mediaAsset.Id,
+                videoProcessIdToSchedule.Value,
                 startAt: null,
                 cancellationToken: cancellationToken);
             if (scheduleResult.IsFailure)
             {
                 _logger.LogError(
                     "Failed to schedule processing for video asset {VideoAssetId}. Error code: {ErrorCode}",
-                    videoAssetIdToSchedule.Value,
+                    mediaAsset.Id,
                     scheduleResult.Error.Code);
             }
         }
