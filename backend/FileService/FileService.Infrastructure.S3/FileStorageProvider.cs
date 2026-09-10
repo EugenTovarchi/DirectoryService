@@ -15,18 +15,24 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
 {
     private readonly IAmazonS3 _s3Client;
     private readonly S3Options _s3Options;
+    private readonly MultipartUploadOptions _multipartUploadOptions;
     private readonly SemaphoreSlim _requestsSemaphore;
     private readonly ILogger<FileStorageProvider> _log;
 
-    public FileStorageProvider(IAmazonS3 s3Client, IOptions<S3Options> s3Options, ILogger<FileStorageProvider> log)
+    public FileStorageProvider(
+        IAmazonS3 s3Client,
+        IOptions<S3Options> s3Options,
+        IOptions<MultipartUploadOptions> multipartUploadOptions,
+        ILogger<FileStorageProvider> log)
     {
         _s3Client = s3Client;
         _log = log;
         _s3Options = s3Options.Value;
+        _multipartUploadOptions = multipartUploadOptions.Value;
         _requestsSemaphore = new SemaphoreSlim(_s3Options.MaxConcurrentRequests);
     }
 
-    public async Task<Result<string, Error>> StartMultipartUploadAsync(
+    public async Task<Result<MultipartUploadInfo, Error>> StartMultipartUploadAsync(
         StorageKey storageKey,
         MediaData mediaData,
         CancellationToken cancellationToken = default)
@@ -35,12 +41,16 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         {
             var request = new InitiateMultipartUploadRequest
             {
-                BucketName = storageKey.Location, Key = storageKey.Value, ContentType = mediaData.ContentType.Value,
+                BucketName = storageKey.Location,
+                Key = storageKey.Value,
+                ContentType = mediaData.ContentType.Value,
             };
 
             var result = await _s3Client.InitiateMultipartUploadAsync(request, cancellationToken);
 
-            return result.UploadId;
+            return new MultipartUploadInfo(
+                result.UploadId,
+                DateTime.UtcNow.AddHours(_multipartUploadOptions.SessionExpirationHours));
         }
         catch (Exception ex)
         {
@@ -246,7 +256,9 @@ public class FileStorageProvider : IDisposable, IFileStorageProvider
         {
             var request = new AbortMultipartUploadRequest
             {
-                BucketName = storageKey.Location, Key = storageKey.Value, UploadId = uploadId
+                BucketName = storageKey.Location,
+                Key = storageKey.Value,
+                UploadId = uploadId
             };
 
             await _s3Client.AbortMultipartUploadAsync(request, cancellationToken);

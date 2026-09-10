@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Amazon.S3;
+using FileService.Contracts.Requests;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
@@ -86,6 +88,25 @@ public abstract class FileServiceBaseTests : IClassFixture<FileServiceTestWebFac
         }
 
         return bucketName;
+    }
+
+    /// <summary>
+    /// Отправляет start-запрос с новым ключом идемпотентности.
+    /// Для проверки повторного запроса вызывающий код может передать тот же ключ явно.
+    /// </summary>
+    protected async Task<HttpResponseMessage> SendStartMultipartUploadRequestAsync(
+        StartMultipartUploadRequest request,
+        CancellationToken cancellationToken = default,
+        string? idempotencyKey = null,
+        HttpClient? client = null)
+    {
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/files/multipart/start")
+        {
+            Content = JsonContent.Create(request),
+        };
+        httpRequest.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
+
+        return await (client ?? AppHttpClient).SendAsync(httpRequest, cancellationToken);
     }
 
     protected async Task<VideoAsset> CreateVideoAssetAsync(MediaStatus status,

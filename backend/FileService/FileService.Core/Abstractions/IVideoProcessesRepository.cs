@@ -25,6 +25,6 @@ public interface IVideoProcessesRepository
 }
 
 public sealed record RecoverableVideoProcess(
+    Guid VideoProcessId,
     Guid VideoAssetId,
-    string CorrelationId,
     DateTime? NextRetryAt);

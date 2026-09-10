@@ -106,8 +106,8 @@ public class VideoProcessesRepository(
                         && !process.IsCriticalError
                         && process.RetryCount < process.MaxRetries))
                 .Select(process => new RecoverableVideoProcess(
+                    process.Id,
                     process.VideoAssetId,
-                    process.CorrelationId,
                     process.NextRetryAt))
                 .ToListAsync(cancellationToken);
 

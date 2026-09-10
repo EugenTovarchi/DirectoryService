@@ -1,4 +1,4 @@
-using Amazon.S3;
+﻿using Amazon.S3;
 using FileService.Core.FilesStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +12,10 @@ public static class S3DependencyInjection
     public static IServiceCollection AddS3(this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<S3Options>(configuration.GetSection(nameof(S3Options)));
+        services.AddSingleton<IValidateOptions<S3Options>, S3OptionsValidator>();
+        services.AddOptions<S3Options>()
+            .Bind(configuration.GetSection(nameof(S3Options)))
+            .ValidateOnStart();
 
         services.AddScoped<IFileStorageProvider, FileStorageProvider>();
 

@@ -53,27 +53,6 @@
                 return;
             }
 
-            string? correlationId = jobDataMap["CorrelationId"]?.ToString();
-            if (string.IsNullOrWhiteSpace(correlationId))
-            {
-                correlationId = Guid.NewGuid().ToString();
-                _logger.LogWarning(
-                    "Missing CorrelationId in video job data for {VideoAssetId}; generated fallback {CorrelationId}",
-                    videoAssetId,
-                    correlationId);
-            }
-
-            using IDisposable? logScope = _logger.BeginScope(new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["CorrelationId"] = correlationId,
-                ["VideoAssetId"] = videoAssetId,
-            });
-            using Activity? activity = VideoProcessingTelemetry.ActivitySource.StartActivity(
-                "video.processing.job",
-                ActivityKind.Consumer);
-            activity?.SetTag("video.asset.id", videoAssetId);
-            activity?.SetTag("correlation.id", correlationId);
-
             int attemptNumber = int.TryParse(
                 jobDataMap["AttemptNumber"]?.ToString(),
                 NumberStyles.Integer,
@@ -82,10 +61,35 @@
                 ? parsedAttempt
                 : 1;
 
+            VideoProcess? scheduledProcess = await ResolveScheduledProcessAsync(
+                jobDataMap,
+                videoAssetId,
+                cancellationToken);
+
+            var scopeProperties = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["VideoAssetId"] = videoAssetId,
+                ["AttemptNumber"] = attemptNumber,
+            };
+            if (scheduledProcess is not null)
+                scopeProperties["VideoProcessId"] = scheduledProcess.Id;
+
+            using IDisposable? logScope = _logger.BeginScope(scopeProperties);
+            using Activity? activity = VideoProcessingTelemetry.ActivitySource.StartActivity(
+                "video.processing.job",
+                ActivityKind.Consumer,
+                default(ActivityContext));
+            activity?.SetTag("video.asset.id", videoAssetId);
+            activity?.SetTag("video.process.id", scheduledProcess?.Id);
+            activity?.SetTag("video.processing.attempt", attemptNumber);
+
             _logger.LogInformation(
-                "Starting video processing job attempt {AttemptNumber} for video asset {VideoAssetId}",
-                attemptNumber,
-                videoAssetId);
+                "Video processing attempt started with trace {TraceId} span {SpanId} for video process {VideoProcessId}, video asset {VideoAssetId}, attempt {AttemptNumber}",
+                activity?.TraceId.ToString(),
+                activity?.SpanId.ToString(),
+                scheduledProcess?.Id,
+                videoAssetId,
+                attemptNumber);
 
             try
             {
@@ -95,12 +99,9 @@
                 if (mediaAssetResult.IsFailure)
                 {
                     _logger.LogError("Video asset {VideoAssetId} not found", videoAssetId);
-                    var orphanedProcess = await _videoProcessesRepository.GetBy(
-                        process => process.VideoAssetId == videoAssetId,
-                        cancellationToken);
-                    if (orphanedProcess.IsSuccess)
+                    if (scheduledProcess is not null)
                     {
-                        orphanedProcess.Value.MarkAsPermanentlyFailed("Video asset not found");
+                        scheduledProcess.MarkAsPermanentlyFailed("Video asset not found");
                         await _transactionManager.SaveChangeAsync(cancellationToken);
                     }
 
@@ -116,12 +117,9 @@
                         "Video asset {VideoAssetId} cannot be processed in status {MediaStatus}; skipping job",
                         videoAssetId, mediaAsset.Status);
 
-                    var invalidAssetProcess = await _videoProcessesRepository.GetBy(
-                        process => process.VideoAssetId == videoAssetId,
-                        cancellationToken);
-                    if (invalidAssetProcess.IsSuccess)
+                    if (scheduledProcess is not null)
                     {
-                        invalidAssetProcess.Value.MarkAsPermanentlyFailed(
+                        scheduledProcess.MarkAsPermanentlyFailed(
                             $"Video asset status {mediaAsset.Status} does not allow processing");
                         await _transactionManager.SaveChangeAsync(cancellationToken);
                     }
@@ -131,12 +129,9 @@
                 }
 
                 // Проверяем текущий VideoProcess (если есть)
-                var existingProcess = await _videoProcessesRepository.GetBy(
-                    v => v.VideoAssetId == videoAssetId, cancellationToken);
-
-                if (existingProcess.IsSuccess)
+                if (scheduledProcess is not null)
                 {
-                    var process = existingProcess.Value;
+                    var process = scheduledProcess;
 
                     // Уже обработан
                     if (process.Status == VideoProcessStatus.SUCCEEDED)
@@ -345,12 +340,54 @@
                 .StartAt(nextRetryTime)
                 .WithSimpleSchedule(schedule => schedule.WithMisfireHandlingInstructionFireNow())
                 .UsingJobData("VideoAssetId", process.VideoAssetId.ToString())
+                .UsingJobData("VideoProcessId", process.Id.ToString())
                 .UsingJobData("AttemptNumber", nextAttempt.ToString(CultureInfo.InvariantCulture))
-                .UsingJobData("CorrelationId", process.CorrelationId)
                 .Build();
 
             await context.Scheduler.ScheduleJob(retryTrigger, cancellationToken);
             _telemetry.RetriedJobs.Add(1);
+        }
+
+        private async Task<VideoProcess?> ResolveScheduledProcessAsync(
+            JobDataMap jobDataMap,
+            Guid videoAssetId,
+            CancellationToken cancellationToken)
+        {
+            bool hasVideoProcessId = TryGetGuidFromJobData(
+                jobDataMap,
+                "VideoProcessId",
+                out Guid videoProcessId);
+
+            if (hasVideoProcessId)
+            {
+                var processById = await _videoProcessesRepository.GetBy(
+                    process => process.Id == videoProcessId && process.VideoAssetId == videoAssetId,
+                    cancellationToken);
+                if (processById.IsSuccess)
+                    return processById.Value;
+
+                _logger.LogWarning(
+                    "Quartz job references missing video process {VideoProcessId} for video asset {VideoAssetId}; using legacy asset lookup",
+                    videoProcessId,
+                    videoAssetId);
+            }
+
+            var processByAsset = await _videoProcessesRepository.GetBy(
+                process => process.VideoAssetId == videoAssetId,
+                cancellationToken);
+            if (processByAsset.IsFailure)
+            {
+                _logger.LogWarning(
+                    "Video process was not found for Quartz job targeting video asset {VideoAssetId}",
+                    videoAssetId);
+                return null;
+            }
+
+            _logger.LogWarning(
+                "Resolved legacy Quartz job without VideoProcessId to video process {VideoProcessId} for video asset {VideoAssetId}",
+                processByAsset.Value.Id,
+                videoAssetId);
+            return processByAsset.Value;
         }
 
         private async Task DeleteJobAsync(IJobExecutionContext context)

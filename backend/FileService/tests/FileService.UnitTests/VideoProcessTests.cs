@@ -41,15 +41,18 @@ public class VideoProcessTests
     }
 
     [Fact]
-    public void Create_ShouldPersistConfiguredRetryLimitAndCorrelationId()
+    public void Create_ShouldPersistConfiguredRetryLimitAndStableProcessId()
     {
-        const string correlationId = "upload-correlation-id";
+        // Arrange
+        const int maxRetries = 5;
 
-        var result = VideoProcess.Create(_videoAssetId, _validRawKey, 5, correlationId);
+        // Act
+        var result = VideoProcess.Create(_videoAssetId, _validRawKey, maxRetries);
 
+        // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.MaxRetries.Should().Be(5);
-        result.Value.CorrelationId.Should().Be(correlationId);
+        result.Value.MaxRetries.Should().Be(maxRetries);
+        result.Value.Id.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -64,24 +67,72 @@ public class VideoProcessTests
     [Fact]
     public void RetryCount_ShouldIncrementWhenRetryStarts_NotWhenItIsPlanned()
     {
+        // Arrange
         var process = VideoProcess.Create(_videoAssetId, _validRawKey, maxRetries: 3).Value;
+        Guid videoProcessId = process.Id;
         VideoProcessStep step = process.Steps[0];
-        process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
-        process.Fail("Temporary failure", isCritical: false).IsSuccess.Should().BeTrue();
+        process.StartStep(step.Order, step.Name);
+        process.Fail("Temporary failure", isCritical: false);
+        var retryObservations = new List<(
+            bool Planned,
+            int CountBeforeStart,
+            bool Prepared,
+            int CountAfterStart,
+            bool StepStarted,
+            bool Failed,
+            Guid VideoProcessId)>();
 
+        // Act
         for (int retry = 1; retry <= 3; retry++)
         {
-            process.PlannedRetry(DateTime.UtcNow.AddMinutes(retry)).IsSuccess.Should().BeTrue();
-            process.RetryCount.Should().Be(retry - 1);
+            bool planned = process.PlannedRetry(DateTime.UtcNow.AddMinutes(retry)).IsSuccess;
+            int countBeforeStart = process.RetryCount;
+            bool prepared = process.PrepareForRetry().IsSuccess;
+            int countAfterStart = process.RetryCount;
+            bool stepStarted = process.StartStep(step.Order, step.Name).IsSuccess;
+            bool failed = process.Fail("Temporary failure", isCritical: false).IsSuccess;
+            retryObservations.Add((
+                planned,
+                countBeforeStart,
+                prepared,
+                countAfterStart,
+                stepStarted,
+                failed,
+                process.Id));
+        }
 
-            process.PrepareForRetry().IsSuccess.Should().BeTrue();
-            process.RetryCount.Should().Be(retry);
-
-            process.StartStep(step.Order, step.Name).IsSuccess.Should().BeTrue();
-            process.Fail("Temporary failure", isCritical: false).IsSuccess.Should().BeTrue();
+        // Assert
+        for (int index = 0; index < retryObservations.Count; index++)
+        {
+            var observation = retryObservations[index];
+            observation.Planned.Should().BeTrue();
+            observation.CountBeforeStart.Should().Be(index);
+            observation.Prepared.Should().BeTrue();
+            observation.CountAfterStart.Should().Be(index + 1);
+            observation.StepStarted.Should().BeTrue();
+            observation.Failed.Should().BeTrue();
+            observation.VideoProcessId.Should().Be(videoProcessId);
         }
 
         process.CanRetry().Should().BeFalse();
+        process.Id.Should().Be(videoProcessId);
+    }
+
+    [Fact]
+    public void MarkAsPermanentlyFailed_ShouldPreserveVideoProcessId()
+    {
+        // Arrange
+        var process = VideoProcess.Create(_videoAssetId, _validRawKey).Value;
+        Guid videoProcessId = process.Id;
+
+        // Act
+        var result = process.MarkAsPermanentlyFailed("Non-retryable failure");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        process.Id.Should().Be(videoProcessId);
+        process.Status.Should().Be(VideoProcessStatus.FAILED);
+        process.IsCriticalError.Should().BeTrue();
     }
 
     [Fact]

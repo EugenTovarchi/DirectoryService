@@ -1,16 +1,18 @@
-﻿using CSharpFunctionalExtensions;
+﻿using Amazon.S3.Model;
+using CSharpFunctionalExtensions;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
+using FileService.Core.Abstractions;
 using FileService.Core.Authorization;
 using FileService.Core.FilesStorage;
 using FileService.Domain;
 using FileService.Domain.Assets;
+using FileService.Domain.Uploads;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SharedService.Core.Validation;
 using SharedService.Framework.EndpointSettings;
@@ -52,18 +54,24 @@ public sealed class GetChunkUploadUrlHandler
 {
     private readonly ILogger<GetChunkUploadUrlHandler> _logger;
     private readonly IFileStorageProvider _fileStorageProvider;
-    private readonly IFileReadDbContext _fileReadDbContext;
+    private readonly IMediaAssetsRepository _mediaAssetsRepository;
+    private readonly IMultipartUploadSessionsRepository _uploadSessionsRepository;
+    private readonly ITransactionManager _transactionManager;
     private readonly IValidator<GetChunkUploadUrlRequest> _validator;
 
     public GetChunkUploadUrlHandler(
         IFileStorageProvider fileStorageProvider,
         ILogger<GetChunkUploadUrlHandler> logger,
-        IFileReadDbContext fileReadDbContext,
+        IMediaAssetsRepository mediaAssetsRepository,
+        IMultipartUploadSessionsRepository uploadSessionsRepository,
+        ITransactionManager transactionManager,
         IValidator<GetChunkUploadUrlRequest> validator)
     {
         _fileStorageProvider = fileStorageProvider;
         _logger = logger;
-        _fileReadDbContext = fileReadDbContext;
+        _mediaAssetsRepository = mediaAssetsRepository;
+        _uploadSessionsRepository = uploadSessionsRepository;
+        _transactionManager = transactionManager;
         _validator = validator;
     }
 
@@ -76,38 +84,77 @@ public sealed class GetChunkUploadUrlHandler
             return validatorResult.ToErrors();
         }
 
-        MediaAsset? mediaAsset = await _fileReadDbContext.ReadMediaAssets
-            .FirstOrDefaultAsync(m => m.Id == request.MediaAssetId, cancellationToken);
-        if (mediaAsset == null)
+        Result<MediaAsset, Error> mediaAssetResult = await _mediaAssetsRepository
+            .GetById(request.MediaAssetId, cancellationToken);
+        if (mediaAssetResult.IsFailure)
         {
             _logger.LogError("Media asset not found");
-            return Errors.General.NotFoundEntity("media_asset").ToFailure();
+            return mediaAssetResult.Error.ToFailure();
         }
 
+        MediaAsset mediaAsset = mediaAssetResult.Value;
         if (mediaAsset.Status != MediaStatus.UPLOADING)
         {
             _logger.LogError("Media asset has invalid status");
             return Errors.Validation.RecordIsInvalid("media_asset_status").ToFailure();
         }
 
-        StorageKey storageKey = mediaAsset.UploadKey;
+        Result<MultipartUploadSession, Error> sessionResult = await _uploadSessionsRepository
+            .GetByMediaAssetIdAsync(request.MediaAssetId, cancellationToken);
+        if (sessionResult.IsFailure)
+            return sessionResult.Error.ToFailure();
 
-        var checkUploadId = await _fileStorageProvider
-            .FileListMultipartUploadAsync(storageKey, cancellationToken);
-
-        if (checkUploadId.IsFailure)
-            return checkUploadId.Error.ToFailure();
-
-        var uploads = checkUploadId.Value.MultipartUploads ?? [];
-
-        var existingUpload = uploads.FirstOrDefault(u =>
-            string.Equals(u.UploadId, request.UploadId, StringComparison.Ordinal) &&
-            string.Equals(u.Key, storageKey.Value, StringComparison.Ordinal));
-
-        if (existingUpload == null)
+        MultipartUploadSession session = sessionResult.Value;
+        if (!string.Equals(session.UploadId, request.UploadId, StringComparison.Ordinal))
         {
-            _logger.LogError("UploadId not found or does not match file");
-            return Errors.Validation.RecordIsInvalid("existing_upload").ToFailure();
+            _logger.LogWarning(
+                "Multipart upload session does not match media asset {MediaAssetId}",
+                request.MediaAssetId);
+            return Errors.Validation.RecordIsInvalid("multipart_upload_session").ToFailure();
+        }
+
+        DateTime now = DateTime.UtcNow;
+        if (session.ExpiresAt <= now)
+        {
+            return Error.Validation(
+                "multipart.upload.expired",
+                "Multipart upload session has expired").ToFailure();
+        }
+
+        if (session.Status != MultipartUploadStatus.ACTIVE)
+        {
+            return Error.Conflict(
+                "multipart.upload.not_active",
+                $"Multipart upload is in {session.Status} status").ToFailure();
+        }
+
+        StorageKey storageKey = mediaAsset.UploadKey;
+        Result<ListMultipartUploadsResponse, Error> uploadsResult =
+            await _fileStorageProvider.FileListMultipartUploadAsync(storageKey, cancellationToken);
+        if (uploadsResult.IsFailure)
+            return uploadsResult.Error.ToFailure();
+
+        bool existsInStorage = (uploadsResult.Value.MultipartUploads ?? []).Any(upload =>
+            string.Equals(upload.UploadId, request.UploadId, StringComparison.Ordinal)
+            && string.Equals(upload.Key, storageKey.Value, StringComparison.Ordinal));
+        if (!existsInStorage)
+        {
+            UnitResult<Error> failSessionResult =
+                session.Fail("Multipart upload no longer exists in object storage");
+            if (failSessionResult.IsFailure)
+                return failSessionResult.Error.ToFailure();
+
+            UnitResult<Error> failMediaResult = mediaAsset.MarkFailed();
+            if (failMediaResult.IsFailure)
+                return failMediaResult.Error.ToFailure();
+
+            UnitResult<Error> saveResult = await _transactionManager.SaveChangeAsync(cancellationToken);
+            if (saveResult.IsFailure)
+                return saveResult.Error.ToFailure();
+
+            return Error.Validation(
+                "multipart.upload.not_found",
+                "Multipart upload no longer exists in object storage").ToFailure();
         }
 
         Result<string, Error> uploadUrlsAsync =
