@@ -20,6 +20,8 @@ public interface IVideoProcessesRepository
 
     Task<Result<IReadOnlyList<RecoverableVideoProcess>, Error>> GetRecoverableVideoProcessesAsync(
         CancellationToken cancellationToken = default);
+
+    Task<Result<VideoProcess, Error>> GetByVideoAssetId(Guid videoAssetId, CancellationToken cancellationToken);
 }
 
 public sealed record RecoverableVideoProcess(

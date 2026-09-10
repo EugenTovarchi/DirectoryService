@@ -78,6 +78,20 @@ public class VideoProcessesRepository(
         return videoProcess;
     }
 
+    public async Task<Result<VideoProcess, Error>> GetByVideoAssetId(
+        Guid videoAssetId,
+        CancellationToken cancellationToken)
+    {
+        var videoProcess = await dbContext.VideoProcesses
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.VideoAssetId == videoAssetId, cancellationToken);
+
+        if (videoProcess is null)
+            return Errors.General.NotFoundEntity("videoProcess");
+
+        return videoProcess;
+    }
+
     public async Task<Result<IReadOnlyList<RecoverableVideoProcess>, Error>> GetRecoverableVideoProcessesAsync(
         CancellationToken cancellationToken = default)
     {

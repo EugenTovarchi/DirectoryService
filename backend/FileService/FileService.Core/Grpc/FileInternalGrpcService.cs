@@ -1,7 +1,9 @@
-using FileService.Contracts.Grpc;
+﻿using FileService.Contracts.Grpc;
 using FileService.Contracts.Requests;
 using FileService.Core.Features;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using SharedService.SharedKernel;
 
 namespace FileService.Core.Grpc;
 
@@ -12,16 +14,19 @@ public sealed class FileInternalGrpcService : FileInternal.FileInternalBase
 {
     private readonly GetMediaAssetInfoHandler _getMediaAssetInfoHandler;
     private readonly GetMediaAssetsInfoHandler _getMediaAssetsInfoHandler;
-    private readonly CheckMediaAssetExistHandler _handler;
+    private readonly GetVideoInfoHandler _getVideoInfoHandler;
+    private readonly CheckMediaAssetExistHandler _checkMediaAssetExistHandler;
 
     public FileInternalGrpcService(
         GetMediaAssetInfoHandler getMediaAssetInfoHandler,
         GetMediaAssetsInfoHandler getMediaAssetsInfoHandler,
-        CheckMediaAssetExistHandler handler)
+        CheckMediaAssetExistHandler checkMediaAssetExistHandler,
+        GetVideoInfoHandler getVideoInfoInfoHandler)
     {
         _getMediaAssetInfoHandler = getMediaAssetInfoHandler;
         _getMediaAssetsInfoHandler = getMediaAssetsInfoHandler;
-        _handler = handler;
+        _checkMediaAssetExistHandler = checkMediaAssetExistHandler;
+        _getVideoInfoHandler = getVideoInfoInfoHandler;
     }
 
     public override async Task<GetMediaAssetInfoReply> GetMediaAssetInfo(
@@ -133,16 +138,93 @@ public sealed class FileInternalGrpcService : FileInternal.FileInternalBase
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid media asset id"));
         }
 
-        var result = await _handler.Handle(mediaAssetId, context.CancellationToken).ConfigureAwait(false);
+        var result = await _checkMediaAssetExistHandler.Handle(mediaAssetId, context.CancellationToken)
+            .ConfigureAwait(false);
 
         if (result.IsFailure)
         {
             throw new RpcException(new Status(StatusCode.Internal, "Failed to check media asset"));
         }
 
-        return new CheckMediaAssetExistsReply
+        return new CheckMediaAssetExistsReply { IsExist = result.Value.IsExist };
+    }
+
+    public override async Task<GetVideoInfoReply> GetVideoInfo(
+        GetVideoInfoRequest request,
+        ServerCallContext context)
+    {
+        if (!Guid.TryParse(request.MediaAssetId, out Guid mediaAssetId))
         {
-            IsExist = result.Value.IsExist
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid media asset id"));
+        }
+
+        var result = await _getVideoInfoHandler.Handle(mediaAssetId, context.CancellationToken)
+            .ConfigureAwait(false);
+
+        if (result.IsFailure)
+        {
+            throw ToRpcException(result.Error);
+        }
+
+        var video = result.Value;
+
+        var reply = new GetVideoInfoReply
+        {
+            Id = video.Id.ToString(),
+            FileName = video.FileName,
+            ContentType = video.ContentType,
+            Status = video.Status,
+            CreatedAt = Timestamp.FromDateTime(video.CreatedAt),
+            UpdatedAt = Timestamp.FromDateTime(video.UpdatedAt),
+            Size = video.Size,
         };
+
+        if (video.Duration.HasValue)
+        {
+            reply.Duration =
+                Duration.FromTimeSpan(video.Duration.Value);
+        }
+
+        if (video.Width.HasValue)
+        {
+            reply.Width = video.Width.Value;
+        }
+
+        if (video.Height.HasValue)
+        {
+            reply.Height = video.Height.Value;
+        }
+
+        if (video.HasAudio.HasValue)
+        {
+            reply.HasAudio = video.HasAudio.Value;
+        }
+
+        return reply;
+    }
+
+    /// <summary>
+    /// Преобразует первую прикладную ошибку FileService в стандартную ошибку gRPC.
+    /// Клиент получит выбранный <see cref="StatusCode"/> и текст ошибки в <see cref="Status.Detail"/>.
+    /// </summary>
+    /// <remarks>
+    /// Validation означает некорректный запрос, NotFound — отсутствие ресурса,
+    /// Conflict — невозможность выполнить операцию в текущем состоянии.
+    /// Остальные и пустые наборы ошибок скрываются за Internal.
+    /// </remarks>
+    private static RpcException ToRpcException(Failure failure)
+    {
+        Error error = failure.FirstOrDefault()
+                      ?? Error.Failure("server.internal", "Failed to get video info");
+
+        StatusCode statusCode = error.Type switch
+        {
+            ErrorType.VALIDATION => StatusCode.InvalidArgument,
+            ErrorType.NOT_FOUND => StatusCode.NotFound,
+            ErrorType.CONFLICT => StatusCode.FailedPrecondition,
+            _ => StatusCode.Internal
+        };
+
+        return new RpcException(new Status(statusCode, error.Message));
     }
 }

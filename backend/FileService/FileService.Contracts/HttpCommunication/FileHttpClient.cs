@@ -72,4 +72,25 @@ internal sealed class FileHttpClient : IFileCommunicationService
             return Error.Failure("server.internal", "Failed to check media asset").ToFailure();
         }
     }
+
+    public async Task<Result<GetVideoInfoResponse, Failure>> GetVideoInfo(Guid mediaAssetId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            HttpResponseMessage response =
+                await _httpClient.GetAsync($"api/files/department/{mediaAssetId}", cancellationToken).ConfigureAwait(false);
+
+            return await response.HandleResponseAsync<GetVideoInfoResponse>(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting video info for media asset {MediaAssetId}", mediaAssetId);
+            return Error.Failure("server.internal", "Failed to request video info").ToFailure();
+        }
+    }
 }
