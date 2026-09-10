@@ -1,8 +1,5 @@
 <Solution>
-  <Folder Name="/AuthService/">
-    <File Path="AuthService/AUTH_SERVICE_ROADMAP.md" />
-    <File Path="AuthService/AGENTS.md" />
-  </Folder>
+  <Folder Name="/AuthService/" />
   <Folder Name="/AuthService/src/">
     <Project Path="AuthService/AuthService.Contracts/AuthService.Contracts.csproj" />
     <Project Path="AuthService/AuthService.Core/AuthService.Core.csproj" />
@@ -16,7 +13,6 @@
   </Folder>
   <Folder Name="/DirectoryService/">
     <File Path="DirectoryService/.dockerignore" />
-    <File Path="DirectoryService/AGENTS.md" />
     <File Path="DirectoryService/gitignore.txt" />
   </Folder>
   <Folder Name="/DirectoryService/src/">
@@ -32,7 +28,6 @@
   <Folder Name="/FileService/">
     <File Path="FileService/.dockerignore" />
     <File Path="FileService/.gitignore" />
-    <File Path="FileService/AGENTS.md" />
   </Folder>
   <Folder Name="/FileService/src/">
     <Project Path="FileService/FileService.Contracts/FileService.Contracts.csproj" />
@@ -47,6 +42,7 @@
     <Project Path="FileService/tests/FileService.IntegrationTests/FileService.IntegrationTests.csproj" />
     <Project Path="FileService/tests/FileService.UnitTests/FileService.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/Infrastructure/" />
   <Folder Name="/Infrastructure/observabillity/">
     <File Path="infrastructure/observabillity/alloy/config.alloy" />
     <File Path="infrastructure/observabillity/grafana/dashboards/backend-services-overview.json" />
@@ -61,29 +57,6 @@
     <File Path="infrastructure/observabillity/prometheus/prometheus.yml" />
   </Folder>
   <Folder Name="/SolutionFolder/">
-    <File Path="AGENTS.md" />
-    <File Path="DS-FS.md" />
-    <File Path="README-CODEX-PACK.md" />
-    <File Path=".codex/settings.json" />
-    <File Path=".codex/agents/architect.md" />
-    <File Path=".codex/agents/code-reviewer.md" />
-    <File Path=".codex/agents/debugger.md" />
-    <File Path=".codex/agents/microservice-reviewer.md" />
-    <File Path=".codex/agents/security-reviewer.md" />
-    <File Path=".codex/agents/test-runner.md" />
-    <File Path=".codex/rules/backend-migrations.md" />
-    <File Path=".codex/rules/backend-patterns.md" />
-    <File Path=".codex/rules/docker-ci.md" />
-    <File Path=".codex/rules/docker-observability.md" />
-    <File Path=".codex/rules/documentation-maintenance.md" />
-    <File Path=".codex/rules/integration-tests.md" />
-    <File Path=".codex/rules/security.md" />
-    <File Path=".codex/skills/add-api-endpoint/SKILL.md" />
-    <File Path=".codex/skills/full-dev-verification/SKILL.md" />
-    <File Path=".codex/skills/observability/SKILL.md" />
-    <File Path=".codex/skills/rabbitmq-event/SKILL.md" />
-    <File Path=".codex/skills/update-shared-nuget/SKILL.md" />
-    <File Path=".codex/skills/video-hls-pipeline/SKILL.md" />
     <File Path="../.editorconfig" />
     <File Path="../.gitignore" />
     <File Path="../AuthService.Development.env" />
