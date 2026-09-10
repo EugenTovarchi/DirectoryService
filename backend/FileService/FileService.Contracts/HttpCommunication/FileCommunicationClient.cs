@@ -1,6 +1,5 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CSharpFunctionalExtensions;
-using FileService.Contracts;
 using FileService.Contracts.Grpc;
 using FileService.Contracts.Requests;
 using FileService.Contracts.Responses;
@@ -39,10 +38,7 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
                 return headersResult.Error;
 
             var call = _grpcClient.GetMediaAssetInfoAsync(
-                new GetMediaAssetInfoRequest
-                {
-                    MediaAssetId = mediaAssetId.ToString()
-                },
+                new GetMediaAssetInfoRequest { MediaAssetId = mediaAssetId.ToString() },
                 headers: headersResult.Value,
                 cancellationToken: cancellationToken);
 
@@ -70,6 +66,65 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
         {
             _logger.LogError(ex, "Error getting media asset info for {MediaAssetId}", mediaAssetId);
             return Error.Failure("server.internal", "Failed to request media asset info").ToFailure();
+        }
+    }
+
+    public async Task<Result<GetVideoInfoResponse, Failure>> GetVideoInfo(Guid mediaAssetId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var headersResult = await CreateServiceHeaders(cancellationToken).ConfigureAwait(false);
+            if (headersResult.IsFailure)
+                return headersResult.Error;
+
+            var call = _grpcClient.GetVideoInfoAsync(
+                new GetVideoInfoRequest { MediaAssetId = mediaAssetId.ToString() },
+                headers: headersResult.Value,
+                cancellationToken: cancellationToken);
+
+            var reply = await call.ResponseAsync.ConfigureAwait(false);
+
+            return new GetVideoInfoResponse(
+                Guid.Parse(reply.Id),
+                reply.FileName,
+                reply.ContentType,
+                reply.Status,
+                reply.CreatedAt.ToDateTime(),
+                reply.UpdatedAt.ToDateTime(),
+                reply.Size,
+                reply.Duration?.ToTimeSpan(),
+                reply.HasWidth ? reply.Width : null,
+                reply.HasHeight ? reply.Height : null,
+                reply.HasHasAudio ? reply.HasAudio : null);
+        }
+        catch (RpcException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            _logger.LogDebug("Video info not found for media asset {MediaAssetId}", mediaAssetId);
+            return Errors.General.NotFoundEntity("video").ToFailure();
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(
+                ex,
+                "gRPC error getting video info for media asset {MediaAssetId}. Status: {GrpcStatusCode}",
+                mediaAssetId,
+                ex.StatusCode);
+
+            return Error.Failure("server.internal", "Failed to request video info").ToFailure();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting video info for media asset {MediaAssetId}", mediaAssetId);
+            return Error.Failure("server.internal", "Failed to request video info").ToFailure();
         }
     }
 
@@ -124,10 +179,7 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
                 return headersResult.Error;
 
             var call = _grpcClient.CheckMediaAssetExistsAsync(
-                new CheckMediaAssetExistsRequest
-                {
-                    MediaAssetId = mediaAssetId.ToString()
-                },
+                new CheckMediaAssetExistsRequest { MediaAssetId = mediaAssetId.ToString() },
                 headers: headersResult.Value,
                 cancellationToken: cancellationToken);
 
@@ -153,9 +205,6 @@ internal sealed class FileCommunicationClient : IFileCommunicationService
         if (tokenResult.IsFailure)
             return tokenResult.Error;
 
-        return new Metadata
-        {
-            { "Authorization", $"Bearer {tokenResult.Value}" }
-        };
+        return new Metadata { { "Authorization", $"Bearer {tokenResult.Value}" } };
     }
 }

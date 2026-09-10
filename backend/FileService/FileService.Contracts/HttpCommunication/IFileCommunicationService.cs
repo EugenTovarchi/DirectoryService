@@ -15,4 +15,6 @@ public interface IFileCommunicationService
 
     Task<Result<CheckMediaAssetExistResponse, Failure>> CheckMediaAssetExists(Guid mediaAssetId,
         CancellationToken cancellationToken);
+
+    Task<Result<GetVideoInfoResponse, Failure>> GetVideoInfo(Guid mediaAssetId, CancellationToken cancellationToken);
 }

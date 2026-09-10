@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+// По сути как using в C#, вытаскиваем типы из другого .proto файла Google чтобы использовать ниже.
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 // C# namespace для сгенерированных request/reply/client/base classes.
 option csharp_namespace = "FileService.Contracts.Grpc";
 
@@ -19,6 +23,10 @@ service FileInternal {
   // Проверяет, можно ли использовать media asset как существующий uploaded/ready файл.
   rpc CheckMediaAssetExists(CheckMediaAssetExistsRequest)
       returns (CheckMediaAssetExistsReply);
+
+  // Получаем информацию по video media asset и metadata, если обработка уже их сформировала.
+  rpc GetVideoInfo(GetVideoInfoRequest)
+      returns (GetVideoInfoReply);
 }
 
 message GetMediaAssetInfoRequest {
@@ -67,4 +75,26 @@ message CheckMediaAssetExistsRequest {
 message CheckMediaAssetExistsReply {
   // gRPC transport DTO; adapter мапит его в старый CheckMediaAssetExistResponse.
   bool is_exist = 1;
+}
+
+message GetVideoInfoRequest {
+    string media_asset_id = 1;
+}
+
+message GetVideoInfoReply {
+    string id = 1;
+    string file_name = 2;
+    string content_type = 3;
+    string status = 4;
+
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+
+    int64 size = 7;
+
+    google.protobuf.Duration duration = 8;
+
+    optional int32 width = 9;
+    optional int32 height = 10;
+    optional bool has_audio = 11;
 }
