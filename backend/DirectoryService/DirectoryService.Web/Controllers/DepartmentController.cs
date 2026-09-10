@@ -1,4 +1,4 @@
-using DirectoryService.Application.Commands.Departments.Create;
+﻿using DirectoryService.Application.Commands.Departments.Create;
 using DirectoryService.Application.Commands.Departments.MoveDepartment;
 using DirectoryService.Application.Commands.Departments.SoftDelete;
 using DirectoryService.Application.Commands.Departments.UpdateDepartmentLocations;
@@ -6,6 +6,7 @@ using DirectoryService.Application.Commands.Departments.UpdateVideo;
 using DirectoryService.Application.Queries.Departments.GetDepartmentChildren;
 using DirectoryService.Application.Queries.Departments.GetDepsWithChildren;
 using DirectoryService.Application.Queries.Departments.GetTopByPositions;
+using DirectoryService.Application.Queries.Departments.GetVideoInfo;
 using DirectoryService.Contracts.Requests.Departments;
 using DirectoryService.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -21,9 +22,9 @@ public class DepartmentController : ApplicationController
     [HttpPost]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> Create(
-       [FromBody] CreateDepartmentRequest request,
-       [FromServices] CreateDepartmentHandler handler,
-       CancellationToken cancellationToken)
+        [FromBody] CreateDepartmentRequest request,
+        [FromServices] CreateDepartmentHandler handler,
+        CancellationToken cancellationToken)
     {
         var command = new CreateDepartmentCommand(request);
 
@@ -38,10 +39,10 @@ public class DepartmentController : ApplicationController
     [HttpPatch("{departmentId:guid}/locations")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> UpdateLocations(
-       [FromRoute] Guid departmentId,
-       [FromBody] UpdateDepartmentLocationsRequest request,
-       [FromServices] UpdateDepartmentLocationsHandler handler,
-       CancellationToken cancellationToken)
+        [FromRoute] Guid departmentId,
+        [FromBody] UpdateDepartmentLocationsRequest request,
+        [FromServices] UpdateDepartmentLocationsHandler handler,
+        CancellationToken cancellationToken)
     {
         var command = new UpdateDepartmentLocationsCommand(departmentId, request);
 
@@ -56,10 +57,10 @@ public class DepartmentController : ApplicationController
     [HttpPut("{departmentId}/parent")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_MANAGE)]
     public async Task<IActionResult> MoveDepartment(
-       [FromRoute] Guid departmentId,
-       [FromBody] MoveDepartmentRequest request,
-       [FromServices] MoveDepartmentHandler handler,
-       CancellationToken cancellationToken)
+        [FromRoute] Guid departmentId,
+        [FromBody] MoveDepartmentRequest request,
+        [FromServices] MoveDepartmentHandler handler,
+        CancellationToken cancellationToken)
     {
         var command = new MoveDepartmentCommand(departmentId, request);
 
@@ -74,9 +75,9 @@ public class DepartmentController : ApplicationController
     [HttpGet("top-positions")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetByFilters(
-       [FromQuery] GetDepartmentsRequest request,
-       [FromServices] GetTopByPositionsDepartmentsHandler handler,
-       CancellationToken cancellationToken)
+        [FromQuery] GetDepartmentsRequest request,
+        [FromServices] GetTopByPositionsDepartmentsHandler handler,
+        CancellationToken cancellationToken)
     {
         var query = request.ToQuery();
 
@@ -88,9 +89,9 @@ public class DepartmentController : ApplicationController
     [HttpGet("roots")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentsWithChildren(
-       [FromQuery] GetDepartmentsWithChildrenRequest request,
-       [FromServices] GetDepartmentsWithChildrenHandler handler,
-       CancellationToken cancellationToken)
+        [FromQuery] GetDepartmentsWithChildrenRequest request,
+        [FromServices] GetDepartmentsWithChildrenHandler handler,
+        CancellationToken cancellationToken)
     {
         var query = request.ToQuery();
 
@@ -102,10 +103,10 @@ public class DepartmentController : ApplicationController
     [HttpGet("{parentId:guid}/children")]
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetDepartmentChildren(
-       [FromRoute] Guid parentId,
-       [FromQuery] GetDepartmentChildrenRequest request,
-       [FromServices] GetDepartmentChildrenHandler handler,
-       CancellationToken cancellationToken)
+        [FromRoute] Guid parentId,
+        [FromQuery] GetDepartmentChildrenRequest request,
+        [FromServices] GetDepartmentChildrenHandler handler,
+        CancellationToken cancellationToken)
     {
         var query = new GetDepartmentChildrenQuery(parentId, request);
         var result = await handler.Handle(query, cancellationToken);
@@ -140,6 +141,19 @@ public class DepartmentController : ApplicationController
 
         if (result.IsFailure)
             return result.Error.ToResponse();
+
+        return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
+    }
+
+    [HttpGet("{departmentId:guid}/video-info")]
+    [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
+    public async Task<IActionResult> GetVideoInfo(
+        [FromRoute] Guid departmentId,
+        [FromServices] GetVideoInfoHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetVideoInfoQuery(departmentId);
+        var result = await handler.Handle(query, cancellationToken);
 
         return result.IsFailure ? result.Error.ToResponse() : Ok(result.Value);
     }
