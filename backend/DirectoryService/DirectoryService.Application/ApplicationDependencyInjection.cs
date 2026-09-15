@@ -1,4 +1,5 @@
 using DirectoryService.Application.Cache;
+using DirectoryService.Application.Queries.Departments.GetVideoInfo;
 using FileService.Contracts.HttpCommunication;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -18,6 +19,8 @@ public static class ApplicationDependencyInjection
             .AddCommands()
             .AddValidatorsFromAssembly(typeof(ApplicationDependencyInjection).Assembly)
             .AddCache(configuration);
+
+        services.Decorate<IGetVideoInfoHandler, CachedGetVideoInfoHandler>();
 
         services.AddFileServiceHttpCommunication(configuration);
         return services;

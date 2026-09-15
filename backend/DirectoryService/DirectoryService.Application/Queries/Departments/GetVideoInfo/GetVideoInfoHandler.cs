@@ -8,7 +8,8 @@ using SharedService.SharedKernel;
 namespace DirectoryService.Application.Queries.Departments.GetVideoInfo;
 
 public class GetVideoInfoHandler
-    : IQueryHandler<Result<GetVideoInfoResponse, Failure>, GetVideoInfoQuery>
+    : IQueryHandler<Result<GetVideoInfoResponse, Failure>, GetVideoInfoQuery>,
+      IGetVideoInfoHandler
 {
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IFileCommunicationService _fileCommunicationService;

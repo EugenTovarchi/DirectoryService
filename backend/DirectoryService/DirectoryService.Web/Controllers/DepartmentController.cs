@@ -149,7 +149,7 @@ public class DepartmentController : ApplicationController
     [Authorize(Policy = DirectoryAuthorizationPolicies.DIRECTORY_READ)]
     public async Task<IActionResult> GetVideoInfo(
         [FromRoute] Guid departmentId,
-        [FromServices] GetVideoInfoHandler handler,
+        [FromServices] IGetVideoInfoHandler handler,
         CancellationToken cancellationToken)
     {
         var query = new GetVideoInfoQuery(departmentId);
