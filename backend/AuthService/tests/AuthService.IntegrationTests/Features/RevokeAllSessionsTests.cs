@@ -8,8 +8,8 @@ using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -24,6 +24,7 @@ public sealed class RevokeAllSessionsTests : AuthServiceBaseTests
     [Fact]
     public async Task RevokeAllSessions_With_Authenticated_User_Should_Revoke_Current_User_Sessions()
     {
+        // Arrange
         ApplicationUser currentUser = await CreateIdentityUserAsync(
             "revoke-all-viewer@example.com",
             "revokeallviewer",
@@ -38,63 +39,53 @@ public sealed class RevokeAllSessionsTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse firstLogin = await LoginAsync("revoke-all-viewer@example.com");
-        TokenResponse secondLogin = await LoginAsync("revoke-all-viewer@example.com");
-        await LoginAsync("revoke-all-other@example.com");
+        OidcTestToken login = await LoginAsync("revoke-all-viewer@example.com");
+        OpenIddictTestSession firstSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, currentUser.Id);
+        OpenIddictTestSession secondSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, currentUser.Id);
+        OpenIddictTestSession otherSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, otherUser.Id);
 
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/revoke-all-sessions");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", firstLogin.AccessToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
+        OpenIddictTestSessionStatus firstStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, firstSession);
+        OpenIddictTestSessionStatus secondStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, secondSession);
+        OpenIddictTestSessionStatus otherStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, otherSession);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        List<RefreshToken> savedTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens.ToListAsync());
-
-        savedTokens
-            .Where(token => token.UserId == currentUser.Id)
-            .Should()
-            .OnlyContain(token => token.RevokedAt != null);
-
-        savedTokens
-            .Where(token => token.UserId == otherUser.Id)
-            .Should()
-            .OnlyContain(token => token.RevokedAt == null);
-
-        HttpResponseMessage firstRefreshResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/refresh",
-            new RefreshTokenRequest(firstLogin.RefreshToken));
-        firstRefreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        HttpResponseMessage secondRefreshResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/refresh",
-            new RefreshTokenRequest(secondLogin.RefreshToken));
-        secondRefreshResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        firstStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        firstStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        secondStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        secondStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        otherStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
+        otherStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Valid);
     }
 
     [Fact]
     public async Task RevokeAllSessions_Without_Access_Token_Should_Return_Unauthorized()
     {
+        // Arrange
+
+        // Act
         HttpResponseMessage response = await AppHttpClient.PostAsync(
             "/api/auth/revoke-all-sessions",
             content: null);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

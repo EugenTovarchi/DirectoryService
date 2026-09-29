@@ -49,20 +49,20 @@ public sealed class RevokeAllSessionsValidator : AbstractValidator<RevokeAllSess
 
 public sealed class RevokeAllSessionsHandler : ICommandHandler<RevokeAllSessionsCommand>
 {
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RevokeAllSessionsCommand> _validator;
     private readonly ILogger<RevokeAllSessionsHandler> _logger;
 
     public RevokeAllSessionsHandler(
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RevokeAllSessionsCommand> validator,
         ILogger<RevokeAllSessionsHandler> logger)
     {
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -84,9 +84,8 @@ public sealed class RevokeAllSessionsHandler : ICommandHandler<RevokeAllSessions
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+        await _sessionService.RevokeAllSessionsAsync(
             command.UserId,
-            command.RevokedByIp,
             cancellationToken);
 
         UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
@@ -107,10 +106,7 @@ public sealed class RevokeAllSessionsHandler : ICommandHandler<RevokeAllSessions
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("All sessions revoked for user {UserId}", command.UserId);
-        }
+        _logger.LogInformation("All sessions revoked for user {UserId}", command.UserId);
 
         return UnitResult.Success<Failure>();
     }

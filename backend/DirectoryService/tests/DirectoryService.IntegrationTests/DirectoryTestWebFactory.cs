@@ -19,8 +19,8 @@ namespace DirectoryService.IntegrationTests;
 
 public class DirectoryTestWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public const string TEST_JWT_ISSUER = "24eye.auth";
-    public const string TEST_JWT_AUDIENCE = "24eye.backend";
+    public const string TEST_JWT_ISSUER = "https://auth-service.tests/";
+    public const string TEST_JWT_AUDIENCE = "directory-service";
     public const string TEST_JWT_SIGNING_KEY = "directory-service-integration-test-signing-key";
 
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()

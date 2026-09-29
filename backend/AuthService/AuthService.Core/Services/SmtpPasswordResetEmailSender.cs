@@ -49,13 +49,10 @@ public sealed class SmtpPasswordResetEmailSender : IPasswordResetEmailSender
             return Error.Failure("password.reset.email.delivery.failed", "Password reset email delivery failed");
         }
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Password reset email sent to user {UserId} at {Email}",
-                message.UserId,
-                message.Email);
-        }
+        _logger.LogInformation(
+            "Password reset email sent to user {UserId} at {Email}",
+            message.UserId,
+            message.Email);
 
         return UnitResult.Success<Error>();
     }

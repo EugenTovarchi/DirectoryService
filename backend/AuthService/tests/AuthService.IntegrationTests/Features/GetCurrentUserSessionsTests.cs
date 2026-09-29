@@ -4,12 +4,10 @@ using System.Net.Http.Json;
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Domain.Identity;
-using AuthService.Infrastructure.Postgres;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.SharedKernel;
 
@@ -25,6 +23,7 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
     [Fact]
     public async Task GetCurrentUserSessions_With_Authenticated_User_Should_Return_Only_Current_User_Active_Sessions()
     {
+        // Arrange
         ApplicationUser currentUser = await CreateIdentityUserAsync(
             "sessions-viewer@example.com",
             "sessionsviewer",
@@ -32,93 +31,81 @@ public sealed class GetCurrentUserSessionsTests : AuthServiceBaseTests
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        await CreateIdentityUserAsync(
+        ApplicationUser otherUser = await CreateIdentityUserAsync(
             "sessions-other@example.com",
             "sessionsother",
             "Sessions Other",
             Guid.NewGuid(),
             AuthRoles.VIEWER);
 
-        TokenResponse firstLogin = await LoginAsync("sessions-viewer@example.com", "SessionsTest/1.0");
-        await LoginAsync("sessions-viewer@example.com", "SessionsTest/2.0");
-        TokenResponse revokedLogin = await LoginAsync("sessions-viewer@example.com", "SessionsTest/Revoked");
-        await LoginAsync("sessions-other@example.com", "SessionsTest/Other");
-        await AddInactiveSessionAsync(currentUser.Id);
-
-        HttpResponseMessage logoutResponse = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/logout",
-            new RefreshTokenRequest(revokedLogin.RefreshToken));
-        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        OidcTestToken login = await LoginAsync("sessions-viewer@example.com", "SessionsTest/Access");
+        DateTimeOffset firstSessionLastUsedAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        OpenIddictTestSession firstSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(
+                Services,
+                currentUser.Id,
+                lastUsedAt: firstSessionLastUsedAt);
+        OpenIddictTestSession secondSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, currentUser.Id);
+        await OpenIddictSessionTestHelper.CreateSessionAsync(
+            Services,
+            currentUser.Id,
+            revoked: true);
+        await OpenIddictSessionTestHelper.CreateSessionAsync(
+            Services,
+            currentUser.Id,
+            expirationDate: DateTimeOffset.UtcNow.AddMinutes(-1));
+        await OpenIddictSessionTestHelper.CreateSessionAsync(Services, otherUser.Id);
 
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/auth/sessions");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", firstLogin.AccessToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
         Envelope<IReadOnlyList<AuthSessionResponse>>? envelope =
             await response.Content.ReadFromJsonAsync<Envelope<IReadOnlyList<AuthSessionResponse>>>();
 
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         envelope.Should().NotBeNull();
         envelope!.Result.Should().NotBeNull();
 
         IReadOnlyList<AuthSessionResponse> sessions = envelope.Result!;
 
         sessions.Should().HaveCount(2);
-        sessions.Select(session => session.UserAgent)
+        Guid[] expectedSessionIds =
+        {
+            firstSession.AuthorizationId,
+            secondSession.AuthorizationId
+        };
+        sessions.Select(session => session.Id)
             .Should()
-            .BeEquivalentTo("SessionsTest/1.0", "SessionsTest/2.0");
+            .BeEquivalentTo(expectedSessionIds);
         sessions.Should().OnlyContain(session => session.ExpiresAt > DateTime.UtcNow);
         sessions.Should().OnlyContain(session => session.Id != Guid.Empty);
-
-        List<RefreshToken> allSavedTokens = await ExecuteInDb(dbContext => dbContext.RefreshTokens.ToListAsync());
-        allSavedTokens.Where(token => token.UserId == currentUser.Id).Should().HaveCount(4);
+        sessions.Should().OnlyContain(session => session.CreatedByIp == null);
+        sessions.Should().OnlyContain(session => session.UserAgent == null);
+        sessions.Single(session => session.Id == firstSession.AuthorizationId)
+            .LastUsedAt
+            .Should()
+            .BeCloseTo(firstSessionLastUsedAt.UtcDateTime, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
     public async Task GetCurrentUserSessions_Without_Access_Token_Should_Return_Unauthorized()
     {
+        // Arrange
+
+        // Act
         HttpResponseMessage response = await AppHttpClient.GetAsync("/api/auth/sessions");
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<TokenResponse> LoginAsync(string email, string userAgent)
+    private Task<OidcTestToken> LoginAsync(string email, string userAgent)
     {
-        using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequest(email, "password123"))
-        };
-
-        request.Headers.UserAgent.ParseAdd(userAgent);
-
-        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
-    }
-
-    private async Task AddInactiveSessionAsync(Guid userId)
-    {
-        await using AsyncServiceScope scope = Services.CreateAsyncScope();
-
-        AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        RefreshToken inactiveToken = RefreshToken.Create(
-            userId,
-            new string('a', 64),
-            DateTime.UtcNow.AddDays(1),
-            "127.0.0.1",
-            "SessionsTest/Inactive").Value;
-        inactiveToken.Revoke("127.0.0.1");
-
-        dbContext.RefreshTokens.Add(inactiveToken);
-        await dbContext.SaveChangesAsync();
+        return LoginWithOidcAsync(email, userAgent: userAgent);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

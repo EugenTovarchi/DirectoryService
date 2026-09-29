@@ -52,7 +52,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("list-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("list-company-admin@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -100,7 +100,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             secondCompanyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("list-system-admin@example.com");
+        OidcTestToken login = await LoginAsync("list-system-admin@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -139,7 +139,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("list-viewer@example.com");
+        OidcTestToken login = await LoginAsync("list-viewer@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -171,7 +171,7 @@ public sealed class GetUsersTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("list-page-admin@example.com");
+        OidcTestToken login = await LoginAsync("list-page-admin@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/users?page=2&pageSize=2");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -199,19 +199,9 @@ public sealed class GetUsersTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

@@ -64,7 +64,7 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
             AuthAuditActions.USER_ROLE_CHANGED,
             admin.Id);
 
-        TokenResponse login = await LoginAsync("audit-read-admin@example.com");
+        OidcTestToken login = await LoginAsync("audit-read-admin@example.com");
         using HttpRequestMessage request = new(
             HttpMethod.Get,
             $"/api/auth/audit-events?page=1&pageSize=20&action={AuthAuditActions.USER_ROLE_CHANGED}");
@@ -122,7 +122,7 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
             secondUser.Email,
             AuthAuditActions.INVITE_CREATED);
 
-        TokenResponse login = await LoginAsync("audit-read-system@example.com");
+        OidcTestToken login = await LoginAsync("audit-read-system@example.com");
         using HttpRequestMessage request = new(
             HttpMethod.Get,
             $"/api/auth/audit-events?companyId={firstCompanyId}&page=2&pageSize=1");
@@ -159,7 +159,7 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
             AuthAuditActions.LOGOUT,
             admin.Id);
 
-        TokenResponse login = await LoginAsync("audit-read-safe-admin@example.com");
+        OidcTestToken login = await LoginAsync("audit-read-safe-admin@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/auth/audit-events?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -196,7 +196,7 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("audit-read-viewer@example.com");
+        OidcTestToken login = await LoginAsync("audit-read-viewer@example.com");
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/auth/audit-events?page=1&pageSize=20");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
@@ -226,7 +226,7 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
         string createdFromUtc = Uri.EscapeDataString(DateTime.UtcNow.AddMinutes(-5).ToString("O"));
         string createdToUtc = Uri.EscapeDataString(DateTime.UtcNow.AddMinutes(5).ToString("O"));
 
-        TokenResponse login = await LoginAsync("audit-read-date-admin@example.com");
+        OidcTestToken login = await LoginAsync("audit-read-date-admin@example.com");
         using HttpRequestMessage request = new(
             HttpMethod.Get,
             $"/api/auth/audit-events?page=1&pageSize=20&createdFromUtc={createdFromUtc}&createdToUtc={createdToUtc}");
@@ -289,19 +289,9 @@ public sealed class GetAuthAuditEventsTests : AuthServiceBaseTests
         });
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

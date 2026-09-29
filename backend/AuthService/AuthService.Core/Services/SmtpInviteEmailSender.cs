@@ -49,13 +49,10 @@ public sealed class SmtpInviteEmailSender : IInviteEmailSender
             return Error.Failure("invite.email.delivery.failed", "Invite email delivery failed");
         }
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Invite email sent to user {UserId} at {Email}",
-                message.UserId,
-                message.Email);
-        }
+        _logger.LogInformation(
+            "Invite email sent to user {UserId} at {Email}",
+            message.UserId,
+            message.Email);
 
         return UnitResult.Success<Error>();
     }

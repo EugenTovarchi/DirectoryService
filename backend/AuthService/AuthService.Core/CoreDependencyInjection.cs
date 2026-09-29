@@ -42,7 +42,9 @@ public static class CoreDependencyInjection
 
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
-        services.AddScoped<ITokenService, TokenService>();
+        // Opaque tokens не связаны с JWT/OAuth lifecycle и хранятся только в виде SHA-256 hash.
+        services.AddSingleton<IOpaqueTokenService, OpaqueTokenService>();
+        services.AddScoped<UserPasswordAuthenticator>();
         services.AddScoped<InviteLinkFactory>();
         services.AddScoped<PasswordResetLinkFactory>();
         services.AddScoped<IInviteEmailSender, SmtpInviteEmailSender>();

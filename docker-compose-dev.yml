@@ -16,6 +16,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
+      - Jwt__Issuer=https://localhost:5001/
+      - Jwt__Audience=directory-service
+      - Jwt__MetadataAddress=http://auth-service:8003/.well-known/openid-configuration
+      - Jwt__RequireHttpsMetadata=false
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +41,12 @@ services:
     ports:
       - "15341:5341"
       - "8081:80"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: always
 
   postgres:
@@ -53,6 +63,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
     restart: always
 
   redis:
@@ -62,6 +73,12 @@ services:
       - "6379:6379"
     volumes:
       - D:/docker-data/shared/redis:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     restart: always
 
   minio:
@@ -75,6 +92,12 @@ services:
     volumes:
       - D:/docker-data/file-service/minio:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:9000/minio/health/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: always
 
   file-service:
@@ -93,11 +116,25 @@ services:
       - FileService.Development.env
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      Jwt__Issuer: https://localhost:5001/
+      Jwt__Audience: file-service
+      Jwt__MetadataAddress: http://auth-service:8003/.well-known/openid-configuration
+      Jwt__RequireHttpsMetadata: "false"
     depends_on:
-      - postgres
-      - redis
-      - seq
-      - loki
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      seq:
+        condition: service_started
+      loki:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     tty: true
     stdin_open: true
     restart: unless-stopped
@@ -113,9 +150,14 @@ services:
         - nuget_username
         - nuget_password
     ports:
-      - "8003:8003"
+      # Direct development port доступен только с этой машины.
+      - "127.0.0.1:8003:8003"
     env_file:
       - AuthService.Development.env
+    environment:
+      # Только local Docker: AuthService принимает исходную HTTPS-схему от Nginx.
+      # Это нужно для корректных OIDC URLs и не используется как production proxy policy.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     depends_on:
       auth-service-migrator:
         condition: service_completed_successfully
@@ -152,6 +194,12 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:8025/readyz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
 
   rabbitmq:
@@ -169,6 +217,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
     restart: always
 
   loki:
@@ -180,6 +229,12 @@ services:
       - ./backend/infrastructure/observabillity/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
       - D:/docker-data/backend/loki:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:3100/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   grafana:
@@ -197,6 +252,12 @@ services:
       - ./backend/infrastructure/observabillity/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   alloy:
@@ -216,11 +277,19 @@ services:
       - /etc/alloy/config.alloy
     depends_on:
       - loki
+    healthcheck:
+      test: [ "CMD", "/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/12345 && printf 'GET /-/ready HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && grep -q '200 OK' <&3" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   otel-collector:
     container_name: otel-collector
-    image: otel/opentelemetry-collector-contrib:0.151.0
+    build:
+      context: .
+      dockerfile: backend/infrastructure/observabillity/otel-collector/Dockerfile
     command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
     ports:
       - "4317:4317"
@@ -229,6 +298,12 @@ services:
       - "13133:13133"
     volumes:
       - ./backend/infrastructure/observabillity/otel-collector/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
+    healthcheck:
+      test: [ "CMD", "/busybox", "wget", "--quiet", "--spider", "http://localhost:13133/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   prometheus:
@@ -245,17 +320,36 @@ services:
       - D:/docker-data/backend/prometheus:/prometheus
     depends_on:
       - otel-collector
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   # Опциональный reverse proxy: запускается отдельно и не стартует backend-сервисы.
   nginx:
     image: nginx:1.29.4-alpine
     container_name: backend-nginx
+    profiles:
+      - proxy
     ports:
-      - "8080:80"
+      # Local reverse proxy не публикуется в локальную сеть.
+      - "127.0.0.1:8080:80"
+      # Порт совпадает с Oidc:Issuer=https://localhost:5001/.
+      - "127.0.0.1:5001:443"
     volumes:
       - D:/Projects/DirectoryService/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Development certificate и private key создаются scripts/prepare-nginx-https.ps1 вне Git.
+      - D:/docker-data/backend/nginx/certificates:/etc/nginx/certificates:ro
       - D:/docker-data/backend/nginx/logs:/var/log/nginx
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/nginx/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 
 secrets:

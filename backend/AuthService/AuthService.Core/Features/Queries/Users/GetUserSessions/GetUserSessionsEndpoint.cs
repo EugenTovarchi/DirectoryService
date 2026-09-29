@@ -59,16 +59,16 @@ public sealed class GetUserSessionsHandler
     : IQueryHandler<Result<IReadOnlyList<AuthSessionResponse>, Failure>, GetUserSessionsQuery>
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IValidator<GetUserSessionsQuery> _validator;
 
     public GetUserSessionsHandler(
         UserManager<ApplicationUser> userManager,
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IValidator<GetUserSessionsQuery> validator)
     {
         _userManager = userManager;
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _validator = validator;
     }
 
@@ -98,7 +98,7 @@ public sealed class GetUserSessionsHandler
         if (!requestedBySystemAdmin && targetUser.CurrentCompanyId != requestedByUser.CurrentCompanyId)
             return Errors.General.NotFoundEntity("user").ToFailure();
 
-        IReadOnlyList<RefreshToken> sessions = await _refreshTokenRepository.GetActiveSessionsForUserAsync(
+        IReadOnlyList<OidcSession> sessions = await _sessionService.GetActiveSessionsAsync(
             targetUser.Id,
             ct);
 
@@ -108,8 +108,8 @@ public sealed class GetUserSessionsHandler
                 session.CreatedAt,
                 session.ExpiresAt,
                 session.LastUsedAt,
-                session.CreatedByIp,
-                session.UserAgent))
+                CreatedByIp: null,
+                UserAgent: null))
             .ToList();
 
         return response;

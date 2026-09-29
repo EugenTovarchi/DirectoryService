@@ -16,7 +16,7 @@ public sealed class AuthIdentitySeeder
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly LocalViewerSeedOptions _localViewerOptions;
+    private readonly LocalUsersSeedOptions _localUsersOptions;
     private readonly ILogger<AuthIdentitySeeder> _logger;
 
     public AuthIdentitySeeder(
@@ -24,66 +24,163 @@ public sealed class AuthIdentitySeeder
         RoleManager<ApplicationRole> roleManager,
         UserManager<ApplicationUser> userManager,
         IHostEnvironment hostEnvironment,
-        IOptions<LocalViewerSeedOptions> localViewerOptions,
+        IOptions<LocalUsersSeedOptions> localUsersOptions,
         ILogger<AuthIdentitySeeder> logger)
     {
         _dbContext = dbContext;
         _roleManager = roleManager;
         _userManager = userManager;
         _hostEnvironment = hostEnvironment;
-        _localViewerOptions = localViewerOptions.Value;
+        _localUsersOptions = localUsersOptions.Value;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Создаёт отсутствующие роли, permissions, связи и явно включённых local users.
+    /// Повторный вызов не создаёт дубликаты и не сбрасывает пароли существующих users.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         await SeedRolesAsync();
         await SeedPermissionsAsync(cancellationToken);
         await SeedRolePermissionsAsync(cancellationToken);
-        await SeedLocalViewerAsync();
+        await SeedConfiguredLocalUsersAsync();
 
         _logger.LogInformation("Auth identity seed completed");
     }
 
-    private async Task SeedLocalViewerAsync()
+    private async Task SeedConfiguredLocalUsersAsync()
     {
-        if (!_localViewerOptions.Enabled)
+        if (!_localUsersOptions.Enabled)
+        {
             return;
+        }
 
-        if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Docker"))
-            throw new InvalidOperationException("Local viewer seed is allowed only in Development or Docker environment");
+        if (!_hostEnvironment.IsDevelopment() &&
+            !_hostEnvironment.IsEnvironment("Docker") &&
+            !_hostEnvironment.IsEnvironment("Testing"))
+        {
+            throw new InvalidOperationException(
+                "Local user seed is allowed only in Development, Docker or Testing environment");
+        }
 
-        string email = _localViewerOptions.Email.Trim();
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(_localViewerOptions.Password))
-            throw new InvalidOperationException("Local viewer seed requires Email and Password configuration");
+        var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (LocalUserSeedDefinition configuredUser in _localUsersOptions.Users)
+        {
+            string email = configuredUser.Email.Trim();
+            if (!emails.Add(email))
+            {
+                throw new InvalidOperationException(
+                    "Local user seed contains duplicate configured email");
+            }
+
+            string password = string.IsNullOrWhiteSpace(configuredUser.Password)
+                ? _localUsersOptions.Password
+                : configuredUser.Password;
+
+            await SeedLocalUserAsync(configuredUser, email, password);
+        }
+    }
+
+    private async Task SeedLocalUserAsync(
+        LocalUserSeedDefinition configuredUser,
+        string email,
+        string password)
+    {
+        if (string.IsNullOrWhiteSpace(email) ||
+            string.IsNullOrWhiteSpace(password) ||
+            string.IsNullOrWhiteSpace(configuredUser.DisplayName) ||
+            string.IsNullOrWhiteSpace(configuredUser.Role))
+        {
+            throw new InvalidOperationException(
+                "Local user seed requires Email, Password, DisplayName and Role");
+        }
 
         ApplicationUser? existingUser = await _userManager.FindByEmailAsync(email);
         if (existingUser is not null)
         {
-            bool isViewer = await _userManager.IsInRoleAsync(existingUser, AuthRoles.VIEWER);
-            if (!isViewer)
-                throw new InvalidOperationException("Configured local viewer already exists without Viewer role");
+            IList<string> existingRoles = await _userManager.GetRolesAsync(existingUser);
 
-            _logger.LogInformation("Local Viewer user already exists");
+            if (existingRoles.Contains(configuredUser.Role, StringComparer.Ordinal))
+            {
+                await RepairMissingCompanyContextAsync(
+                    existingUser,
+                    configuredUser.CurrentCompanyId);
+
+                _logger.LogInformation(
+                    "Local user already exists with role {Role}",
+                    configuredUser.Role);
+                return;
+            }
+
+            if (existingRoles.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Configured local user already exists with another role");
+            }
+
+            IdentityResult repairRoleResult = await _userManager.AddToRoleAsync(
+                existingUser,
+                configuredUser.Role);
+            EnsureSucceeded(repairRoleResult, "repair local user role");
+
+            _logger.LogInformation(
+                "Assigned missing role {Role} to existing local user",
+                configuredUser.Role);
             return;
         }
 
         var usernameResult = Username.Create(email);
         if (usernameResult.IsFailure)
-            throw new InvalidOperationException("Local viewer seed Email cannot be used as username");
+        {
+            throw new InvalidOperationException(
+                "Local user seed Email cannot be used as username");
+        }
 
-        var displayNameResult = DisplayName.Create(_localViewerOptions.DisplayName);
+        var displayNameResult = DisplayName.Create(configuredUser.DisplayName);
         if (displayNameResult.IsFailure)
-            throw new InvalidOperationException("Local viewer seed DisplayName is invalid");
+        {
+            throw new InvalidOperationException(
+                "Local user seed DisplayName is invalid");
+        }
 
-        ApplicationUser user = new(email, usernameResult.Value, displayNameResult.Value, currentCompanyId: null);
-        IdentityResult createResult = await _userManager.CreateAsync(user, _localViewerOptions.Password);
-        EnsureSucceeded(createResult, "create local Viewer user");
+        ApplicationUser user = new(
+            email,
+            usernameResult.Value,
+            displayNameResult.Value,
+            configuredUser.CurrentCompanyId);
+        IdentityResult createResult = await _userManager.CreateAsync(
+            user,
+            password);
+        EnsureSucceeded(createResult, "create local user");
 
-        IdentityResult addToRoleResult = await _userManager.AddToRoleAsync(user, AuthRoles.VIEWER);
-        EnsureSucceeded(addToRoleResult, "assign Viewer role to development user");
+        IdentityResult addToRoleResult = await _userManager.AddToRoleAsync(
+            user,
+            configuredUser.Role);
+        EnsureSucceeded(addToRoleResult, "assign local user role");
 
-        _logger.LogInformation("Local Viewer user created");
+        _logger.LogInformation(
+            "Local user created with role {Role}",
+            configuredUser.Role);
+    }
+
+    private async Task RepairMissingCompanyContextAsync(
+        ApplicationUser user,
+        Guid? configuredCompanyId)
+    {
+        if (user.CurrentCompanyId is not null ||
+            configuredCompanyId is not Guid companyId)
+        {
+            return;
+        }
+
+        user.ChangeCurrentCompany(companyId);
+        IdentityResult updateResult = await _userManager.UpdateAsync(user);
+        EnsureSucceeded(updateResult, "repair local user company context");
+
+        _logger.LogInformation(
+            "Assigned missing company context to existing local user");
     }
 
     private static void EnsureSucceeded(IdentityResult result, string operation)

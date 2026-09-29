@@ -13,6 +13,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using SharedService.SharedKernel;
 
 namespace AuthService.IntegrationTests.Features;
@@ -70,6 +71,38 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
 
         await AssertUserCannotLoginAsync("password-reset-user@example.com", "password123");
         await AssertUserCanLoginAsync("password-reset-user@example.com", "newpassword123");
+    }
+
+    [Fact]
+    public async Task ResetPassword_With_Active_Oidc_Session_Should_Revoke_Session()
+    {
+        // Arrange
+        ApplicationUser user = await CreateIdentityUserAsync(
+            "password-reset-session@example.com",
+            "passwordresetsession",
+            "Password Reset Session",
+            Guid.NewGuid(),
+            AuthRoles.VIEWER);
+        OpenIddictTestSession session =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, user.Id);
+
+        await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/request-password-reset",
+            new RequestPasswordResetRequest(user.Email!));
+        string resetToken = await GetLatestPasswordResetTokenForUserAsync(user.Id);
+
+        // Act
+        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
+            "/api/auth/reset-password",
+            new ResetPasswordRequest(resetToken, "newpassword123"));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        OpenIddictTestSessionStatus sessionStatus =
+            await OpenIddictSessionTestHelper.GetStatusAsync(Services, session);
+        sessionStatus.AuthorizationStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
+        sessionStatus.RefreshTokenStatus.Should().Be(OpenIddictConstants.Statuses.Revoked);
     }
 
     [Fact]
@@ -222,10 +255,10 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
         await using AsyncServiceScope scope = Services.CreateAsyncScope();
 
         AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        ITokenService tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        IOpaqueTokenService opaqueTokenService = scope.ServiceProvider.GetRequiredService<IOpaqueTokenService>();
         PasswordResetToken resetToken = PasswordResetToken.Create(
             userId,
-            tokenService.HashRefreshToken(rawResetToken),
+            opaqueTokenService.HashToken(rawResetToken),
             DateTime.UtcNow.AddSeconds(1)).Value;
 
         dbContext.PasswordResetTokens.Add(resetToken);
@@ -236,20 +269,16 @@ public sealed class PasswordResetTests : AuthServiceBaseTests
 
     private async Task AssertUserCanLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        token.Should().NotBeNull();
     }
 
     private async Task AssertUserCannotLoginAsync(string email, string password)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, password));
+        OidcTestToken? token = await TryLoginWithOidcAsync(email, password);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        token.Should().BeNull();
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

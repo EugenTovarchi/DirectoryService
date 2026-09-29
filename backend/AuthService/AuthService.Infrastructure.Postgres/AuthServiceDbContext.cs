@@ -18,6 +18,9 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
     {
         var optionsBuilder = new DbContextOptionsBuilder<AuthServiceDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
+
+        // Подключает framework-owned OpenIddict entities к EF model при direct/test создании context.
+        optionsBuilder.UseOpenIddict();
         optionsBuilder.EnableSensitiveDataLogging();
 
         return new AuthServiceDbContext(optionsBuilder.Options);
@@ -25,7 +28,6 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
 
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<UserInviteToken> UserInviteTokens => Set<UserInviteToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<AuthAuditEvent> AuthAuditEvents => Set<AuthAuditEvent>();
@@ -41,7 +43,6 @@ public class AuthServiceDbContext : IdentityDbContext<ApplicationUser, Applicati
         builder.ApplyConfiguration(new ApplicationRoleConfiguration());
         builder.ApplyConfiguration(new PermissionConfiguration());
         builder.ApplyConfiguration(new RolePermissionConfiguration());
-        builder.ApplyConfiguration(new RefreshTokenConfiguration());
         builder.ApplyConfiguration(new UserInviteTokenConfiguration());
         builder.ApplyConfiguration(new PasswordResetTokenConfiguration());
         builder.ApplyConfiguration(new AuthAuditEventConfiguration());

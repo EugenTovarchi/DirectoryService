@@ -49,17 +49,13 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             var settings = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
-                ["Jwt:Issuer"] = "24eye.auth.tests",
-                ["Jwt:Audience"] = "24eye.backend.tests",
-                ["Jwt:SigningKey"] = "test-auth-service-signing-key-with-enough-length",
-                ["Jwt:AccessTokenLifetimeMinutes"] = "15",
-                ["Jwt:RefreshTokenLifetimeDays"] = "30",
                 ["EmailOutbox:InitialRetryDelaySeconds"] = "1",
                 ["EmailOutbox:MaxRetryDelaySeconds"] = "1",
                 ["ServiceClients:Clients:0:ClientId"] = "directory-service",
                 ["ServiceClients:Clients:0:ClientSecret"] = "test-directory-service-client-secret-value",
                 ["ServiceClients:Clients:0:ServiceName"] = "DirectoryService",
-                ["ServiceClients:Clients:0:ServicePermissions:0"] = "file-service.internal"
+                ["ServiceClients:Clients:0:ServicePermissions:0"] = "file-service.internal",
+                ["ServiceClients:Clients:0:AllowedScopes:0"] = "files"
             };
 
             config.AddInMemoryCollection(settings);
@@ -125,8 +121,11 @@ public class AuthServiceTestWebFactory : WebApplicationFactory<Program>, IAsyncL
             new RespawnerOptions
             {
                 DbAdapter = DbAdapter.Postgres,
-                SchemasToInclude = ["public"],
-                TablesToIgnore = ["__EFMigrationsHistory"]
+                SchemasToInclude = new[] { "public" },
+                TablesToIgnore = new Respawn.Graph.Table[]
+                {
+                    "__EFMigrationsHistory"
+                }
             });
     }
 }

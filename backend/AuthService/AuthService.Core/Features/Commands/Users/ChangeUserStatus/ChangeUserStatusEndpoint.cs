@@ -59,31 +59,41 @@ public sealed class ChangeUserStatusValidator : AbstractValidator<ChangeUserStat
     }
 }
 
+/// <summary>
+/// Изменяет статус пользователя и отзывает его OAuth/OIDC sessions при деактивации.
+/// </summary>
 public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetailsResponse, ChangeUserStatusCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ChangeUserStatusCommand> _validator;
     private readonly ILogger<ChangeUserStatusHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler изменения статуса пользователя.
+    /// </summary>
     public ChangeUserStatusHandler(
         UserManager<ApplicationUser> userManager,
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ChangeUserStatusCommand> validator,
         ILogger<ChangeUserStatusHandler> logger)
     {
         _userManager = userManager;
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Активирует или деактивирует пользователя в допустимой company boundary.
+    /// При деактивации отзывает все его OpenIddict authorizations и tokens.
+    /// </summary>
     public async Task<Result<CompanyUserDetailsResponse, Failure>> Handle(
         ChangeUserStatusCommand command,
         CancellationToken cancellationToken)
@@ -124,9 +134,8 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         else
         {
             targetUser.Deactivate();
-            await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+            await _sessionService.RevokeAllSessionsAsync(
                 targetUser.Id,
-                revokedByIp: null,
                 cancellationToken);
         }
 
@@ -134,13 +143,26 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
         if (!updateResult.Succeeded)
             return UserManagementFailures.UserStatusChangeFailed();
 
-        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+        string metadataJson =
+            $$"""
+              {
+                "isActive": {{targetUser.IsActive.ToString().ToLowerInvariant()}}
+              }
+              """;
+
+        Result<AuthAuditEvent, Error> auditEventResult = AuthAuditEvent.Create(
             targetUser.CurrentCompanyId,
             targetUser.Id,
             targetUser.Email,
             AuthAuditActions.USER_STATUS_CHANGED,
             command.RequestedByUserId,
-            metadataJson: $$"""{"isActive":{{targetUser.IsActive.ToString().ToLowerInvariant()}}}""").Value);
+            metadataJson: metadataJson);
+        if (auditEventResult.IsFailure)
+        {
+            return auditEventResult.Error.ToFailure();
+        }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(auditEventResult.Value);
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
@@ -154,14 +176,11 @@ public sealed class ChangeUserStatusHandler : ICommandHandler<CompanyUserDetails
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User {UserId} status changed to {IsActive} by {RequestedByUserId}",
-                targetUser.Id,
-                targetUser.IsActive,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "User {UserId} status changed to {IsActive} by {RequestedByUserId}",
+            targetUser.Id,
+            targetUser.IsActive,
+            command.RequestedByUserId);
 
         return new CompanyUserDetailsResponse(
             targetUser.Id,
