@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,12 +40,19 @@ internal sealed class AuthServiceTokenProvider : IServiceTokenProvider, IDisposa
             if (TokenIsUsable())
                 return _accessToken!;
 
-            var request = new ServiceTokenRequest(
-                _options.ServiceClientId,
-                _options.ServiceClientSecret);
+            var tokenForm = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = _options.ServiceClientId,
+                ["client_secret"] = _options.ServiceClientSecret,
+                ["scope"] = _options.ServiceTokenScope
+            };
 
             HttpResponseMessage response = await _httpClient
-                .PostAsJsonAsync("api/auth/service-token", request, cancellationToken)
+                .PostAsync(
+                    "connect/token",
+                    new FormUrlEncodedContent(tokenForm),
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -53,21 +61,26 @@ internal sealed class AuthServiceTokenProvider : IServiceTokenProvider, IDisposa
                 return Error.Failure("auth.service_token.failed", "Failed to request service access token").ToFailure();
             }
 
-            ServiceTokenEnvelope? tokenEnvelope = await response.Content
-                .ReadFromJsonAsync<ServiceTokenEnvelope>(cancellationToken)
+            OAuthTokenResponse? tokenResponse = await response.Content
+                .ReadFromJsonAsync<OAuthTokenResponse>(cancellationToken)
                 .ConfigureAwait(false);
 
-            ServiceTokenResponse? tokenResponse = tokenEnvelope?.Result;
-            if (tokenResponse is null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
+            if (tokenResponse is null ||
+                string.IsNullOrWhiteSpace(tokenResponse.AccessToken) ||
+                tokenResponse.ExpiresIn <= 0)
             {
                 return Error.Failure("auth.service_token.invalid_response", "Service token response is invalid")
                     .ToFailure();
             }
 
             _accessToken = tokenResponse.AccessToken;
-            _accessTokenExpiresAt = tokenResponse.AccessTokenExpiresAt;
+            _accessTokenExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
 
             return _accessToken;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -84,11 +97,9 @@ internal sealed class AuthServiceTokenProvider : IServiceTokenProvider, IDisposa
         !string.IsNullOrWhiteSpace(_accessToken) &&
         _accessTokenExpiresAt > DateTime.UtcNow.Add(RefreshSkew);
 
-    private sealed record ServiceTokenRequest(string ClientId, string ClientSecret);
-
-    private sealed record ServiceTokenEnvelope(ServiceTokenResponse? Result);
-
-    private sealed record ServiceTokenResponse(string AccessToken, DateTime AccessTokenExpiresAt);
+    private sealed record OAuthTokenResponse(
+        [property: JsonPropertyName("access_token")] string AccessToken,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn);
 
     public void Dispose()
     {

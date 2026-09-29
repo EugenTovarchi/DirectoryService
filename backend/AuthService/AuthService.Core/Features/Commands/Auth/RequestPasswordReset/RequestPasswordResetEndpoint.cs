@@ -50,23 +50,29 @@ public sealed class RequestPasswordResetValidator : AbstractValidator<RequestPas
     }
 }
 
+/// <summary>
+/// Создаёт одноразовый opaque token для безопасного password reset flow.
+/// </summary>
 public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswordResetCommand>
 {
     private const int PASSWORD_RESET_TOKEN_LIFETIME_HOURS = 1;
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
-    private readonly ITokenService _tokenService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly PasswordResetLinkFactory _passwordResetLinkFactory;
     private readonly IEmailOutboxRepository _emailOutboxRepository;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RequestPasswordResetCommand> _validator;
 
+    /// <summary>
+    /// Создаёт handler запроса password reset.
+    /// </summary>
     public RequestPasswordResetHandler(
         UserManager<ApplicationUser> userManager,
         IPasswordResetTokenRepository passwordResetTokenRepository,
-        ITokenService tokenService,
+        IOpaqueTokenService opaqueTokenService,
         PasswordResetLinkFactory passwordResetLinkFactory,
         IEmailOutboxRepository emailOutboxRepository,
         IAuthAuditRepository auditRepository,
@@ -75,7 +81,7 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
     {
         _userManager = userManager;
         _passwordResetTokenRepository = passwordResetTokenRepository;
-        _tokenService = tokenService;
+        _opaqueTokenService = opaqueTokenService;
         _passwordResetLinkFactory = passwordResetLinkFactory;
         _emailOutboxRepository = emailOutboxRepository;
         _auditRepository = auditRepository;
@@ -83,6 +89,9 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
         _validator = validator;
     }
 
+    /// <summary>
+    /// Без раскрытия существования пользователя создаёт reset token и outbox message.
+    /// </summary>
     public async Task<UnitResult<Failure>> Handle(
         RequestPasswordResetCommand command,
         CancellationToken cancellationToken)
@@ -105,7 +114,7 @@ public sealed class RequestPasswordResetHandler : ICommandHandler<RequestPasswor
 
         await _passwordResetTokenRepository.RevokeActiveTokensForUserAsync(user.Id, cancellationToken);
 
-        RefreshTokenResult resetToken = _tokenService.CreateRefreshToken();
+        OpaqueToken resetToken = _opaqueTokenService.CreateToken();
         DateTime resetTokenExpiresAt = DateTime.UtcNow.AddHours(PASSWORD_RESET_TOKEN_LIFETIME_HOURS);
         Result<PasswordResetToken, Error> resetTokenResult = PasswordResetToken.Create(
             user.Id,

@@ -1,7 +1,6 @@
 using System.Threading.RateLimiting;
 using AuthService.Core.Options;
 using AuthService.Core.RateLimiting;
-using AuthService.Web.Swagger;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using SharedService.Framework.Logging;
@@ -35,7 +34,6 @@ public static class DependencyInjectionExtensions
     {
         services.AddSerilogLogging(configuration, "AuthService");
         services.AddOpenApiSpec("AuthService");
-        services.AddSwaggerGen(options => options.SchemaFilter<LoginRequestSchemaFilter>());
         services.AddSharedOpenTelemetry(configuration, fallbackServiceName: "AuthService");
         services.AddEmailOptions(configuration);
         services.AddPublicAuthRateLimiting(configuration);
@@ -65,8 +63,8 @@ public static class DependencyInjectionExtensions
                 rateLimitOptions => rateLimitOptions.LoginPermitLimit);
             AddFixedWindowPolicy(
                 options,
-                PublicAuthRateLimitPolicies.REFRESH,
-                rateLimitOptions => rateLimitOptions.RefreshPermitLimit);
+                PublicAuthRateLimitPolicies.TOKEN,
+                rateLimitOptions => rateLimitOptions.TokenPermitLimit);
             AddFixedWindowPolicy(
                 options,
                 PublicAuthRateLimitPolicies.PASSWORD_RESET,

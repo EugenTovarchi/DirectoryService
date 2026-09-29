@@ -179,6 +179,9 @@ public sealed class Department : SoftDeletableEntity<DepartmentId>
         if (parent == null)
             return Errors.General.NotFoundEntity("parent");
 
+        if (parent.IsDeleted)
+            return Errors.General.NotFoundEntity("parent");
+
         var pathResult = Path.CreateForChild(parent.Path, identifier);
         if (pathResult.IsFailure)
             return pathResult.Error;

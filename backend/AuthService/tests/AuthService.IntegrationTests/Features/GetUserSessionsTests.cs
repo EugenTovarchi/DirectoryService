@@ -4,12 +4,10 @@ using System.Net.Http.Json;
 using AuthService.Contracts.Requests;
 using AuthService.Contracts.Responses;
 using AuthService.Domain.Identity;
-using AuthService.Infrastructure.Postgres;
 using AuthService.Infrastructure.Postgres.Seeding;
 using AuthService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SharedService.SharedKernel;
 
@@ -25,6 +23,7 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
     [Fact]
     public async Task GetUserSessions_By_CompanyAdmin_Should_Return_Own_Company_User_Active_Sessions()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
             "admin-sessions-company-admin@example.com",
@@ -39,31 +38,39 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.OPERATOR);
 
-        await LoginAsync("admin-sessions-operator@example.com", "AdminSessions/1.0");
-        TokenResponse targetRevokedLogin = await LoginAsync("admin-sessions-operator@example.com", "AdminSessions/Revoked");
-        await AddInactiveSessionAsync(targetUser.Id);
-        await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/logout",
-            new RefreshTokenRequest(targetRevokedLogin.RefreshToken));
+        OpenIddictTestSession activeSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
+        await OpenIddictSessionTestHelper.CreateSessionAsync(
+            Services,
+            targetUser.Id,
+            revoked: true);
+        await OpenIddictSessionTestHelper.CreateSessionAsync(
+            Services,
+            targetUser.Id,
+            expirationDate: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-company-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-company-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
         IReadOnlyList<AuthSessionResponse> sessions = await ReadSessionsAsync(response);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         sessions.Should().ContainSingle();
-        sessions.Single().UserAgent.Should().Be("AdminSessions/1.0");
+        sessions.Single().Id.Should().Be(activeSession.AuthorizationId);
+        sessions.Single().UserAgent.Should().BeNull();
+        sessions.Single().CreatedByIp.Should().BeNull();
         sessions.Should().OnlyContain(session => session.ExpiresAt > DateTime.UtcNow);
     }
 
     [Fact]
     public async Task GetUserSessions_By_CompanyAdmin_For_Another_Company_User_Should_Return_NotFound()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         Guid anotherCompanyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
@@ -80,19 +87,22 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             AuthRoles.VIEWER);
 
         await LoginAsync("admin-sessions-other-company@example.com", "AdminSessions/Other");
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-boundary-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-boundary-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetUserSessions_By_SystemAdmin_Should_Return_Another_Company_User_Sessions()
     {
+        // Arrange
         Guid systemCompanyId = Guid.NewGuid();
         Guid anotherCompanyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
@@ -108,32 +118,41 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             anotherCompanyId,
             AuthRoles.TECHNICIAN);
 
-        await LoginAsync("admin-sessions-system-target@example.com", "AdminSessions/SystemTarget");
-        TokenResponse adminLogin = await LoginAsync("admin-sessions-system-admin@example.com", "AdminSessions/Admin");
+        OpenIddictTestSession targetSession =
+            await OpenIddictSessionTestHelper.CreateSessionAsync(Services, targetUser.Id);
+        OidcTestToken adminLogin = await LoginAsync("admin-sessions-system-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             adminLogin.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
         IReadOnlyList<AuthSessionResponse> sessions = await ReadSessionsAsync(response);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         sessions.Should().ContainSingle();
-        sessions.Single().UserAgent.Should().Be("AdminSessions/SystemTarget");
+        sessions.Single().Id.Should().Be(targetSession.AuthorizationId);
+        sessions.Single().UserAgent.Should().BeNull();
+        sessions.Single().CreatedByIp.Should().BeNull();
     }
 
     [Fact]
     public async Task GetUserSessions_Without_Access_Token_Should_Return_Unauthorized()
     {
+        // Arrange
+
+        // Act
         HttpResponseMessage response = await AppHttpClient.GetAsync($"/api/users/{Guid.NewGuid()}/sessions");
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task GetUserSessions_Without_UsersManage_Permission_Should_Return_Forbidden()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         ApplicationUser viewer = await CreateIdentityUserAsync(
             "admin-sessions-viewer@example.com",
@@ -142,19 +161,22 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-sessions-viewer@example.com", "AdminSessions/Viewer");
+        OidcTestToken login = await LoginAsync("admin-sessions-viewer@example.com", "AdminSessions/Viewer");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{viewer.Id}/sessions",
             login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task GetUserSessions_With_Unknown_User_Should_Return_NotFound()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
             "admin-sessions-unknown-admin@example.com",
@@ -163,19 +185,22 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-sessions-unknown-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-unknown-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{Guid.NewGuid()}/sessions",
             login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetUserSessions_With_Self_User_Should_Return_BadRequest()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         ApplicationUser admin = await CreateIdentityUserAsync(
             "admin-sessions-self-admin@example.com",
@@ -184,19 +209,22 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("admin-sessions-self-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-self-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{admin.Id}/sessions",
             login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task GetUserSessions_With_No_Active_Sessions_Should_Return_Empty_List()
     {
+        // Arrange
         Guid companyId = Guid.NewGuid();
         await CreateIdentityUserAsync(
             "admin-sessions-empty-admin@example.com",
@@ -211,16 +239,17 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
             companyId,
             AuthRoles.VIEWER);
 
-        TokenResponse login = await LoginAsync("admin-sessions-empty-admin@example.com", "AdminSessions/Admin");
+        OidcTestToken login = await LoginAsync("admin-sessions-empty-admin@example.com", "AdminSessions/Admin");
         using HttpRequestMessage request = CreateAuthorizedGetRequest(
             $"/api/users/{targetUser.Id}/sessions",
             login.AccessToken);
 
+        // Act
         HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
         IReadOnlyList<AuthSessionResponse> sessions = await ReadSessionsAsync(response);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         sessions.Should().BeEmpty();
     }
 
@@ -243,41 +272,9 @@ public sealed class GetUserSessionsTests : AuthServiceBaseTests
         return envelope.Result!;
     }
 
-    private async Task<TokenResponse> LoginAsync(string email, string userAgent)
+    private Task<OidcTestToken> LoginAsync(string email, string userAgent)
     {
-        using HttpRequestMessage request = new(HttpMethod.Post, "/api/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequest(email, "password123"))
-        };
-
-        request.Headers.UserAgent.ParseAdd(userAgent);
-
-        HttpResponseMessage response = await AppHttpClient.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
-    }
-
-    private async Task AddInactiveSessionAsync(Guid userId)
-    {
-        await using AsyncServiceScope scope = Services.CreateAsyncScope();
-
-        AuthServiceDbContext dbContext = scope.ServiceProvider.GetRequiredService<AuthServiceDbContext>();
-        RefreshToken inactiveToken = RefreshToken.Create(
-            userId,
-            new string('b', 64),
-            DateTime.UtcNow.AddDays(1),
-            "127.0.0.1",
-            "AdminSessions/Inactive").Value;
-        inactiveToken.Revoke("127.0.0.1");
-
-        dbContext.RefreshTokens.Add(inactiveToken);
-        await dbContext.SaveChangesAsync();
+        return LoginWithOidcAsync(email, userAgent: userAgent);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

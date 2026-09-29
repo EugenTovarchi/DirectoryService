@@ -60,7 +60,7 @@ public sealed class RevokeUserSessionsValidator : AbstractValidator<RevokeUserSe
 public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessionsCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RevokeUserSessionsCommand> _validator;
@@ -68,14 +68,14 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
 
     public RevokeUserSessionsHandler(
         UserManager<ApplicationUser> userManager,
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RevokeUserSessionsCommand> validator,
         ILogger<RevokeUserSessionsHandler> logger)
     {
         _userManager = userManager;
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -115,9 +115,8 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+        await _sessionService.RevokeAllSessionsAsync(
             targetUser.Id,
-            command.RevokedByIp,
             cancellationToken);
 
         UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
@@ -138,13 +137,10 @@ public sealed class RevokeUserSessionsHandler : ICommandHandler<RevokeUserSessio
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "All sessions revoked for user {UserId} by {RequestedByUserId}",
-                targetUser.Id,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "All sessions revoked for user {UserId} by {RequestedByUserId}",
+            targetUser.Id,
+            command.RequestedByUserId);
 
         return UnitResult.Success<Failure>();
     }

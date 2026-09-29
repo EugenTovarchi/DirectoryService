@@ -21,7 +21,9 @@ public partial class Program
                 environment,
                 builder.Environment);
 
-            builder.Services.AddControllers();
+            // ControllersWithViews нужен только для небольших OIDC login/consent pages.
+            // Существующие API controllers продолжают работать как раньше.
+            builder.Services.AddControllersWithViews();
 
             builder.Services.AddEndpointsApiExplorer();
 
@@ -31,6 +33,9 @@ public partial class Program
             builder.Services.AddDataProtection();
 
             builder.Services.AddAuthServiceAuthentication(builder.Configuration);
+            builder.Services.AddAuthServiceOidcServer(
+                builder.Configuration,
+                builder.Environment);
 
             builder.Services.AddCore()
                 .AddPostgresInfrastructure(builder.Configuration);

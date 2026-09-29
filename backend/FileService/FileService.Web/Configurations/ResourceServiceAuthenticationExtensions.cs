@@ -16,17 +16,24 @@ public static class ResourceServiceAuthenticationExtensions
     // Проверка конфигурации при старте приложения(настройка самого FS, а не каждого JWT).
     public static IServiceCollection AddResourceServiceAuthentication(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
+        bool allowTestingSigningKey = environment.IsEnvironment("Testing");
+
         services
             .AddOptions<JwtValidationOptions>()
             .Bind(configuration.GetSection(JWT_SECTION_NAME))
             .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "Jwt:Issuer is required")
             .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "Jwt:Audience is required")
             .Validate(
-                options => !string.IsNullOrWhiteSpace(options.SigningKey) &&
-                    options.SigningKey.Length >= MIN_SIGNING_KEY_LENGTH,
-                $"Jwt:SigningKey must be at least {MIN_SIGNING_KEY_LENGTH} characters")
+                options => HasValidSigningSource(
+                    options,
+                    environment,
+                    allowTestingSigningKey),
+                "Jwt requires an HTTPS MetadataAddress; " +
+                "HTTP metadata is limited to Docker/Testing; " +
+                $"only Testing may use a SigningKey with at least {MIN_SIGNING_KEY_LENGTH} characters")
             .ValidateOnStart();
 
         services
@@ -38,7 +45,10 @@ public static class ResourceServiceAuthenticationExtensions
             .Configure<IOptions<JwtValidationOptions>>((options, jwtOptions) =>
             {
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = CreateTokenValidationParameters(jwtOptions.Value);
+                ConfigureJwtBearer(
+                    options,
+                    jwtOptions.Value,
+                    allowTestingSigningKey);
             });
 
         services.AddAuthorization(options =>
@@ -62,6 +72,31 @@ public static class ResourceServiceAuthenticationExtensions
         return services;
     }
 
+    private static void ConfigureJwtBearer(
+        JwtBearerOptions bearerOptions,
+        JwtValidationOptions jwtOptions,
+        bool allowTestingSigningKey)
+    {
+        bearerOptions.TokenValidationParameters = CreateTokenValidationParameters(jwtOptions);
+
+        if (string.IsNullOrWhiteSpace(jwtOptions.MetadataAddress))
+        {
+            if (!allowTestingSigningKey)
+            {
+                return;
+            }
+
+            // Symmetric key остаётся только быстрым test helper для изолированных integration tests.
+            bearerOptions.TokenValidationParameters.IssuerSigningKey =
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
+            return;
+        }
+
+        // JwtBearer загружает discovery/JWKS и автоматически обновляет public signing keys.
+        bearerOptions.MetadataAddress = jwtOptions.MetadataAddress;
+        bearerOptions.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+    }
+
     private static TokenValidationParameters CreateTokenValidationParameters(JwtValidationOptions options) => new()
     {
         ValidateIssuer = true,
@@ -69,15 +104,48 @@ public static class ResourceServiceAuthenticationExtensions
         ValidateAudience = true,
         ValidAudience = options.Audience,
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)),
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromSeconds(30)
     };
+
+    private static bool HasValidSigningSource(
+        JwtValidationOptions options,
+        IHostEnvironment environment,
+        bool allowTestingSigningKey)
+    {
+        if (!string.IsNullOrWhiteSpace(options.MetadataAddress))
+        {
+            if (!Uri.TryCreate(
+                    options.MetadataAddress,
+                    UriKind.Absolute,
+                    out Uri? metadataAddress))
+            {
+                return false;
+            }
+
+            if (options.RequireHttpsMetadata)
+            {
+                return metadataAddress.Scheme == Uri.UriSchemeHttps;
+            }
+
+            return (environment.IsEnvironment("Docker") ||
+                    allowTestingSigningKey) &&
+                metadataAddress.Scheme == Uri.UriSchemeHttp;
+        }
+
+        return allowTestingSigningKey &&
+            !string.IsNullOrWhiteSpace(options.SigningKey) &&
+            options.SigningKey.Length >= MIN_SIGNING_KEY_LENGTH;
+    }
 
     private sealed class JwtValidationOptions
     {
         public string Issuer { get; init; } = string.Empty;
         public string Audience { get; init; } = string.Empty;
+
+        // Используется только integration tests при EnvironmentName=Testing.
         public string SigningKey { get; init; } = string.Empty;
+        public string MetadataAddress { get; init; } = string.Empty;
+        public bool RequireHttpsMetadata { get; init; } = true;
     }
 }

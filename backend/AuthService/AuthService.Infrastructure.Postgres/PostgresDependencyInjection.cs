@@ -7,6 +7,7 @@ using AuthService.Infrastructure.Postgres.EmailDelivery;
 using AuthService.Infrastructure.Postgres.Queries;
 using AuthService.Infrastructure.Postgres.Repositories;
 using AuthService.Infrastructure.Postgres.Seeding;
+using AuthService.Infrastructure.Postgres.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,8 +33,12 @@ public static class PostgresDependencyInjection
             .AddRepositories()
             .AddEmailOutbox(configuration);
 
-        services.Configure<LocalViewerSeedOptions>(
-            configuration.GetSection(LocalViewerSeedOptions.SECTION_NAME));
+        services.AddSingleton<
+            IValidateOptions<LocalUsersSeedOptions>,
+            LocalUsersSeedOptionsValidator>();
+        services.AddOptions<LocalUsersSeedOptions>()
+            .Bind(configuration.GetSection(LocalUsersSeedOptions.SECTION_NAME))
+            .ValidateOnStart();
 
         return services;
     }
@@ -68,6 +73,9 @@ public static class PostgresDependencyInjection
 
             options.UseNpgsql(dataSource);
 
+            // Добавляет OpenIddict applications/authorizations/scopes/tokens в production EF model.
+            options.UseOpenIddict();
+
             options.LogTo(message =>
             {
                 if (message.Contains("Error", StringComparison.OrdinalIgnoreCase) ||
@@ -93,7 +101,7 @@ public static class PostgresDependencyInjection
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IOidcSessionService, OpenIddictSessionService>();
         services.AddScoped<IUserInviteTokenRepository, UserInviteTokenRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IAuthAuditRepository, AuthAuditRepository>();

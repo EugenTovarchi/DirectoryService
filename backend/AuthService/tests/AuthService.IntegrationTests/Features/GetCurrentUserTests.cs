@@ -31,7 +31,7 @@ public sealed class GetCurrentUserTests : AuthServiceBaseTests
             companyId,
             AuthRoles.COMPANY_ADMIN);
 
-        TokenResponse login = await LoginAsync("me-company-admin@example.com");
+        OidcTestToken login = await LoginAsync("me-company-admin@example.com");
 
         using HttpRequestMessage request = new(HttpMethod.Get, "/api/auth/me");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
@@ -73,19 +73,9 @@ public sealed class GetCurrentUserTests : AuthServiceBaseTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<TokenResponse> LoginAsync(string email)
+    private Task<OidcTestToken> LoginAsync(string email)
     {
-        HttpResponseMessage response = await AppHttpClient.PostAsJsonAsync(
-            "/api/auth/login",
-            new LoginRequest(email, "password123"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        Envelope<TokenResponse>? envelope = await response.Content.ReadFromJsonAsync<Envelope<TokenResponse>>();
-        envelope.Should().NotBeNull();
-        envelope!.Result.Should().NotBeNull();
-
-        return envelope.Result!;
+        return LoginWithOidcAsync(email);
     }
 
     private async Task<ApplicationUser> CreateIdentityUserAsync(

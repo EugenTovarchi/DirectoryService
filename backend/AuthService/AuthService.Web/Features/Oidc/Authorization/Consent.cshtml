@@ -1,0 +1,37 @@
+@model AuthService.Web.Features.Oidc.Authorization.OidcAuthorizationModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Разрешение доступа</title>
+</head>
+<body>
+    <main>
+        <h1>Разрешить доступ?</h1>
+        <p>Client <strong>@Model.ClientDisplayName</strong> запрашивает:</p>
+        <ul>
+            @foreach (string scope in Model.Scopes)
+            {
+                <li><code>@scope</code></li>
+            }
+        </ul>
+
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="client_id" value="@Model.ClientId" />
+            <input type="hidden" name="redirect_uri" value="@Model.RedirectUri" />
+            <input type="hidden" name="response_type" value="@Model.ResponseType" />
+            <input type="hidden" name="scope" value="@Model.Scope" />
+            <input type="hidden" name="state" value="@Model.State" />
+            <input type="hidden" name="code_challenge" value="@Model.CodeChallenge" />
+            <input type="hidden" name="code_challenge_method" value="@Model.CodeChallengeMethod" />
+            <button type="submit" name="decision" value="accept">Разрешить</button>
+            <button type="submit" name="decision" value="deny">Отклонить</button>
+        </form>
+    </main>
+</body>
+</html>

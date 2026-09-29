@@ -57,20 +57,20 @@ public sealed class RevokeSessionValidator : AbstractValidator<RevokeSessionComm
 
 public sealed class RevokeSessionHandler : ICommandHandler<RevokeSessionCommand>
 {
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<RevokeSessionCommand> _validator;
     private readonly ILogger<RevokeSessionHandler> _logger;
 
     public RevokeSessionHandler(
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<RevokeSessionCommand> validator,
         ILogger<RevokeSessionHandler> logger)
     {
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
@@ -85,16 +85,6 @@ public sealed class RevokeSessionHandler : ICommandHandler<RevokeSessionCommand>
         if (!validationResult.IsValid)
             return validationResult.ToErrors();
 
-        RefreshToken? session = await _refreshTokenRepository.GetActiveSessionForUserAsync(
-            command.Request.SessionId,
-            command.UserId,
-            cancellationToken);
-
-        if (session is null)
-            return UnitResult.Success<Failure>();
-
-        session.Revoke(command.RevokedByIp);
-
         Result<ITransactionScope, Error> transactionScopeResult =
             await _transactionManager.BeginTransactionAsync(cancellationToken);
         if (transactionScopeResult.IsFailure)
@@ -102,14 +92,36 @@ public sealed class RevokeSessionHandler : ICommandHandler<RevokeSessionCommand>
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
+        bool revoked = await _sessionService.RevokeSessionAsync(
+            command.UserId,
+            command.Request.SessionId,
+            cancellationToken);
+        if (!revoked)
+        {
+            return UnitResult.Success<Failure>();
+        }
+
+        string metadataJson =
+            $$"""
+              {
+                "sessionId": "{{command.Request.SessionId}}"
+              }
+              """;
+
+        Result<AuthAuditEvent, Error> auditEventResult = AuthAuditEvent.Create(
             companyId: null,
-            session.UserId,
+            command.UserId,
             email: null,
             AuthAuditActions.SESSION_REVOKED,
             command.UserId,
             ipAddress: command.RevokedByIp,
-            metadataJson: $$"""{"sessionId":"{{session.Id}}"}""").Value);
+            metadataJson);
+        if (auditEventResult.IsFailure)
+        {
+            return auditEventResult.Error.ToFailure();
+        }
+
+        UnitResult<Error> addAuditResult = _auditRepository.Add(auditEventResult.Value);
         if (addAuditResult.IsFailure)
             return addAuditResult.Error.ToFailure();
 
@@ -121,10 +133,10 @@ public sealed class RevokeSessionHandler : ICommandHandler<RevokeSessionCommand>
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Session {SessionId} revoked for user {UserId}", session.Id, session.UserId);
-        }
+        _logger.LogInformation(
+            "Session {SessionId} revoke requested for user {UserId}",
+            command.Request.SessionId,
+            command.UserId);
 
         return UnitResult.Success<Failure>();
     }

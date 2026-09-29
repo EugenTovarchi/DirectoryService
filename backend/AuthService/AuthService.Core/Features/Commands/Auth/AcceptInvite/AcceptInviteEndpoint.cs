@@ -50,20 +50,26 @@ public sealed class AcceptInviteValidator : AbstractValidator<AcceptInviteComman
     }
 }
 
+/// <summary>
+/// Проверяет opaque invite token, назначает password и активирует пользователя.
+/// </summary>
 public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, AcceptInviteCommand>
 {
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ITokenService _tokenService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<AcceptInviteCommand> _validator;
     private readonly ILogger<AcceptInviteHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler принятия приглашения.
+    /// </summary>
     public AcceptInviteHandler(
         IUserInviteTokenRepository inviteTokenRepository,
         UserManager<ApplicationUser> userManager,
-        ITokenService tokenService,
+        IOpaqueTokenService opaqueTokenService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<AcceptInviteCommand> validator,
@@ -71,13 +77,16 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
     {
         _inviteTokenRepository = inviteTokenRepository;
         _userManager = userManager;
-        _tokenService = tokenService;
+        _opaqueTokenService = opaqueTokenService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Находит приглашение по SHA-256 hash и атомарно завершает регистрацию пользователя.
+    /// </summary>
     public async Task<Result<AcceptInviteResponse, Failure>> Handle(
         AcceptInviteCommand command,
         CancellationToken cancellationToken)
@@ -93,7 +102,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        string tokenHash = _tokenService.HashRefreshToken(command.Request.InviteToken);
+        string tokenHash = _opaqueTokenService.HashToken(command.Request.InviteToken);
         UserInviteToken? inviteToken = await _inviteTokenRepository.GetByHashAsync(
             tokenHash,
             cancellationToken);
@@ -138,10 +147,7 @@ public sealed class AcceptInviteHandler : ICommandHandler<AcceptInviteResponse, 
 
         string[] roles = (await _userManager.GetRolesAsync(user)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Invite accepted for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("Invite accepted for user {UserId}", user.Id);
 
         return new AcceptInviteResponse(
             user.Id,

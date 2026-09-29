@@ -38,6 +38,26 @@ public class MoveDepartmentTests : DirectoryBaseTests
     }
 
     [Fact]
+    public async Task Move_department_below_its_child_should_fail()
+    {
+        // Arrange
+        var parentId = await CreateRootTestDepartment("Parent department", "parent");
+        var childId = await CreateChildTestDepartment(parentId, "Child department", "child");
+
+        // Act
+        var result = await ExecuteHandler(sut =>
+        {
+            var request = new MoveDepartmentRequest(childId);
+            var command = new MoveDepartmentCommand(parentId, request);
+
+            return sut.Handle(command, CancellationToken.None);
+        });
+
+        // Assert
+        result.IsFailure.Should().BeTrue("a department cannot become a child of its own descendant");
+    }
+
+    [Fact]
     public async Task Move_parent_with_children_to_root_should_update_all_children()
     {
         // Arrange

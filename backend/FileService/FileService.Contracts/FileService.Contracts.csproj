@@ -23,4 +23,7 @@
     <PackageReference Include="WolverineFx.Postgresql" />
     <PackageReference Include="WolverineFx.RabbitMQ" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FileService.UnitTests" />
+  </ItemGroup>
 </Project>

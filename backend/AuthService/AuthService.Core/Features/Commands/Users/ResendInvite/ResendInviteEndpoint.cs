@@ -60,13 +60,16 @@ public sealed class ResendInviteValidator : AbstractValidator<ResendInviteComman
     }
 }
 
+/// <summary>
+/// Отзывает предыдущее приглашение и создаёт новый одноразовый opaque token.
+/// </summary>
 public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, ResendInviteCommand>
 {
     private const int INVITE_TOKEN_LIFETIME_DAYS = 3;
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IUserInviteTokenRepository _inviteTokenRepository;
-    private readonly ITokenService _tokenService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly InviteLinkFactory _inviteLinkFactory;
     private readonly IEmailOutboxRepository _emailOutboxRepository;
     private readonly IAuthAuditRepository _auditRepository;
@@ -74,10 +77,13 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
     private readonly IValidator<ResendInviteCommand> _validator;
     private readonly ILogger<ResendInviteHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler повторной отправки приглашения.
+    /// </summary>
     public ResendInviteHandler(
         UserManager<ApplicationUser> userManager,
         IUserInviteTokenRepository inviteTokenRepository,
-        ITokenService tokenService,
+        IOpaqueTokenService opaqueTokenService,
         InviteLinkFactory inviteLinkFactory,
         IEmailOutboxRepository emailOutboxRepository,
         IAuthAuditRepository auditRepository,
@@ -87,7 +93,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
     {
         _userManager = userManager;
         _inviteTokenRepository = inviteTokenRepository;
-        _tokenService = tokenService;
+        _opaqueTokenService = opaqueTokenService;
         _inviteLinkFactory = inviteLinkFactory;
         _emailOutboxRepository = emailOutboxRepository;
         _auditRepository = auditRepository;
@@ -96,6 +102,9 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
         _logger = logger;
     }
 
+    /// <summary>
+    /// Проверяет pending пользователя, заменяет invite token и создаёт новое outbox message.
+    /// </summary>
     public async Task<Result<ResendInviteResponse, Failure>> Handle(
         ResendInviteCommand command,
         CancellationToken cancellationToken)
@@ -131,7 +140,7 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
 
         await _inviteTokenRepository.RevokeActiveTokensForUserAsync(targetUser.Id, cancellationToken);
 
-        RefreshTokenResult inviteToken = _tokenService.CreateRefreshToken();
+        OpaqueToken inviteToken = _opaqueTokenService.CreateToken();
         DateTime inviteTokenExpiresAt = DateTime.UtcNow.AddDays(INVITE_TOKEN_LIFETIME_DAYS);
         Result<UserInviteToken, Error> inviteTokenResult = UserInviteToken.Create(
             targetUser.Id,
@@ -178,13 +187,10 @@ public sealed class ResendInviteHandler : ICommandHandler<ResendInviteResponse, 
 
         string[] roles = (await _userManager.GetRolesAsync(targetUser)).ToArray();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Invite resent for user {UserId} by {RequestedByUserId}",
-                targetUser.Id,
-                command.RequestedByUserId);
-        }
+        _logger.LogInformation(
+            "Invite resent for user {UserId} by {RequestedByUserId}",
+            targetUser.Id,
+            command.RequestedByUserId);
 
         return new ResendInviteResponse(
             targetUser.Id,

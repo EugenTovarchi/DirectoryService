@@ -27,7 +27,7 @@ public static class FileServiceExtensions
         {
             FileServiceOptions options = sp.GetRequiredService<IOptions<FileServiceOptions>>().Value;
 
-            // AuthServiceUrl нужен только для service-token flow перед internal gRPC calls.
+            // AuthServiceUrl нужен для OAuth Client Credentials перед internal gRPC calls.
             config.BaseAddress = new Uri(options.AuthServiceUrl);
             config.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });

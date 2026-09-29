@@ -1,7 +1,6 @@
 using AuthService.Contracts.Responses;
 using AuthService.Core.Abstractions;
 using AuthService.Core.Extensions;
-using AuthService.Domain.Identity;
 using CSharpFunctionalExtensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -49,14 +48,14 @@ public sealed class GetCurrentUserSessionsValidator : AbstractValidator<GetCurre
 public sealed class GetCurrentUserSessionsHandler
     : IQueryHandler<Result<IReadOnlyList<AuthSessionResponse>, Failure>, GetCurrentUserSessionsQuery>
 {
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IOidcSessionService _sessionService;
     private readonly IValidator<GetCurrentUserSessionsQuery> _validator;
 
     public GetCurrentUserSessionsHandler(
-        IRefreshTokenRepository refreshTokenRepository,
+        IOidcSessionService sessionService,
         IValidator<GetCurrentUserSessionsQuery> validator)
     {
-        _refreshTokenRepository = refreshTokenRepository;
+        _sessionService = sessionService;
         _validator = validator;
     }
 
@@ -68,7 +67,7 @@ public sealed class GetCurrentUserSessionsHandler
         if (!validationResult.IsValid)
             return validationResult.ToErrors();
 
-        IReadOnlyList<RefreshToken> sessions = await _refreshTokenRepository.GetActiveSessionsForUserAsync(
+        IReadOnlyList<OidcSession> sessions = await _sessionService.GetActiveSessionsAsync(
             query.UserId,
             ct);
 
@@ -78,8 +77,8 @@ public sealed class GetCurrentUserSessionsHandler
                 session.CreatedAt,
                 session.ExpiresAt,
                 session.LastUsedAt,
-                session.CreatedByIp,
-                session.UserAgent))
+                CreatedByIp: null,
+                UserAgent: null))
             .ToList();
 
         return response;

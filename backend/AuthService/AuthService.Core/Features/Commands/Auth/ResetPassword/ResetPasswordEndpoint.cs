@@ -51,22 +51,28 @@ public sealed class ResetPasswordValidator : AbstractValidator<ResetPasswordComm
     }
 }
 
+/// <summary>
+/// Устанавливает новый password и отзывает OAuth/OIDC sessions пользователя.
+/// </summary>
 public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly ITokenService _tokenService;
+    private readonly IOidcSessionService _sessionService;
+    private readonly IOpaqueTokenService _opaqueTokenService;
     private readonly IAuthAuditRepository _auditRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IValidator<ResetPasswordCommand> _validator;
     private readonly ILogger<ResetPasswordHandler> _logger;
 
+    /// <summary>
+    /// Создаёт handler завершения password reset.
+    /// </summary>
     public ResetPasswordHandler(
         UserManager<ApplicationUser> userManager,
         IPasswordResetTokenRepository passwordResetTokenRepository,
-        IRefreshTokenRepository refreshTokenRepository,
-        ITokenService tokenService,
+        IOidcSessionService sessionService,
+        IOpaqueTokenService opaqueTokenService,
         IAuthAuditRepository auditRepository,
         ITransactionManager transactionManager,
         IValidator<ResetPasswordCommand> validator,
@@ -74,14 +80,17 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
     {
         _userManager = userManager;
         _passwordResetTokenRepository = passwordResetTokenRepository;
-        _refreshTokenRepository = refreshTokenRepository;
-        _tokenService = tokenService;
+        _sessionService = sessionService;
+        _opaqueTokenService = opaqueTokenService;
         _auditRepository = auditRepository;
         _transactionManager = transactionManager;
         _validator = validator;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Проверяет одноразовый reset token, заменяет password и отзывает все sessions пользователя.
+    /// </summary>
     public async Task<UnitResult<Failure>> Handle(
         ResetPasswordCommand command,
         CancellationToken cancellationToken)
@@ -97,7 +106,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
 
         using ITransactionScope transactionScope = transactionScopeResult.Value;
 
-        string tokenHash = _tokenService.HashRefreshToken(command.Request.Token);
+        string tokenHash = _opaqueTokenService.HashToken(command.Request.Token);
         PasswordResetToken? resetToken = await _passwordResetTokenRepository.GetByHashAsync(
             tokenHash,
             cancellationToken);
@@ -118,9 +127,8 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
 
         resetToken.MarkUsed();
         await _passwordResetTokenRepository.RevokeActiveTokensForUserAsync(user.Id, cancellationToken);
-        await _refreshTokenRepository.RevokeActiveTokensForUserAsync(
+        await _sessionService.RevokeAllSessionsAsync(
             user.Id,
-            revokedByIp: null,
             cancellationToken);
 
         UnitResult<Error> addAuditResult = _auditRepository.Add(AuthAuditEvent.Create(
@@ -140,10 +148,7 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         if (commitResult.IsFailure)
             return commitResult.Error.ToFailure();
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
 
         return UnitResult.Success<Failure>();
     }

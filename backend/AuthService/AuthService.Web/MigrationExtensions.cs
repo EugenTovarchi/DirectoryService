@@ -1,6 +1,8 @@
+using AuthService.Core.Options;
 using AuthService.Infrastructure.Postgres;
 using AuthService.Infrastructure.Postgres.Seeding;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AuthService.Web;
 
@@ -23,6 +25,16 @@ public static class MigrationExtensions
 
         var seeder = scope.ServiceProvider.GetRequiredService<AuthIdentitySeeder>();
         await seeder.SeedAsync();
+
+        OidcServerOptions oidcOptions = scope.ServiceProvider
+            .GetRequiredService<IOptions<OidcServerOptions>>()
+            .Value;
+
+        if (oidcOptions.Enabled)
+        {
+            var oidcSeeder = scope.ServiceProvider.GetRequiredService<OidcServerSeeder>();
+            await oidcSeeder.SeedAsync();
+        }
 
         app.Logger.LogInformation("All migrations applied successfully");
     }
